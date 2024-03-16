@@ -10,7 +10,6 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -38,7 +37,10 @@ class FirstRunDialogFragment : DialogFragment() {
 
     private val binding by viewBinding(FirstRunDialogFragmentLayoutBinding::inflate)
 
-    private val viewModel: FirstRunViewModel by viewModels()
+    // Download is handled by this viewModel, that's why I scoped viewModel's lifecycle to the activity's
+    // lifecycle this is temporary workaround to prevent from canceling download job when the user
+    // dismiss FirstRunDialog, in future commits I will handle download using DownloadManager service.
+    private val viewModel: FirstRunViewModel by activityViewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
     private val util = Util()
@@ -58,19 +60,14 @@ class FirstRunDialogFragment : DialogFragment() {
         // If location permission is granted show progress bar.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                findNavController().currentBackStackEntry?.savedStateHandle?.getStateFlow(
-                    "locationGranted",
-                    false
-                )?.collect {
-                    if (!it) return@collect
-                    if (viewModel.region != null) return@collect
+                mapSharedViewModel.permissionGranted.collect {
+                    if (it == null || !it) return@collect
 
-                    withContext(Dispatchers.Main) {
-                        showProgressBar(isVisible = true, isDownloading = false)
-                    }
+                    showProgressBar(isVisible = true, isDownloading = false)
                 }
             }
         }
+
 
         this.isCancelable = false
         return binding.root
@@ -96,6 +93,12 @@ class FirstRunDialogFragment : DialogFragment() {
         binding.downloadButton.setOnClickListener {
             when (binding.downloadButton.text) {
                 getString(R.string.download) -> {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.download_started),
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     // Starts download job.
                     viewModel.getPoiResult(
                         binding.regionNameTextView.text.toString(),
@@ -124,7 +127,7 @@ class FirstRunDialogFragment : DialogFragment() {
                 alpha = 1f
             }
             toggleDownloadButtonState()
-        } ?: viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+        } ?: viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 mapSharedViewModel.lastKnownPosition.take(1).collect { geoPoint ->
                     geoPoint ?: return@collect
@@ -147,58 +150,56 @@ class FirstRunDialogFragment : DialogFragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiStateFlow.collect { uiState ->
                     uiState ?: return@collect
 
-                    withContext(Dispatchers.Main) {
-                        when (uiState.error) {
-                            UiState.Error.NetworkError -> {
+                    when (uiState.error) {
+                        UiState.Error.NetworkError -> {
+                            showProgressBar(isVisible = false, isDownloading = false)
+                            toggleDownloadButtonState()
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.no_network_available),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        UiState.Error.ServiceUnavailable -> {
+                            showProgressBar(isVisible = false, isDownloading = false)
+                            toggleDownloadButtonState()
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.service_unavailable),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        UiState.Error.Other -> {
+                            showProgressBar(isVisible = false, isDownloading = false)
+                            toggleDownloadButtonState()
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.something_went_wrong),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        null -> {
+                            if (uiState.isLoading) {
+                                showProgressBar(isVisible = true, isDownloading = true)
+                                toggleDownloadButtonState()
+                            } else {
                                 showProgressBar(isVisible = false, isDownloading = false)
                                 toggleDownloadButtonState()
+                                viewModel.saveFirstRunFlag(false)
                                 Toast.makeText(
                                     requireContext(),
-                                    getString(R.string.no_network_available),
+                                    getString(R.string.region_download_success).format(uiState.items.firstOrNull()),
                                     Toast.LENGTH_SHORT
                                 ).show()
-                            }
-
-                            UiState.Error.ServiceUnavailable -> {
-                                showProgressBar(isVisible = false, isDownloading = false)
-                                toggleDownloadButtonState()
-                                Toast.makeText(
-                                    requireContext(),
-                                    getString(R.string.service_unavailable),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
-                            UiState.Error.Other -> {
-                                showProgressBar(isVisible = false, isDownloading = false)
-                                toggleDownloadButtonState()
-                                Toast.makeText(
-                                    requireContext(),
-                                    getString(R.string.something_went_wrong),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
-                            null -> {
-                                if (uiState.isLoading) {
-                                    showProgressBar(isVisible = true, isDownloading = true)
-                                    toggleDownloadButtonState()
-                                } else {
-                                    showProgressBar(isVisible = false, isDownloading = false)
-                                    toggleDownloadButtonState()
-                                    viewModel.saveFirstRunFlag(false)
-                                    Toast.makeText(
-                                        requireContext(),
-                                        getString(R.string.region_download_success).format(uiState.items.firstOrNull()),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    dismiss()
-                                }
+                                dismiss()
                             }
                         }
                     }

@@ -2,7 +2,6 @@ package com.bytecause.nautichart.ui.view.fragment.dialog
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,13 +22,11 @@ import com.bytecause.nautichart.domain.model.IconsChildItem
 import com.bytecause.nautichart.interfaces.SelectPoiMarkerIconInterface
 import com.bytecause.nautichart.ui.adapter.CustomPoiMarkerIconParentAdapter
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
+import com.bytecause.nautichart.ui.viewmodels.CustomMarkerCategorySharedViewModel
 import com.bytecause.nautichart.ui.viewmodels.SelectPoiMarkerIconViewModel
-import com.bytecause.nautichart.util.TAG
 import com.bytecause.nautichart.util.Util
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface {
@@ -37,6 +34,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     private val binding by viewBinding(SelectPoiMarkerIconDialogBinding::inflate)
 
     private val viewModel: SelectPoiMarkerIconViewModel by viewModels()
+    private val sharedViewModel: CustomMarkerCategorySharedViewModel by activityViewModels()
 
     private lateinit var parentRecyclerView: RecyclerView
     private lateinit var parentAdapter: CustomPoiMarkerIconParentAdapter
@@ -50,25 +48,23 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     ): View {
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.getRecentUsedPoiMarkerIcons().collect {
                     it.iconDrawableResourceNameList.reversed().let { drawableResourceNameList ->
 
                         // create recycler view with icons content.
                         viewModel.contentList.value?.let { newContent ->
-                            withContext(Dispatchers.Main) {
-                                if (!::parentRecyclerView.isInitialized) {
-                                    parentRecyclerView =
-                                        binding.poiMarkerIconsParentRecyclerView.apply {
-                                            layoutManager = LinearLayoutManager(requireContext())
-                                            setHasFixedSize(true)
-                                            parentAdapter = CustomPoiMarkerIconParentAdapter(
-                                                newContent,
-                                                this@SelectPoiMarkerIconDialog
-                                            )
-                                            adapter = parentAdapter
-                                        }
-                                }
+                            if (!::parentRecyclerView.isInitialized) {
+                                parentRecyclerView =
+                                    binding.poiMarkerIconsParentRecyclerView.apply {
+                                        layoutManager = LinearLayoutManager(requireContext())
+                                        setHasFixedSize(true)
+                                        parentAdapter = CustomPoiMarkerIconParentAdapter(
+                                            newContent,
+                                            this@SelectPoiMarkerIconDialog
+                                        )
+                                        adapter = parentAdapter
+                                    }
                             }
                         }
 
@@ -92,10 +88,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
                         }
                         // if icons are not present in list, update state.
                         if (!viewModel.iconList.containsAll(viewModel.recentlyUsedIcons)) viewModel.updateRecentlyUsedIcons()
-
-                        withContext(Dispatchers.Main) {
-                            parentAdapter.notifyDataSetChanged()
-                        }
+                        parentAdapter.notifyDataSetChanged()
                     }
                 }
             }
@@ -121,7 +114,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
             // Saves clicked icon drawable resource name into proto datastore.
             viewModel.saveRecentlyUsedPoiMarkerIcon(resources.getResourceEntryName(drawableId))
 
-            findNavController().previousBackStackEntry?.savedStateHandle?.set("selectedDrawableId", drawableId)
+            sharedViewModel.setDrawableId(drawableId)
             findNavController().popBackStack()
         }
     }

@@ -43,8 +43,6 @@ class CustomMarkerViewModel @Inject constructor(
 
     val getAllCategories = repository.getAllCategories()
 
-    fun getPoisByCategoryName(categoryName: String) = repository.getPoisByCategoryName(categoryName)
-
     suspend fun removeCategory(category: CustomPoiCategoryEntity) =
         repository.removeCategory(category)
 
@@ -61,6 +59,4 @@ class CustomMarkerViewModel @Inject constructor(
     fun setRemoveIndex(index: Int) {
         this.removeIndex = index
     }
-
-
 }

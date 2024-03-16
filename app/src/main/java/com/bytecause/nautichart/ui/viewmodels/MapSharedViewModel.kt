@@ -64,21 +64,15 @@ class MapSharedViewModel : ViewModel() {
     }
 
     fun setPlaceToFind(entity: SearchPlaceCacheEntity?) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _placeToFindStateFlow.emit(entity)
-        }
+        _placeToFindStateFlow.value = entity
     }
 
     fun setPoiToShow(poiMap: Map<String, List<Long>>?) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _showPoiStateFlow.emit(poiMap)
-        }
+        _showPoiStateFlow.value = poiMap
     }
 
     fun setDismissSearchMapDialogState(bool: Boolean?) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _dismissSearchMapDialog.emit(bool)
-        }
+        _dismissSearchMapDialog.value = bool
     }
 
     fun toggleGridOverlay() {

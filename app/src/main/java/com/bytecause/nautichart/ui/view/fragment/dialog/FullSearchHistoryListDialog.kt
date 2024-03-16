@@ -23,10 +23,8 @@ import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.viewmodels.FullSearchHistoryListDialogViewModel
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_list_dialog),
@@ -78,7 +76,7 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
 
     override fun onItemViewClickListener(view: View, parentIndex: Int, childIndex: Int) {
         viewModel.parentList.value[parentIndex].searchHistory[childIndex].let { recentlySearchedPlace ->
-            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            viewLifecycleOwner.lifecycleScope.launch {
 
                 viewModel.updateRecentlySearchedPlaces(
                     element = RecentlySearchedPlace.newBuilder()
@@ -89,8 +87,7 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
                         .setDisplayName(recentlySearchedPlace.displayName)
                         .setType(recentlySearchedPlace.type)
                         .setTimeStamp(System.currentTimeMillis())
-                        .build(),
-                    cache = viewModel.getRecentlySearchedPlaceList
+                        .build()
                 ).firstOrNull()?.let {
                     viewModel.updateRecentlySearchedPlaces(it)
                 }
@@ -104,9 +101,7 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
                         mapSharedViewModel.setPlaceToFind(it)
                     }
                     setDismissSearchMapDialogState(true)
-                    withContext(Dispatchers.Main) {
-                        findNavController().popBackStack()
-                    }
+                    findNavController().popBackStack()
                 }
             }
         }

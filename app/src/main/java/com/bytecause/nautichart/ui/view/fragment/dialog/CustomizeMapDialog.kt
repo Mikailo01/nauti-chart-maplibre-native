@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.DialogFragment
@@ -57,8 +59,13 @@ class CustomizeMapDialog : DialogFragment() {
         val bindingInterface = object : RecyclerViewBindingInterface<String> {
             override fun bindData(item: String, itemView: View, itemPosition: Int) {
                 val textView: TextView = itemView.findViewById(R.id.poi_category_name_text_view)
+                val imageView: ImageView = itemView.findViewById(R.id.poi_category_image_view)
 
                 textView.text = item
+                imageView.setOnClickListener {
+                    Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
         }
 

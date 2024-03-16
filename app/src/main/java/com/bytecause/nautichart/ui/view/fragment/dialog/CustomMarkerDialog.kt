@@ -268,9 +268,7 @@ class CustomMarkerDialog : DialogFragment(),
                         )
                         for (x in initCategories) {
                             viewModel.insertCategory(x)
-                            poiCategoriesList.add(x)
                         }
-                        poiCategoriesList.add(categoryAddButton)
                         categoryGenericRecyclerViewAdapter.notifyItemRangeChanged(
                             0,
                             poiCategoriesList.size

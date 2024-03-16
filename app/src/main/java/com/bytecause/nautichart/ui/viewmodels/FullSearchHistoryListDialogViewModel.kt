@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.sql.Date
 import java.sql.Timestamp
 import java.util.Calendar
@@ -51,11 +51,10 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
     }
 
     fun updateRecentlySearchedPlaces(
-        element: RecentlySearchedPlace,
-        cache: Flow<RecentlySearchedPlaceList?>
+        element: RecentlySearchedPlace
     ) = flow {
         element.let {
-            cache.firstOrNull()
+            getRecentlySearchedPlaceList.firstOrNull()
                 .let { savedPlaces ->
                     savedPlaces ?: return@flow
                     val updatedList =
@@ -63,7 +62,7 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
                     emit(updatedList)
                 }
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     private fun getParentTitle(timestamp: Long, stringArray: Array<String>): String {
         val currentTimestamp = Timestamp(System.currentTimeMillis())
@@ -100,7 +99,8 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
     }
 
     // DataStore operations.
-    val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> = historyRepository.getRecentlySearchedPlaces()
+    val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> =
+        historyRepository.getRecentlySearchedPlaces()
 
     fun updateRecentlySearchedPlaces(entityList: List<RecentlySearchedPlace>) {
         viewModelScope.launch {
@@ -109,11 +109,8 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
     }
 
     // AppSearch API operations.
-    suspend fun searchCachedResult(query: String): List<SearchPlaceCacheEntity> {
-        return withContext(Dispatchers.IO) {
-            searchManager.searchCachedResult(query)
-        }
-    }
+    suspend fun searchCachedResult(query: String): List<SearchPlaceCacheEntity> =
+        searchManager.searchCachedResult(query)
 
     override fun onCleared() {
         searchManager.closeSession()

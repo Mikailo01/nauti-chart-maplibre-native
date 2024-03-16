@@ -410,7 +410,7 @@ class OverlayHelper(
                             "drawable",
                             mapView.context.packageName
                         )
-                    ), 0.5f
+                    ), 0.55f
                 ) ?: ContextCompat.getDrawable(mapView.context, R.drawable.map_marker)
                 position = geoPoint
                 setMarkerType(CustomMarker.CustomMarkerType.CustomPoi)

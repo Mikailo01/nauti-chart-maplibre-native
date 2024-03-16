@@ -1,5 +1,6 @@
 package com.bytecause.nautichart.domain.model
 
+/** Restricts types to String, Int, StringArray and IntArray.  **/
 sealed class ArgsObjectTypeArray {
 
     data class StringType(val value: String): ArgsObjectTypeArray()

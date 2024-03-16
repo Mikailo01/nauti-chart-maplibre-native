@@ -11,9 +11,11 @@ import com.bytecause.nautichart.ui.util.DrawableUtil
 import com.bytecause.nautichart.util.PoiUtil
 import com.bytecause.nautichart.util.StringUtil
 import com.bytecause.nautichart.util.TAG
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import org.osmdroid.util.GeoPoint
 import javax.inject.Inject
 
@@ -23,48 +25,50 @@ class PoiUseCase @Inject constructor(
 ) {
 
     fun getPoiResultByRadius(entity: PoiQueryEntity): Flow<ApiResult<List<PoiCacheEntity>>> {
-        return flow {
+        return flow<ApiResult<List<PoiCacheEntity>>> {
             poiCacheRepository.loadCachedResults.firstOrNull()?.let { poiEntityList ->
                 poiEntityList.filter { poiElement ->
                     entity.category.contains(poiElement.category) && entity.position.distanceToAsDouble(
                         GeoPoint(poiElement.latitude, poiElement.longitude)
-                    ) <= entity.radius // TODO("Create algorithm.")
+                    ) <= entity.radius
                 }.takeIf { it.isNotEmpty() && it.size >= 15 }?.let {
                     emit(ApiResult.Success(data = it))
                     return@flow
                 } ?: run {
-                    overpassRepository.makeQuery<OverpassNodeModel>(entity.query.getQuery()).also { result ->
-                        if (result.exception != null) {
-                            emit(ApiResult.Failure(result.exception))
-                            return@flow
+                    overpassRepository.makeQuery<OverpassNodeModel>(entity.query.getQuery())
+                        .also { result ->
+                            if (result.exception != null) {
+                                emit(ApiResult.Failure(result.exception))
+                                return@flow
+                            }
+                            result.data?.filter { element ->
+                                poiCacheRepository.isPlaceCached(element.id).firstOrNull() == false
+                            }?.takeIf { it.isNotEmpty() }?.map {
+
+                                val category = PoiUtil().extractCategoryFromPoiEntity(it.tags)
+                                    .takeIf { category -> !category.isNullOrEmpty() }
+                                    .let { tagValue -> StringUtil.formatTagString(tagValue) } ?: ""
+
+                                PoiCacheEntity(
+                                    placeId = it.id,
+                                    category = category.also { Log.d(TAG(this), it) },
+                                    drawableResourceName = DrawableUtil.getResourceName(category),
+                                    latitude = it.lat,
+                                    longitude = it.lon,
+                                    tags = it.tags
+                                )
+                            }?.let { poiCacheEntity ->
+                                poiCacheRepository.cacheResult(poiCacheEntity)
+
+                                // Filter out categories which don't belong to specified category set.
+                                emit(ApiResult.Success(data = poiCacheEntity/*.filter { element -> entity.category.contains(element.category) }*/))
+                                return@flow
+                            }
                         }
-                        result.data?.filter { element ->
-                            poiCacheRepository.isPlaceCached(element.id).firstOrNull() == false
-                        }?.takeIf { it.isNotEmpty() }?.map {
-
-                            val category = PoiUtil().extractCategoryFromPoiEntity(it.tags)
-                                .takeIf { category -> !category.isNullOrEmpty() }
-                                .let { tagValue -> StringUtil.formatTagString(tagValue) } ?: ""
-
-                            PoiCacheEntity(
-                                placeId = it.id,
-                                category = category.also { Log.d(TAG(this), it) },
-                                drawableResourceName = DrawableUtil.getResourceName(category),
-                                latitude = it.lat,
-                                longitude = it.lon,
-                                tags = it.tags
-                            )
-                        }?.let { poiCacheEntity ->
-                            poiCacheRepository.cacheResult(poiCacheEntity)
-
-                            // Filter out categories which don't belong to specified category set.
-                            emit(ApiResult.Success(data = poiCacheEntity/*.filter { element -> entity.category.contains(element.category) }*/))
-                            return@flow
-                        }
-                    }
                 }
             }
         }
+            .flowOn(Dispatchers.Default)
     }
 
     fun getPoiResultByRegion(regionName: String, query: String): Flow<ApiResult<String>> {
@@ -96,6 +100,7 @@ class PoiUseCase @Inject constructor(
                 }
             }
         }
+            .flowOn(Dispatchers.Default)
     }
 
 }

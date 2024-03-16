@@ -13,6 +13,8 @@ import com.bytecause.nautichart.databinding.ConfirmationDialogBinding
 import com.bytecause.nautichart.domain.model.ArgsObjectTypeArray
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
 
+
+/** Reusable Confirmation Dialog. **/
 class ConfirmationDialog : DialogFragment() {
 
     interface ConfirmationDialogListener {

@@ -35,6 +35,7 @@ class CustomTileSourceDialog : DialogFragment() {
 
         binding.setZoomLevelRangeLayout.setOnClickListener {
             // TODO("Finish implementation.")
+            Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT).show()
         }
 
         binding.dismissButton.setOnClickListener {

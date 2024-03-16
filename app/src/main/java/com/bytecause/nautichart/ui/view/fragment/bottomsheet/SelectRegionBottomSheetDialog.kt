@@ -3,6 +3,7 @@ package com.bytecause.nautichart.ui.view.fragment.bottomsheet
 import android.Manifest
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -14,6 +15,7 @@ import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
 import com.bytecause.nautichart.ui.viewmodels.SelectRegionBottomSheetViewModel
 import com.bytecause.nautichart.util.Util
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -36,16 +38,19 @@ class SelectRegionBottomSheetDialog :
             // Handle Permission granted/rejected
             if (isGranted) {
                 mapSharedViewModel.permissionGranted(isGranted)
-                findNavController().previousBackStackEntry?.savedStateHandle?.set(
-                    "locationGranted",
-                    isGranted
-                )
                 findNavController().popBackStack()
             }
         }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        dialog?.setOnShowListener {
+            BottomSheetBehavior.from(requireView().parent as View).apply {
+                state = BottomSheetBehavior.STATE_EXPANDED
+                maxWidth = ViewGroup.LayoutParams.MATCH_PARENT
+            }
+        }
 
         binding.grantLocationPermissionLinearLayout.setOnClickListener {
             if (!util.lastClick(500)) return@setOnClickListener

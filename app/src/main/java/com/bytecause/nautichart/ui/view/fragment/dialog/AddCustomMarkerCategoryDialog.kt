@@ -12,6 +12,7 @@ import android.view.Window
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +24,7 @@ import com.bytecause.nautichart.databinding.AddCustomMarkerCategoryDialogBinding
 import com.bytecause.nautichart.ui.util.showKeyboard
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.viewmodels.AddCustomMarkerCategoryViewModel
+import com.bytecause.nautichart.ui.viewmodels.CustomMarkerCategorySharedViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -36,6 +38,7 @@ class AddCustomMarkerCategoryDialog :
     private val binding by viewBinding(AddCustomMarkerCategoryDialogBinding::inflate)
 
     private val viewModel: AddCustomMarkerCategoryViewModel by viewModels()
+    private val sharedViewModel: CustomMarkerCategorySharedViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -50,27 +53,6 @@ class AddCustomMarkerCategoryDialog :
 
         this.isCancelable = false
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                findNavController().currentBackStackEntry?.savedStateHandle?.getStateFlow(
-                    "selectedDrawableId",
-                    -1
-                )?.collect {
-                    if (it == -1) return@collect
-
-                    binding.addIconImageButton.let { imageButton ->
-                        imageButton.setImageDrawable(
-                            ContextCompat.getDrawable(
-                                requireContext(),
-                                it
-                            )
-                        )
-                        imageButton.tag = it
-                    }
-                }
-            }
-        }
-
         return binding.root
     }
 
@@ -79,6 +61,7 @@ class AddCustomMarkerCategoryDialog :
 
         binding.toolbar.apply {
             navBack.setOnClickListener {
+                sharedViewModel.resetDrawableId()
                 findNavController().popBackStack()
             }
             destNameTextView.text = getString(R.string.new_category)
@@ -131,6 +114,7 @@ class AddCustomMarkerCategoryDialog :
                             viewModel.insertCategory(newCategory)
                         }
 
+                        sharedViewModel.resetDrawableId()
                         findNavController().popBackStack()
                     }
 
@@ -147,6 +131,25 @@ class AddCustomMarkerCategoryDialog :
                             )
                                 .show()
                         }
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                sharedViewModel.drawableIdStateFlow.collect {
+                    if (it == -1) return@collect
+
+                    binding.addIconImageButton.apply {
+                        setImageDrawable(
+                            ContextCompat.getDrawable(
+                                requireContext(),
+                                it
+                            )
+                        )
+                        tag = it
+                        binding.addIconTextView.text = getString(R.string.change_icon)
                     }
                 }
             }

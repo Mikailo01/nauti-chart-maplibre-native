@@ -42,10 +42,6 @@ class CustomPoiDatabaseRepository @Inject constructor(
         customPoiDao.removeCustomPoi(id)
     }
 
-    fun getPoisByCategoryName(categoryName: String) =
-        customPoiDao.getPoisByCategoryName(categoryName)
-            .flowOn(Dispatchers.IO)
-
     suspend fun removeCategory(category: CustomPoiCategoryEntity) = withContext(Dispatchers.IO) {
         customPoiDao.removeCategory(category)
     }

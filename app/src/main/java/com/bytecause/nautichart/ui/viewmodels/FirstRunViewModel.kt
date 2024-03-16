@@ -7,7 +7,6 @@ import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,9 +31,7 @@ class FirstRunViewModel @Inject constructor(
         private set
 
     fun resetUiState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiStateFlow.emit(null)
-        }
+        _uiStateFlow.value = null
     }
 
     fun cancelDownloadJob() {

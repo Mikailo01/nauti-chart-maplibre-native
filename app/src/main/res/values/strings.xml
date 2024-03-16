@@ -97,7 +97,7 @@
     <string name="unknown_location_image_view_content_description">Unknown location image.</string>
     <string name="count_text_place_holder">Count: %1s</string>
     <string name="show_results_on_the_map_place_holder">Show %1s on the map</string>
-    <string name="loading_elements">Loading elements...</string>
+    <string name="loading_elements">Loading elements…</string>
     <string name="unknown_region">Unknown region</string>
     <string name="skip">SKIP</string>
     <string name="choose_region_description">Please choose your region for which POIs should be downloaded.</string>
@@ -115,7 +115,9 @@
     <string name="countries">Countries</string>
     <string name="mapnik_default">Mapnik (default)</string>
     <string name="add_icon">Add icon</string>
+    <string name="change_icon">Change icon</string>
     <string name="fetching_regions">Fetching regions…</string>
+    <string name="download_started">Download started. This can take few minutes.</string>
     <string name="vessels_ais">Vessels AIS</string>
     <string name="show_all">Show all</string>
     <string name="no_pois_downloaded">No POIs downloaded.</string>

@@ -23,9 +23,6 @@ interface CustomPoiDao {
     @Query("DELETE FROM custom_poi WHERE poiId = :id")
     suspend fun removeCustomPoi(id: Long)
 
-    @Query("SELECT * FROM custom_poi WHERE categoryName = :categoryName")
-    fun getPoisByCategoryName(categoryName: String): Flow<List<CustomPoiEntity>>
-
     @Query("SELECT * FROM custom_poi WHERE poiId = :id")
     fun searchCustomPoiById(id: Int): Flow<CustomPoiEntity>
 
