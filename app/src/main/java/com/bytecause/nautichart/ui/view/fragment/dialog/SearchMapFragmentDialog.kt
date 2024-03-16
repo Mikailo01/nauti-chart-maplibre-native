@@ -25,15 +25,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.widget.ViewPager2
 import com.bytecause.nautichart.R
-import com.bytecause.nautichart.RecentlySearchedPlace
-import com.bytecause.nautichart.data.local.room.tables.SearchPlaceCacheEntity
 import com.bytecause.nautichart.databinding.SearchMapFragmentDialogBinding
 import com.bytecause.nautichart.domain.model.SearchedPlace
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.ui.adapter.GenericRecyclerViewAdapter
 import com.bytecause.nautichart.ui.adapter.RecyclerViewBindingInterface
 import com.bytecause.nautichart.ui.adapter.SearchMapViewPagerAdapter
-import com.bytecause.nautichart.ui.adapter.clear
 import com.bytecause.nautichart.ui.util.DrawableUtil
 import com.bytecause.nautichart.ui.util.getProgressBarDrawable
 import com.bytecause.nautichart.ui.util.hideKeyboard
@@ -45,14 +42,11 @@ import com.bytecause.nautichart.ui.view.fragment.SearchMapCategoriesFragment
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
 import com.bytecause.nautichart.ui.viewmodels.SearchMapViewModel
 import com.bytecause.nautichart.util.KeyboardUtils
-import com.bytecause.nautichart.util.MapUtil
-import com.bytecause.nautichart.util.PolylineAlgorithms
 import com.bytecause.nautichart.util.StringUtil
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
@@ -73,10 +67,6 @@ class SearchMapFragmentDialog : DialogFragment() {
     private lateinit var viewPagerAdapter: SearchMapViewPagerAdapter
     private lateinit var tabLayout: TabLayout
 
-    private val objectList = mutableListOf<SearchedPlace>()
-
-    private var isLoading: Boolean = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, R.style.Theme_NautiChart)
@@ -87,8 +77,6 @@ class SearchMapFragmentDialog : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
-        recyclerView = binding.searchedPlacesRecyclerView
 
         val linearLayoutManager = object : LinearLayoutManager(requireContext()) {
             override fun canScrollVertically(): Boolean {
@@ -105,7 +93,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                 val distance: TextView = itemView.findViewById(R.id.distance_textview)
 
                 innerItemView.setOnClickListener {
-                    saveNewSearchedPlace(item)
+                    viewModel.saveAndShowSearchedPlace(item)
                 }
 
                 placeImage.setImageResource(
@@ -128,12 +116,12 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
 
         genericRecyclerViewAdapter = GenericRecyclerViewAdapter(
-            objectList,
+            listOf(),
             R.layout.searched_places_recycler_view_item_view,
             bindingInterface
         )
 
-        recyclerView.apply {
+        recyclerView = binding.searchedPlacesRecyclerView.apply {
             layoutManager = linearLayoutManager
             adapter = genericRecyclerViewAdapter
         }
@@ -182,6 +170,7 @@ class SearchMapFragmentDialog : DialogFragment() {
 
         binding.searchMapBox.searchMapEditText.apply {
 
+            // Set navigate back arrow in custom edit text view.
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_arrow_back_24)?.apply {
                 setTint(ContextCompat.getColor(requireContext(), R.color.adaptive_color))
                 setDrawables(this, null)
@@ -218,9 +207,8 @@ class SearchMapFragmentDialog : DialogFragment() {
             setOnTextChangedListener(object : CustomTextInputEditText.OnTextChangedListener {
                 override fun onTextChanged(text: CharSequence?) {
                     hideErrorLayout()
-                    genericRecyclerViewAdapter.clear(objectList)
-                    objectList.clear()
-                    if (text.isNullOrEmpty() && objectList.isEmpty()) {
+                    genericRecyclerViewAdapter.updateContent(listOf())
+                    if (text.isNullOrEmpty() && genericRecyclerViewAdapter.itemCount == 0) {
                         // Clear right drawable when empty.
                         setDrawables(
                             right = null,
@@ -243,7 +231,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                              searchByCoordinates(text.toString())
                              return@postDelayed
                          }*/
-                        searchApi(text.toString())
+                        viewModel.searchPlaces(text.toString())
                     }, 1000)
                 }
             })
@@ -257,7 +245,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                 override fun onEndDrawableClick(view: CustomTextInputEditText) {
                     binding.searchMapBox.searchMapEditText.let {
                         it.text ?: return
-                        if (isLoading) return
+                        if (viewModel.isLoading) return
                         it.setText("")
                     }
                 }
@@ -283,81 +271,41 @@ class SearchMapFragmentDialog : DialogFragment() {
             }
         }.attach()
 
+        // hides search map dialog, after tapping on element in search history (history content is
+        // inflated in different fragment, so I needed to notify parent fragment dialog which serves
+        // as container.)
         viewLifecycleOwner.lifecycleScope.launch {
             mapSharedViewModel.dismissSearchMapDialog.collect {
                 it ?: return@collect
-                this@SearchMapFragmentDialog.dismiss()
+                findNavController().popBackStack()
             }
         }
 
+        // data returned by api or cache database
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
                 viewModel.uiSearchState.collect {
                     it ?: return@collect
                     if (it.isLoading) {
-                        isLoading = true
                         binding.searchMapBox.searchMapEditText.setDrawables(right = progressDrawable)
                         (progressDrawable as? Animatable)?.start()
                     } else {
-                        isLoading = false
                         binding.searchMapBox.searchMapEditText.setDrawables(right = clearTextDrawable)
                     }
-
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        val polylineAlgorithms = PolylineAlgorithms()
-                        it.items.filterNot { searchedPlace ->
-                            val searchedPlaceList =
-                                viewModel.searchCachedResult(searchedPlace.name.takeIf { it.isNotEmpty() }
-                                    ?: searchedPlace.displayName).map { cachedEntity ->
-                                    // Map only necessary properties.
-                                    SearchedPlace(
-                                        placeId = cachedEntity.placeId.toLong(),
-                                        latitude = cachedEntity.latitude,
-                                        longitude = cachedEntity.longitude
-                                    )
-                                }
-
-                            searchedPlaceList.any { element -> element.placeId == searchedPlace.placeId }
-                        }.map { searchedPlace ->
-
-                            SearchPlaceCacheEntity(
-                                nameSpace = "cached_place",
-                                placeId = searchedPlace.placeId.toString(),
-                                latitude = searchedPlace.latitude,
-                                longitude = searchedPlace.longitude,
-                                addressType = searchedPlace.addressType,
-                                name = searchedPlace.name,
-                                displayName = searchedPlace.displayName,
-                                polygonCoordinates = polylineAlgorithms.encode(
-                                    StringUtil.extractCoordinatesToGeoPointList(searchedPlace.polygonCoordinates)
-                                        .let { geoPointList ->
-                                            if (geoPointList.size > 1000) polylineAlgorithms.simplifyPolyline(
-                                                geoPointList,
-                                                0.001
-                                            )
-                                            else geoPointList
-                                        }
-                                ),
-                                score = 1
-                            )
-                        }.let { mappedEntity ->
-                            viewModel.cacheResult(mappedEntity)
-                        }
-                    }
-
                     populateRecyclerView(it)
                 }
             }
         }
-    }
 
-    private fun searchApi(s: String) {
-        view ?: return
+        // we have to notify MapFragment that the selected place should be drawn on map.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.searchCachedResult(s).let {
-                if (it.isEmpty()) {
-                    viewModel.searchPlaces(s)
-                } else viewModel.searchPlaces(s, it)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+                viewModel.searchPlace.collect {
+                    mapSharedViewModel.setPlaceToFind(it)
+                    withContext(Dispatchers.Main) {
+                        findNavController().popBackStack(R.id.map_dest, false)
+                    }
+                }
             }
         }
     }
@@ -374,24 +322,25 @@ class SearchMapFragmentDialog : DialogFragment() {
         binding.searchedPlacesRecyclerView.visibility = View.VISIBLE
     }
 
-    private fun searchByCoordinates(input: String) {
+    /*private fun searchByCoordinates(input: String) {
         MapUtil.stringCoordinatesToGeoPoint(input).let {
             it ?: return
 
-            objectList.add(
-                SearchedPlace(
-                    name = resources.getString(R.string.split_two_strings_formatter)
-                        .format(
-                            MapUtil.latitudeToDMS(it.latitude),
-                            MapUtil.longitudeToDMS(it.longitude)
-                        ),
-                    latitude = it.latitude,
-                    longitude = it.longitude
+            genericRecyclerViewAdapter.updateContent(
+                listOf(
+                    SearchedPlace(
+                        name = resources.getString(R.string.split_two_strings_formatter)
+                            .format(
+                                MapUtil.latitudeToDMS(it.latitude),
+                                MapUtil.longitudeToDMS(it.longitude)
+                            ),
+                        latitude = it.latitude,
+                        longitude = it.longitude
+                    )
                 )
             )
-            genericRecyclerViewAdapter.notifyItemRangeChanged(0, objectList.size)
         }
-    }
+    }*/
 
     private fun populateRecyclerView(places: UiState<SearchedPlace>) {
         when (places.error) {
@@ -429,89 +378,24 @@ class SearchMapFragmentDialog : DialogFragment() {
                     binding.errorLayout.networkErrorLinearLayout.visibility = View.GONE
                     binding.searchedPlacesRecyclerView.visibility = View.VISIBLE
                 }
+
                 places.items.let { searchedPlaces ->
-                    if (searchedPlaces.isEmpty()) {
+                    /*if (searchedPlaces.isEmpty()) {
                         if (MapUtil.areCoordinatesValid(binding.searchMapBox.searchMapEditText.text.toString())) {
                             searchByCoordinates(binding.searchMapBox.searchMapEditText.toString())
                         }
                         return@let
-                    }
+                    } */
 
+                    // don't sort list if it contains single element
                     if (searchedPlaces.size > 1) {
                         viewModel.sortListByDistance(
                             searchedPlaces,
                             mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
-                        ).forEach { sortedElement ->
-                            objectList.add(sortedElement)
+                        ).let { sortedList ->
+                            genericRecyclerViewAdapter.updateContent(sortedList)
                         }
-                    } else {
-                        objectList.add(searchedPlaces.first())
-                    }
-
-                    genericRecyclerViewAdapter.notifyItemRangeChanged(
-                        0,
-                        objectList.size
-                    )
-                }
-            }
-        }
-    }
-
-    private fun saveNewSearchedPlace(element: SearchedPlace) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            element.let { searchedPlace ->
-                viewModel.getRecentlySearchedPlaceList.firstOrNull()
-                    .let { savedPlaces ->
-                        savedPlaces ?: return@launch
-                        /* if (searchedPlace.placeId == 0L) {
-                             mapSharedViewModel.setPlaceToFind(
-                                 SearchPlaceCacheEntities(
-                                     latitude = searchedPlace.latitude,
-                                     longitude = searchedPlace.longitude
-                                 )
-                             )
-                             withContext(Dispatchers.Main) {
-                                 findNavController().popBackStack(R.id.map_dest, false)
-                             }
-                             return@launch
-                         }*/
-
-                        val entity: RecentlySearchedPlace =
-                            RecentlySearchedPlace.newBuilder().setPlaceId(searchedPlace.placeId)
-                                .setLatitude(searchedPlace.latitude)
-                                .setLongitude(searchedPlace.longitude)
-                                .setName(searchedPlace.name)
-                                .setDisplayName(searchedPlace.displayName)
-                                .setType(searchedPlace.addressType)
-                                .setTimeStamp(System.currentTimeMillis())
-                                .build()
-
-                        if (savedPlaces.placeList.any { it.placeId == entity.placeId }) {
-                            val updatedList =
-                                savedPlaces.placeList.filter { it.placeId != entity.placeId } + entity
-                            viewModel.updateRecentlySearchedPlaces(updatedList)
-                        } else {
-                            if (savedPlaces.placeList.size <= 50) viewModel.saveRecentlySearchedPlace(
-                                entity
-                            )
-                            else {
-                                val updatedList = savedPlaces.placeList.toMutableList().apply {
-                                    removeAt(0)
-                                    add(entity)
-                                }
-                                viewModel.updateRecentlySearchedPlaces(updatedList)
-                            }
-                        }
-                    }
-
-                viewModel.searchCachedResult(searchedPlace.name.takeIf { it.isNotEmpty() }
-                    ?: searchedPlace.displayName).first {
-                    it.placeId.toLong() == searchedPlace.placeId
-                }.let {
-                    mapSharedViewModel.setPlaceToFind(it)
-                    withContext(Dispatchers.Main) {
-                        findNavController().popBackStack(R.id.map_dest, false)
-                    }
+                    } else genericRecyclerViewAdapter.updateContent(searchedPlaces)
                 }
             }
         }
@@ -536,6 +420,7 @@ class SearchMapFragmentDialog : DialogFragment() {
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
+        // reset state
         mapSharedViewModel.setDismissSearchMapDialogState(null)
     }
 }
