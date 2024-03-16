@@ -7,24 +7,22 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketAddress
 
-class NetworkUtil {
+object NetworkUtil {
 
     @Suppress("SpellCheckingInspection")
-    companion object {
-        suspend fun isOnline(): Boolean {
-            return withContext(Dispatchers.IO) {
-                try {
-                    val timeoutMs = 1500
-                    val sock = Socket()
-                    val sockAddr: SocketAddress = InetSocketAddress("8.8.8.8", 53)
+    suspend fun isOnline(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val timeoutMs = 1500
+                val sock = Socket()
+                val sockAddr: SocketAddress = InetSocketAddress("8.8.8.8", 53)
 
-                    sock.connect(sockAddr, timeoutMs)
-                    sock.close()
+                sock.connect(sockAddr, timeoutMs)
+                sock.close()
 
-                    true
-                } catch (e: IOException) {
-                    false
-                }
+                true
+            } catch (e: IOException) {
+                false
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.bytecause.nautichart.data.remote
 
 import android.util.Log
+import com.bytecause.nautichart.util.CountryNameMapping
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -34,8 +35,11 @@ class RegionDataExtractRemoteDataSource {
             }
         }
 
-    private fun getIsoCodeFromCountryName(countryName: String): String? {
-        var country = countryName
+    private fun getIsoCodeFromCountryName(countryName: String): String {
+
+        return CountryNameMapping.getCountryIso(countryName)
+
+        /*var country = countryName
         val locales = Locale.getAvailableLocales()
         if (countryName.contains("-") && !countryName.contains(
                 "united",
@@ -51,13 +55,12 @@ class RegionDataExtractRemoteDataSource {
             }
         }
 
-        return null
+        return null*/
     }
 
     private fun extractSizes(input: String, isCountry: Boolean): Map<String, String> {
         val map = mutableMapOf<String, String>()
 
-        //val regexNamePattern = "onmouseover=\"loadkml\\('[^/]+/([^']+\\.kml)'\\)\""
         val regexNamePattern = """<a\s+href="[^"]+">([^<]+)</a>"""
         val regexSizePattern = "\\((\\d+(?:\\.\\d+)?)&nbsp;([GMK]B)\\)"
 
@@ -68,7 +71,8 @@ class RegionDataExtractRemoteDataSource {
         val sizeMatchResult = sizeRegex.find(input)
 
         if (sizeMatchResult != null && nameMatchResult != null) {
-            val extractedNameValue = nameMatchResult.groupValues[1].split(".")[0]//.replace("-", " ")
+            val extractedNameValue =
+                nameMatchResult.groupValues[1].split(".")[0]//.replace("-", " ")
 
             val extractedSizeValue = sizeMatchResult.groupValues[1]
             val extractedUnit = sizeMatchResult.groupValues[2]
@@ -76,7 +80,7 @@ class RegionDataExtractRemoteDataSource {
             if (isCountry) {
                 map[extractedNameValue.split(" ")[0]] = "$extractedSizeValue $extractedUnit"
             } else {
-                map[getIsoCodeFromCountryName(extractedNameValue) ?: extractedNameValue] =
+                map[getIsoCodeFromCountryName(extractedNameValue)] =
                     "$extractedSizeValue $extractedUnit"
             }
         }
