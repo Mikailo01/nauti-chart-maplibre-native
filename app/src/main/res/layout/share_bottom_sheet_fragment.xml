@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="25dp">
+
+    <ImageView
+        android:id="@+id/send_image_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginTop="5dp"
+        app:tint="@color/adaptive_color"
+        android:scaleX="1.5"
+        android:scaleY="1.5"
+        android:src="@drawable/send_icon" />
+
+    <TextView
+        android:id="@+id/send_textview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Send"
+        android:textColor="@color/adaptive_color"
+        android:layout_alignTop="@id/send_image_view"
+        android:layout_alignBottom="@id/send_image_view"
+        android:layout_toEndOf="@id/send_image_view"
+        android:layout_marginStart="20dp"
+        android:textSize="20sp" />
+
+        <ImageView
+            android:id="@+id/copy_coordinates_image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/copy_icon"
+            android:layout_marginStart="5dp"
+            android:layout_marginBottom="5dp"
+            android:scaleX="1.5"
+            android:scaleY="1.5"
+            app:tint="@color/adaptive_color"
+            android:layout_marginTop="40dp"
+            android:layout_below="@id/send_image_view" />
+
+        <TextView
+            android:id="@+id/copy_coordinates_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/adaptive_color"
+            android:textSize="20sp"
+            android:clickable="true"
+            android:layout_alignTop="@id/copy_coordinates_image_view"
+            android:layout_toEndOf="@id/copy_coordinates_image_view"
+            android:layout_marginStart="20dp"
+            android:text="Copy coordinates"
+            android:focusable="true" />
+
+        <ImageView
+            android:id="@+id/third_party_app_image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/geo_icon"
+            android:layout_marginTop="40dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginBottom="5dp"
+            app:tint="@color/adaptive_color"
+            android:scaleX="1.5"
+            android:scaleY="1.5"
+            android:layout_below="@id/copy_coordinates_image_view" />
+
+        <TextView
+            android:id="@+id/third_party_app_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:text="Third party app"
+            android:textColor="@color/adaptive_color"
+            android:clickable="true"
+            android:layout_marginStart="20dp"
+            android:layout_alignTop="@id/third_party_app_image_view"
+            android:layout_toEndOf="@id/third_party_app_image_view"
+            android:focusable="true" />
+
+
+
+    </RelativeLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

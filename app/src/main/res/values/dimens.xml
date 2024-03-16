@@ -1,0 +1,14 @@
+<resources>
+    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="button_margin">20dp</dimen>
+    <dimen name="textview_margin">10dp</dimen>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">12dp</dimen>
+    <dimen name="bottom_sheet_fragment_text_size">15sp</dimen>
+    <dimen name="map_button_margin">8dp</dimen>
+    <dimen name="map_location_bottom_sheet_textview_margin_top">5dp</dimen>
+    <dimen name="map_location_bottom_sheet_textview_size">16sp</dimen>
+    <dimen name="map_location_bottom_sheet_imagebutton_margin_start">75dp</dimen>
+    <dimen name="max_recycler_view_height">200dp</dimen>
+</resources>

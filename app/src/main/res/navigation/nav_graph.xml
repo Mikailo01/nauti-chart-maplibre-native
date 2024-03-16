@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/map_dest">
+
+    <fragment
+        android:id="@+id/map_dest"
+        android:name="com.bytecause.nautichart.ui.view.fragment.MapFragment"
+        tools:layout="@layout/fragment_map">
+        <action
+            android:id="@+id/action_map_dest_to_customizeMapDialog"
+            app:destination="@id/customizeMapDialog" />
+        <action
+            android:id="@+id/action_map_dest_to_mapBottomSheetFragment"
+            app:destination="@id/mapBottomSheetFragment" />
+        <action
+            android:id="@+id/action_map_dest_to_mapShareBottomSheetDialog"
+            app:destination="@id/mapShareBottomSheetDialog" />
+        <action
+            android:id="@+id/action_map_dest_to_mapToolsBottomSheetFragment"
+            app:destination="@id/mapToolsBottomSheetFragment" />
+        <action
+            android:id="@+id/action_map_dest_to_locationDialogFragment"
+            app:destination="@id/locationDialogFragment" />
+        <action
+            android:id="@+id/action_map_dest_to_searchMapFragmentDialog"
+            app:destination="@id/searchMapFragmentDialog" />
+        <action
+            android:id="@+id/action_map_dest_to_firstRunDialogFragment"
+            app:destination="@id/firstRunDialogFragment" />
+        <action
+            android:id="@+id/action_map_dest_to_customMarkerDialog"
+            app:destination="@id/customMarkerDialog" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/settings_dest"
+        android:name="com.bytecause.nautichart.ui.view.fragment.SettingsFragment"
+        android:label="Settings"
+        tools:layout="@layout/settings_fragment"/>
+
+    <fragment
+        android:id="@+id/downloadMapFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.DownloadMapFragment"
+        android:label="@string/download_map"
+        tools:layout="@layout/download_tiles_fragment_layout">
+        <action
+            android:id="@+id/action_downloadMapFragment_to_tileSourceTypes"
+            app:destination="@id/tileSourceTypes" />
+        <action
+            android:id="@+id/action_downloadMapFragment_to_runtimeDialogFragment"
+            app:destination="@id/runtimeDialogFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchHistoryFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.SearchHistoryFragment"
+        android:label="SearchHistoryFragment"
+        tools:layout="@layout/search_history_fragment">
+        <action
+            android:id="@+id/action_searchHistoryFragment_to_searchMapCategoriesFragment"
+            app:destination="@id/searchMapCategoriesFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchMapCategoriesFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.SearchMapCategoriesFragment"
+        android:label="SearchMapCategoriesFragment"
+        tools:layout="@layout/search_map_categories_fragment_layout"/>
+    <dialog
+        android:id="@+id/customizeMapDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.CustomizeMapDialog"
+        android:label="@string/customize_map"
+        tools:layout="@layout/customize_map_dialog_fragment_layout">
+        <action
+            android:id="@+id/action_customizeMapDialog_to_loadingDialogFragment"
+            app:destination="@id/loadingDialogFragment" />
+    </dialog>
+    <dialog
+        android:id="@+id/loadingDialogFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.LoadingDialogFragment"
+        android:label="LoadingDialogFragment"
+        tools:layout="@layout/loading_dialog_fragment">
+        <argument
+            android:name="text_info"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+    </dialog>
+    <dialog
+        android:id="@+id/mapBottomSheetFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.bottomsheet.MapBottomSheetFragment"
+        android:label="MapBottomSheetFragment"
+        tools:layout="@layout/map_bottom_sheet"/>
+    <dialog
+        android:id="@+id/addCustomMarkerCategoryDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.AddCustomMarkerCategoryDialog"
+        android:label="AddCustomMarkerCategoryDialog"
+        tools:layout="@layout/add_custom_marker_category_dialog">
+        <action
+            android:id="@+id/action_addCustomMarkerCategoryDialog_to_selectPoiMarkerIconDialog"
+            app:destination="@id/selectPoiMarkerIconDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/customMarkerDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.CustomMarkerDialog"
+        android:label="CustomMarkerDialog"
+        tools:layout="@layout/add_custom_marker">
+        <action
+            android:id="@+id/action_customMarkerDialog_to_addCustomMarkerCategoryDialog"
+            app:destination="@id/addCustomMarkerCategoryDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectPoiMarkerIconDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.SelectPoiMarkerIconDialog"
+        android:label="SelectPoiMarkerIconDialog"
+        tools:layout="@layout/select_poi_marker_icon_dialog">
+        <action
+            android:id="@+id/action_selectPoiMarkerIconDialog_to_addCustomMarkerCategoryDialog"
+            app:destination="@id/addCustomMarkerCategoryDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/mapShareBottomSheetDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.bottomsheet.MapShareBottomSheetDialog"
+        android:label="MapShareBottomSheetDialog"
+        tools:layout="@layout/share_bottom_sheet_fragment">
+        <argument
+            android:name="geoPoint"
+            app:argType="float[]" />
+    </dialog>
+
+    <dialog
+        android:id="@+id/mapToolsBottomSheetFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.bottomsheet.MapToolsBottomSheetFragment"
+        android:label="MapToolsBottomSheetFragment"
+        tools:layout="@layout/map_tools_bottom_sheet_fragment">
+        <action
+            android:id="@+id/action_mapToolsBottomSheetFragment_to_customTileSourceDialog"
+            app:destination="@id/customTileSourceDialog" />
+        <action
+            android:id="@+id/action_mapToolsBottomSheetFragment_to_downloadMapFragment"
+            app:destination="@id/downloadMapFragment" />
+    </dialog>
+    <dialog
+        android:id="@+id/runtimeDialogFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.RuntimeDialogFragment"
+        android:label="RuntimeDialogFragment"
+        tools:layout="@layout/runtime_dialog_layout"/>
+    <dialog
+        android:id="@+id/customTileSourceDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.CustomTileSourceDialog"
+        android:label="CustomTileSourceDialog"
+        tools:layout="@layout/custom_tile_source_dialog"/>
+    <dialog
+        android:id="@+id/locationDialogFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.LocationDialogFragment"
+        android:label="LocationDialogFragment"
+        tools:layout="@layout/location_alert_dialog"/>
+    <dialog
+        android:id="@+id/tileSourceTypes"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.TileSourceTypes"
+        android:label="TileSourceTypes"
+        tools:layout="@layout/tile_source_types_dialog_fragment"/>
+    <dialog
+        android:id="@+id/searchMapFragmentDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.SearchMapFragmentDialog"
+        android:label="SearchMapFragmentDialog"
+        tools:layout="@layout/search_map_fragment_dialog">
+        <action
+            android:id="@+id/action_searchMapFragmentDialog_to_selectedCategoryElementsDialogFragment"
+            app:destination="@id/selectedCategoryElementsDialogFragment" />
+        <action
+            android:id="@+id/action_searchMapFragmentDialog_to_fullSearchHistoryListDialog"
+            app:destination="@id/fullSearchHistoryListDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectedCategoryElementsListFilterDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.SelectedCategoryElementsListFilterDialog"
+        android:label="SelectedCategoryElementsListFilterDialog"
+        tools:layout="@layout/selected_category_elements_filter_dialog_layout">
+    </dialog>
+    <fragment
+        android:id="@+id/download_poi_dest"
+        android:name="com.bytecause.nautichart.ui.view.fragment.DownloadPoiFragment"
+        android:label="@string/download_poi"
+        tools:layout="@layout/download_poi_fragment_layout">
+        <action
+            android:id="@+id/action_download_poi_dest_to_downloadPoiSelectCountryFragment"
+            app:destination="@id/downloadPoiSelectCountryFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/downloadPoiSelectCountryFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.DownloadPoiSelectCountryFragment"
+        android:label="DownloadPoiSelectCountryFragment"
+        tools:layout="@layout/download_poi_fragment_layout">
+        <argument
+            android:name="args"
+            app:argType="string[]" />
+    </fragment>
+    <dialog
+        android:id="@+id/selectRegionBottomSheetDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.bottomsheet.SelectRegionBottomSheetDialog"
+        android:label="SelectRegionBottomSheetDialog"
+        tools:layout="@layout/select_region_bottom_sheet_layout">
+        <action
+            android:id="@+id/action_selectRegionBottomSheetDialog_to_download_poi_dest"
+            app:destination="@id/download_poi_dest" />
+    </dialog>
+    <dialog
+        android:id="@+id/firstRunDialogFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.FirstRunDialogFragment"
+        android:label="FirstRunDialogFragment"
+        tools:layout="@layout/first_run_dialog_fragment_layout">
+        <action
+            android:id="@+id/action_firstRunDialogFragment_to_selectRegionBottomSheetDialog"
+            app:destination="@id/selectRegionBottomSheetDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectedCategoryElementsDialogFragment"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.SelectedCategoryElementsDialogFragment"
+        android:label="SelectedCategoryElementsDialogFragment"
+        tools:layout="@layout/selected_category_elements_fragment_layout">
+        <argument
+            android:name="poiCategory"
+            app:argType="com.bytecause.nautichart.domain.model.parcelable.PoiCategoryModel" />
+        <action
+            android:id="@+id/action_selectedCategoryElementsDialogFragment_to_selectedCategoryElementsListFilterDialog"
+            app:destination="@id/selectedCategoryElementsListFilterDialog" />
+
+    </dialog>
+    <dialog
+        android:id="@+id/fullSearchHistoryListDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.FullSearchHistoryListDialog"
+        android:label="FullSearchHistoryListDialog"
+        tools:layout="@layout/full_search_history_list_dialog"/>
+
+</navigation>

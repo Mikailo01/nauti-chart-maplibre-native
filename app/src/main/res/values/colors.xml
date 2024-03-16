@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#4CAF50</color>
+    <color name="statusBarColor">#408342</color>
+    <color name="adaptive_color"> #FF000000 </color>
+    <color name="search_box_color">#FF000000</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent"> #0000 </color>
+    <color name="dialog_color">#000000</color>
+    <color name="dialog_background"> #FFFFFF </color>
+    <color name="card_view_color">#E4DEDE</color>
+    <color name="green">#90ee90</color>
+
+    <color name="gray">#d2d5da</color>
+    <color name="bottom_sheet_color"> #FFFFFF </color>
+    <color name="red">#DC0000</color>
+    <color name="light_red">#ff3125</color>
+    <color name="button_state_color">#C1BDBD</color>
+    <color name="dark_blue">#197aff</color>
+    <color name="light_blue">#26f5f5</color>
+    <color name="light_green">#90ee90</color>
+    <color name="yellow">#ffce1f</color>
+    <color name="purple">#e33aff</color>
+    <color name="light_pink">#ffc0cb</color>
+    <color name="light_gray">#d2d5da</color>
+
+    <color name="poi_dark_blue">#1a73e8</color>
+    <color name="poi_medium_blue">#5491f5</color>
+    <color name="poi_light_blue">#7986cb</color>
+    <color name="poi_light_green">#34a853</color>
+    <color name="poi_dark_red">#ea4335</color>
+    <color name="poi_light_red">#ee675c</color>
+    <color name="turquoise">#12b5cb</color>
+    <color name="poi_pink">#f06292</color>
+    <color name="poi_gray">#78909c</color>
+    <color name="poi_yellow">#f29900</color>
+</resources>

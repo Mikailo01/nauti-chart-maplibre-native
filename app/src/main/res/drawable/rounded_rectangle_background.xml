@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Background shape with rounded corners -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00878787" /> <!-- Set your desired background color here -->
+            <corners android:radius="10dp" /> <!-- Adjust the radius to control the corner roundness -->
+        </shape>
+    </item>
+
+    <!-- Ripple effect for API level 21 and above -->
+    <item android:id="@android:id/background">
+        <ripple android:color="?android:attr/colorControlHighlight">
+            <item android:id="@android:id/mask">
+                <shape android:shape="rectangle">
+                    <solid android:color="#FFFFFF" />
+                    <corners android:radius="10dp" />
+                </shape>
+            </item>
+        </ripple>
+    </item>
+</layer-list>

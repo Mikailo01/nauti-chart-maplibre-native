@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:id="@+id/primary"
+        android:menuCategory="secondary">
+        
+        <item
+            android:id="@+id/download_poi_dest"
+            android:icon="@drawable/search_poi_icon"
+            android:title="@string/download_poi" />
+    </group>
+
+    <group android:id="@+id/secondary">
+        <item
+            android:id="@+id/settings_dest"
+            android:menuCategory="secondary"
+            android:icon="@drawable/baseline_settings_applications_24"
+            android:title="@string/action_settings" />
+    </group>
+
+</menu>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+    <item
+        android:width="18dp"
+        android:height="18dp"
+        android:drawable="@drawable/poi_icon_marker_bottom_layer" />
+
+    <item
+        android:id="@+id/top_layer"
+        android:width="9dp"
+        android:height="9dp"
+        android:drawable="@android:color/transparent"
+        android:gravity="center_horizontal"
+        android:top="2dp"
+        tools:drawable="@drawable/shop" />
+</layer-list>

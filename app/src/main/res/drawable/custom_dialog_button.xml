@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background shape for the button -->
+    <item>
+        <shape android:shape="rectangle">
+            <!-- Customize the background color of the button -->
+            <solid android:color="#A0A3A0" />
+
+            <!-- Customize the corner radius to make the button rounded -->
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+
+    <!-- Border for the button (optional) -->
+    <item
+        android:left="3dp"
+        android:right="3dp"
+        android:top="3dp"
+        android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <!-- Customize the border color of the button -->
+            <solid android:color="@color/dialog_background" />
+
+            <!-- Customize the corner radius to match the background shape -->
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+</layer-list>

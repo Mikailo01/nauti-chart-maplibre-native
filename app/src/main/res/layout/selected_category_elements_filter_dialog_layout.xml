@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/elements_filter_dialog_linear_layout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/rounded_dialog"
+    android:orientation="vertical"
+    android:padding="15dp"
+    android:visibility="visible"
+    tools:visibility="visible">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/check_box_parent_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:layout_weight="1" />
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="3dp" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/clear_filters_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/custom_dialog_button"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:text="Clear filters"
+        android:textColor="@color/red"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnDone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="15dp"
+        android:background="@drawable/custom_dialog_button"
+        android:text="Done"
+        android:textStyle="bold" />
+</LinearLayout>

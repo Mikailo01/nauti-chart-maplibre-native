@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_gravity="center"
+    android:paddingTop="20dp"
+    android:background="@drawable/rounded_dialog">
+
+    <include layout="@layout/toolbar"
+        android:id="@+id/toolbar" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/add_icon_image_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/transparent"
+        android:textAlignment="center"
+        android:src="@drawable/add_icon"/>
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:text="@string/add_icon"
+        android:textColor="@color/adaptive_color"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/category_name_edittext_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="40dp"
+        android:layout_marginEnd="40dp"
+        app:startIconDrawable="@drawable/baseline_category_24"
+        app:startIconTint="@color/adaptive_color"
+        app:errorEnabled="true">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/category_name_edittext_input"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:hint="@string/category_name"
+            android:imeOptions="actionDone"
+            android:inputType="text"
+            android:maxLength="12"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/save_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="20dp"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/save"
+        android:textColor="@color/adaptive_color"
+        android:background="@drawable/custom_dialog_button" />
+</LinearLayout>

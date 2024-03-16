@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <include
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar" />
+
+    <FrameLayout
+        android:id="@+id/invisible_window"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_margin="20dp" />
+
+    <ScrollView
+        android:id="@+id/customize_map_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/dialog_background">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <com.google.android.material.chip.ChipGroup
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_show_all"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:text="@string/show_all"
+                    android:textColor="@color/adaptive_color"
+                    app:checkedIcon="@drawable/map_marker"
+                    app:checkedIconEnabled="true"
+                    app:checkedIconTint="@color/adaptive_color"
+                    app:chipBackgroundColor="@drawable/bg_chip_state_list"
+                    app:chipIcon="@drawable/map_marker"
+                    app:chipIconEnabled="true"
+                    app:chipIconTint="@color/adaptive_color" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_ais"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:text="@string/vessels_ais"
+                    android:textColor="@color/adaptive_color"
+                    app:checkedIcon="@drawable/ship_ais"
+                    app:checkedIconEnabled="true"
+                    app:checkedIconTint="@color/adaptive_color"
+                    app:chipBackgroundColor="@drawable/bg_chip_state_list"
+                    app:chipIcon="@drawable/ship_ais"
+                    app:chipIconEnabled="true"
+                    app:chipIconTint="@color/adaptive_color"
+                    app:iconStartPadding="5dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_harbours"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:text="@string/harbours"
+                    android:textColor="@color/adaptive_color"
+                    app:checkedIcon="@drawable/anchor"
+                    app:checkedIconEnabled="true"
+                    app:checkedIconTint="@color/adaptive_color"
+                    app:chipBackgroundColor="@drawable/bg_chip_state_list"
+                    app:chipIcon="@drawable/anchor"
+                    app:chipIconEnabled="true"
+                    app:chipIconSize="20dp"
+                    app:chipIconTint="@color/adaptive_color"
+                    app:iconStartPadding="5dp" />
+
+            </com.google.android.material.chip.ChipGroup>
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="2dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/poi_categories_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="10dp" />
+
+            <TextView
+                android:id="@+id/no_pois_downloaded_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="20dp"
+                android:alpha="0.3"
+                android:text="@string/no_pois_downloaded"
+                android:textColor="@color/adaptive_color"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="2dp" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
