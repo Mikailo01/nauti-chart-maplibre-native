@@ -19,13 +19,13 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.App.Start"
+        android:theme="@style/Base.Theme.NautiChart"
         tools:targetApi="tiramisu">
 
         <activity
             android:name="com.bytecause.nautichart.ui.view.activity.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.App.Start">
+            android:theme="@style/Base.Theme.NautiChart">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />

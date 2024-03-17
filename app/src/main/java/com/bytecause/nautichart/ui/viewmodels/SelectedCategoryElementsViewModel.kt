@@ -1,8 +1,6 @@
 package com.bytecause.nautichart.ui.viewmodels
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.nautichart.domain.model.ApiResult
@@ -15,14 +13,16 @@ import com.bytecause.nautichart.util.PoiUtil
 import com.bytecause.nautichart.util.StringUtil
 import com.bytecause.nautichart.util.TAG
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.net.ConnectException
 import javax.inject.Inject
+
+private const val INIT_SEARCH_RADIUS = 30000
 
 @HiltViewModel
 class SelectedCategoryElementsViewModel @Inject constructor(
@@ -43,26 +43,26 @@ class SelectedCategoryElementsViewModel @Inject constructor(
     private val _categoryElementsList = mutableSetOf<OverpassNodeModel>()
     val categoryElementsList get() = _categoryElementsList.toList()
 
-    private val _elementList = MutableLiveData<List<OverpassNodeModel>>()
-    val elementList: LiveData<List<OverpassNodeModel>> get() = _elementList
+    private val _elementList = MutableStateFlow<Set<OverpassNodeModel>>(setOf())
+    val elementList: StateFlow<Set<OverpassNodeModel>> get() = _elementList.asStateFlow()
 
     // Holds unmodified init map key value pairs.
     private val _allTagsMap = mutableMapOf<String, List<ElementTagModel>>()
     val allTagsMap get() = _allTagsMap.toMap()
 
-    var radius: Int = 30000
+    var radius: Int = INIT_SEARCH_RADIUS
         private set
 
     fun addElements(elements: List<OverpassNodeModel>) {
-        _elementList.value = elements
+        _elementList.value = elements.toSet()
     }
 
     fun clearElements() {
-        _elementList.value = listOf()
+        _elementList.value = setOf()
     }
 
-    fun addTags(map: Map<String, List<ElementTagModel>>) {
-        _allTagsMap.putAll(map)
+    fun resetSearchRadius() {
+        radius = INIT_SEARCH_RADIUS
     }
 
     fun addAllToCategoryElementsList(element: List<OverpassNodeModel>) {
@@ -74,7 +74,7 @@ class SelectedCategoryElementsViewModel @Inject constructor(
     }
 
     fun extractAllTags() {
-        _elementList.value?.let {
+        _elementList.value.let {
             _allTagsMap.putAll(sortMap(extractValuesToMap(it)))
         }
     }
@@ -100,14 +100,14 @@ class SelectedCategoryElementsViewModel @Inject constructor(
     }
 
     fun getPoiResult(entity: PoiQueryEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             _uiSearchCategoryState.value = UiState(isLoading = true)
             when (val result = poiUseCase.getPoiResultByRadius(entity).firstOrNull()) {
                 is ApiResult.Success -> {
                     _uiSearchCategoryState.emit(
                         UiState(
                             isLoading = false,
-                            items = PoiUtil().generalizeTagKeys(result.data?.map {
+                            items = PoiUtil.generalizeTagKeys(result.data?.map {
                                 OverpassNodeModel(
                                     "",
                                     it.placeId,
@@ -128,7 +128,6 @@ class SelectedCategoryElementsViewModel @Inject constructor(
                         }
 
                         is FileNotFoundException -> {
-                            Log.d(TAG(this), "file not found")
                             _uiSearchCategoryState.emit(UiState(error = UiState.Error.Other))
                         }
 
@@ -144,38 +143,20 @@ class SelectedCategoryElementsViewModel @Inject constructor(
     }
 
     fun filterAlgorithm(filterTags: Map<String, List<String>>): List<OverpassNodeModel> {
+        if (filterTags.isEmpty()) return categoryElementsList
+
         val filteredList = mutableListOf<OverpassNodeModel>()
         for (element in categoryElementsList) {
-            if (filterTags.all { (key, value) ->
-                    element.tags.keys.any { it.contains(key) }
-                            && element.tags.values.any { elementValue ->
-                        value.any { filterValue ->
-                            elementValue.contains(
-                                filterValue
-                            )
-                        }
+            for ((key, value) in filterTags) {
+                if (element.tags.keys.contains(key)) {
+                    if (value.contains(element.tags[key])) {
+                        filteredList.add(element)
                     }
-                }) {
-                filteredList.add(element)
+                }
             }
         }
         return filteredList
     }
-
-    // gets place name from tags.keys values
-    /* private fun getItemName(item: OverpassApiModel): String? {
-         // ordered by precedence
-         val preferredKeys = listOf("name", "amenity", "type", "shop")
-
-         for (key in preferredKeys) {
-             for (string in item.tags.keys) {
-                 if (string.contains(key)) {
-                     return StringUtil.formatTagString(item.tags[string])
-                 }
-             }
-         }
-         return args.poiCategory.name
-     }*/
 
     // Checked state update method to keep track of currently filtered elements.
     fun updateCheckedStatus(
@@ -206,7 +187,7 @@ class SelectedCategoryElementsViewModel @Inject constructor(
     }
 
     // Extracts values from each element of the list and save them as keys, values pairs.
-    private fun extractValuesToMap(list: List<OverpassNodeModel>): Map<String, List<ElementTagModel>> {
+    private fun extractValuesToMap(list: Set<OverpassNodeModel>): Map<String, List<ElementTagModel>> {
         val tagTypeToTagsMap = mutableMapOf<String, MutableSet<ElementTagModel>>()
 
         for (listElement in list) {
@@ -232,12 +213,12 @@ class SelectedCategoryElementsViewModel @Inject constructor(
         return allTagsMap.filterKeys { key ->
             // Finding keys that are present in visible elements.
 
-            _elementList.value?.any { it.tags.keys.contains(key) } == true
+            _elementList.value.any { it.tags.keys.contains(key) }
         }.mapValues { (_, value) ->
             value.filter { elementTagModel ->
                 // Finding values held by visible elements.
                 _elementList.value
-                    ?.any { it.tags.values.contains(elementTagModel.tagName) } == true
+                    .any { it.tags.values.contains(elementTagModel.tagName) }
             }
         }
     }
@@ -257,4 +238,64 @@ class SelectedCategoryElementsViewModel @Inject constructor(
             else -> null
         }
     }
+
+    /* private fun extractDaysAndHours(openingHoursString: String?): List<OpeningHour>? {
+        openingHoursString ?: return null
+
+        val extractedValues = mutableListOf<OpeningHour>()
+        if (openingHoursString.contains(",") || openingHoursString.contains(";")) {
+            val splittedStringList = openingHoursString.split("[,;]".toRegex()).map { it.trim() }
+
+            splittedStringList.forEach {
+
+                if (it.matches("\\d\\d:\\d\\d-\\d\\d:\\d\\d".toRegex()) && splittedStringList[1].matches(
+                        "[A-Za-z][A-Za-z]\\s(?:closed|off)".toRegex()
+                    )
+                ) {
+                    Log.d(TAG(this), openingHoursString)
+                    Log.d(TAG(this), splittedStringList[1])
+                    extractedValues.add(OpeningHour("Su-Sa", splittedStringList[0]))
+                    return extractedValues
+                }
+
+                val reader = StringReader(it)
+                val ohParser = OpeningHoursParser(reader)
+                val oh = ohParser.rule()
+
+                val days = oh.days?.joinToString()
+                val timeSpans = oh.times?.joinToString()
+
+                days?.let {
+                    timeSpans?.let {
+                        extractedValues.add(OpeningHour(days, timeSpans))
+                    }
+                }
+
+                /* Log.d(TAG(this), "original: " + openingHoursString)
+                 Log.d(TAG(this), "result: " + extractedValues.joinToString())*/
+
+            }
+        }
+        // Match 08:00-17:00 format.
+        else if (openingHoursString.matches("\\d\\d:\\d\\d-\\d\\d:\\d\\d".toRegex())) {
+            extractedValues.add(OpeningHour("Su-Sa", openingHoursString))
+        } else {
+            val reader = StringReader(openingHoursString)
+            val ohParser = OpeningHoursParser(reader)
+            val oh = ohParser.rule()
+
+            val days = oh.days?.joinToString()
+            val timeSpans = oh.times?.joinToString()
+
+            days?.let {
+                timeSpans?.let {
+                    extractedValues.add(OpeningHour(days, timeSpans))
+                }
+            }
+
+            /*Log.d(TAG(this), "original: " + openingHoursString)
+            Log.d(TAG(this), "result: " + extractedValues.joinToString())*/
+        }
+        return extractedValues
+    }*/
 }

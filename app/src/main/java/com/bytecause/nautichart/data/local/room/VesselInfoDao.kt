@@ -22,7 +22,7 @@ interface VesselInfoDao {
     @Query("SELECT (SELECT COUNT(*) FROM vessel_info) == 0")
     fun isVesselDatabaseEmpty(): Flow<Boolean>
 
-    @Query("SELECT (:currentTimeMillis - (SELECT MIN(timeStamp) FROM vessel_info)) > 600000000")
+    @Query("SELECT (:currentTimeMillis - (SELECT MIN(timeStamp) FROM vessel_info)) > 600000")
     fun shouldUpdateVesselDatabase(currentTimeMillis: Long): Flow<Boolean>
 
     @Query("SELECT * FROM vessel_info WHERE id = :id")

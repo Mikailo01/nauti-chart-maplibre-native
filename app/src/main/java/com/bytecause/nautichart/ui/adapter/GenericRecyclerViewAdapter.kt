@@ -6,11 +6,6 @@ import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.RecyclerView
 
-// Create an extension function for the RecyclerView.Adapter class
-fun <T> RecyclerView.Adapter<*>.clear(childList: List<T>, notify: Boolean = true) {
-    val size = childList.size
-    if (notify) notifyItemRangeRemoved(0, size)
-}
 
 class GenericRecyclerViewAdapter<T : Any>(
     private var dataList: List<T>,
@@ -19,13 +14,13 @@ class GenericRecyclerViewAdapter<T : Any>(
 ) : RecyclerView.Adapter<GenericRecyclerViewAdapter.ViewHolder>() {
 
     fun updateContent(list: List<T>) {
-        if (list.isEmpty()) {
-            dataList = list
-            clear(list)
-        } else {
-            dataList = list
-            notifyItemRangeChanged(0, dataList.size)
+        if (dataList.isNotEmpty()) {
+            val size = dataList.size
+            dataList = listOf()
+            notifyItemRangeRemoved(0, size)
         }
+        dataList = list
+        notifyItemRangeChanged(0, list.size)
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

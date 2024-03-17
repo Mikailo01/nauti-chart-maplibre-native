@@ -69,7 +69,6 @@ class RegionUseCase @Inject constructor(
                     return@flow
                 } ?: run {
                 overpassRepository.makeQuery<OverpassRelationModel>(query).let {
-                    Log.d(TAG(this), "make main query")
                     if (it.exception == null && !it.data.isNullOrEmpty()) {
                         filteredList =
                             filterRegionObjects(
@@ -77,7 +76,6 @@ class RegionUseCase @Inject constructor(
                                 countryId,
                                 isoCode
                             ).takeIf { it.isNotEmpty() } ?: let {
-                                Log.d(TAG(this), "make secondary query")
                                 // If list is empty, do another query with adminLevel 6 (original query use adminLevel 4)
                                 val result =
                                     overpassRepository.makeQuery<OverpassRelationModel>(
@@ -110,7 +108,6 @@ class RegionUseCase @Inject constructor(
                 }
             }
             filteredList.let {
-                Log.d(TAG(this), "cache results of the query")
                 regionRepository.cacheRegions(it)
                 emit(ApiResult.Success(data = it))
                 return@flow

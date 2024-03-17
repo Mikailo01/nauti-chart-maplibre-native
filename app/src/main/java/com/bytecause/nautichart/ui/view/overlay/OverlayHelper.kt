@@ -367,7 +367,7 @@ class OverlayHelper(
                         icon = ContextCompat.getDrawable(mapView.context, iconDrawableId)
                         position = geoPoint
                         setDrawableId(iconDrawableId)
-                        //setMarkerType(CustomMarker.CustomMarkerType.HarbourMarker)
+                        setMarkerType(CustomMarker.CustomMarkerType.HarbourMarker)
                         it.add(this)
                     }
                 }

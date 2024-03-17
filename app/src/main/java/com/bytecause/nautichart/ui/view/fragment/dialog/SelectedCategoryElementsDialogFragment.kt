@@ -2,13 +2,13 @@ package com.bytecause.nautichart.ui.view.fragment.dialog
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -36,7 +36,6 @@ import com.bytecause.nautichart.ui.viewmodels.SelectedCategoryElementsViewModel
 import com.bytecause.nautichart.util.PoiUtil
 import com.bytecause.nautichart.util.SimpleOverpassQueryBuilder
 import com.bytecause.nautichart.util.StringUtil
-import com.bytecause.nautichart.util.TAG
 import com.bytecause.nautichart.util.Util
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +61,7 @@ class SelectedCategoryElementsDialogFragment :
     private lateinit var recyclerView: RecyclerView
     private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<OverpassNodeModel>
 
-    private val elementList = mutableListOf<OverpassNodeModel>()
+    //private val elementList = mutableListOf<OverpassNodeModel>()
 
     private var filterJob: Job? = null
 
@@ -115,7 +114,7 @@ class SelectedCategoryElementsDialogFragment :
         }
 
         genericRecyclerViewAdapter = GenericRecyclerViewAdapter(
-            elementList,
+            viewModel.elementList.value.toList(),
             R.layout.searched_places_recycler_view_item_view,
             bindingInterface
         )
@@ -132,7 +131,7 @@ class SelectedCategoryElementsDialogFragment :
         viewModel.categoryElementsList.takeIf { it.isNotEmpty() }?.let { categoryList ->
             viewModel.addElements(categoryList)
         } ?: run {
-            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { geoPoint ->
+            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let {
                 populateRecyclerView()
             } ?: run {
                 toggleLocationUnknownLayout()
@@ -152,8 +151,8 @@ class SelectedCategoryElementsDialogFragment :
         binding.showResultsOnTheMapRelativeLayout.setOnClickListener {
             mapSharedViewModel.setPoiToShow(
                 viewModel.elementList.value
-                    ?.groupBy { args.poiCategory.name }
-                    ?.mapValues { entry -> entry.value.map { it.id } }
+                    .groupBy { args.poiCategory.name }
+                    .mapValues { entry -> entry.value.map { it.id } }
             )
 
             sharedViewModel.setFilter(null)
@@ -193,17 +192,15 @@ class SelectedCategoryElementsDialogFragment :
             }
         }
 
-        viewModel.elementList.observe(viewLifecycleOwner) { elements ->
-            if (elementList.isNotEmpty()) {
-                val size = elementList.size
-                elementList.clear()
-                genericRecyclerViewAdapter.notifyItemRangeRemoved(0, size)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+                viewModel.elementList.collect { elements ->
+                    genericRecyclerViewAdapter.updateContent(elements.toList())
+
+                    updateCount(elements.size)
+                    toggleShowResultsOnTheMapLayout()
+                }
             }
-            elementList.addAll(elements)
-            toggleExtendSearchRadiusLayout()
-            updateCount(elements.size)
-            genericRecyclerViewAdapter.notifyItemRangeChanged(0, elements.size)
-            toggleShowResultsOnTheMapLayout()
         }
 
         // StateFlow consumer of Overpass API output
@@ -211,15 +208,16 @@ class SelectedCategoryElementsDialogFragment :
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiSearchCategoryState.collect { state ->
                     state ?: return@collect
+
                     if (viewModel.elementList.value
-                            ?.containsAll(state.items) == true && state.items.isNotEmpty()
+                            .containsAll(state.items) && state.items.isNotEmpty()
                     ) {
                         return@collect
-                    } else if (state.items.isNotEmpty() && !viewModel.elementList.value
-                            .isNullOrEmpty() && viewModel.elementList.value
-                            ?.containsAll(
+                    } else if (state.items.isNotEmpty() && viewModel.elementList.value
+                            .isNotEmpty() && !viewModel.elementList.value
+                            .containsAll(
                                 state.items
-                            ) == false
+                            )
                     ) {
                         viewModel.clearElements()
                     }
@@ -252,7 +250,11 @@ class SelectedCategoryElementsDialogFragment :
                         }
 
                         is UiState.Error.Other -> {
-
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.something_went_wrong),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
 
                         null -> {
@@ -278,6 +280,7 @@ class SelectedCategoryElementsDialogFragment :
                                                     )
                                                 } ?: run {
                                                 viewModel.addElements(sortedList)
+                                                toggleExtendSearchRadiusLayout()
                                             }
                                         }
                                     }
@@ -310,7 +313,6 @@ class SelectedCategoryElementsDialogFragment :
                             )
                         )
                         filteredList.addAll(viewModel.categoryElementsList)
-
                     } else {
                         // If filter is applied update drawable.
                         binding.filterListImageButton.setImageDrawable(
@@ -329,13 +331,14 @@ class SelectedCategoryElementsDialogFragment :
                         .let {
                             sharedViewModel.setTags(viewModel.sortMap(it))
                         }
+                    toggleExtendSearchRadiusLayout()
                 }
             }
         }
     }
 
     private fun toggleShowResultsOnTheMapLayout() {
-        if (elementList.isEmpty()) {
+        if (genericRecyclerViewAdapter.itemCount == 0) {
             if (binding.showResultsOnTheMapRelativeLayout.visibility == View.GONE) return
             binding.showResultsOnTheMapRelativeLayout.visibility = View.GONE
         } else {
@@ -352,17 +355,18 @@ class SelectedCategoryElementsDialogFragment :
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { geoPoint ->
             viewModel.getPoiResult(
                 PoiQueryEntity(
-                    PoiUtil().unifyPoiCategory(args.poiCategory.name),
-                    viewModel.radius,
-                    geoPoint,
-                    SimpleOverpassQueryBuilder(
+                    category = PoiUtil.unifyPoiCategory(args.poiCategory.name),
+                    radius = viewModel.radius,
+                    position = geoPoint,
+                    query = SimpleOverpassQueryBuilder(
                         format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
                         timeoutInSeconds = 120,
                         type = "node",
                         radiusInMeters = viewModel.radius,
                         geoPoint = geoPoint,
                         search = args.poiCategory.search
-                    ).also { Log.d(TAG(), it.getQuery()) }
+                    ),
+                    appliedFilters = sharedViewModel.filteredTagsStateFlow.value
                 )
             )
         }
@@ -380,19 +384,21 @@ class SelectedCategoryElementsDialogFragment :
     }
 
     private fun toggleExtendSearchRadiusLayout() {
-        if (elementList.size < 15) {
+        if (binding.progressLayout.visibility == View.VISIBLE) return
+        if (viewModel.elementList.value.size < 15) {
             binding.extendSearchRadiusLayout.extendSearchRadiusLinearLayout.visibility =
                 View.VISIBLE
             updateExtendSearchRadiusLayout()
         } else if (binding.extendSearchRadiusLayout.extendSearchRadiusLinearLayout.visibility == View.VISIBLE) {
             binding.extendSearchRadiusLayout.extendSearchRadiusLinearLayout.visibility = View.GONE
+            viewModel.resetSearchRadius()
         }
     }
 
     private fun updateExtendSearchRadiusLayout() {
         binding.extendSearchRadiusLayout.extendSearchRadiusLayoutTitle.text =
             getString(R.string.nothing_found_text_place_holder).format(
-                if (elementList.isEmpty()) "Nothing" else elementList.size,
+                if (viewModel.elementList.value.isEmpty()) "Nothing" else viewModel.elementList.value.size,
                 viewModel.radius / 1000,
                 "km"
             )
@@ -430,66 +436,6 @@ class SelectedCategoryElementsDialogFragment :
         if (binding.errorLayout.networkErrorLinearLayout.visibility == View.GONE) return
         binding.errorLayout.networkErrorLinearLayout.visibility = View.GONE
         binding.categoryElementsRecyclerView.visibility = View.VISIBLE
-    }*/
-
-    /* private fun extractDaysAndHours(openingHoursString: String?): List<OpeningHour>? {
-        openingHoursString ?: return null
-
-        val extractedValues = mutableListOf<OpeningHour>()
-        if (openingHoursString.contains(",") || openingHoursString.contains(";")) {
-            val splittedStringList = openingHoursString.split("[,;]".toRegex()).map { it.trim() }
-
-            splittedStringList.forEach {
-
-                if (it.matches("\\d\\d:\\d\\d-\\d\\d:\\d\\d".toRegex()) && splittedStringList[1].matches(
-                        "[A-Za-z][A-Za-z]\\s(?:closed|off)".toRegex()
-                    )
-                ) {
-                    Log.d(TAG(), openingHoursString)
-                    Log.d(TAG(), splittedStringList[1])
-                    extractedValues.add(OpeningHour("Su-Sa", splittedStringList[0]))
-                    return extractedValues
-                }
-
-                val reader = StringReader(it)
-                val ohParser = OpeningHoursParser(reader)
-                val oh = ohParser.rule()
-
-                val days = oh.days?.joinToString()
-                val timeSpans = oh.times?.joinToString()
-
-                days?.let {
-                    timeSpans?.let {
-                        extractedValues.add(OpeningHour(days, timeSpans))
-                    }
-                }
-
-                /* Log.d("mapfragment", "original: " + openingHoursString)
-                 Log.d("mapfragment", "result: " + extractedValues.joinToString())*/
-
-            }
-        }
-        // Match 08:00-17:00 format.
-        else if (openingHoursString.matches("\\d\\d:\\d\\d-\\d\\d:\\d\\d".toRegex())) {
-            extractedValues.add(OpeningHour("Su-Sa", openingHoursString))
-        } else {
-            val reader = StringReader(openingHoursString)
-            val ohParser = OpeningHoursParser(reader)
-            val oh = ohParser.rule()
-
-            val days = oh.days?.joinToString()
-            val timeSpans = oh.times?.joinToString()
-
-            days?.let {
-                timeSpans?.let {
-                    extractedValues.add(OpeningHour(days, timeSpans))
-                }
-            }
-
-            /*Log.d("mapfragment", "original: " + openingHoursString)
-            Log.d("mapfragment", "result: " + extractedValues.joinToString())*/
-        }
-        return extractedValues
     }*/
 
 

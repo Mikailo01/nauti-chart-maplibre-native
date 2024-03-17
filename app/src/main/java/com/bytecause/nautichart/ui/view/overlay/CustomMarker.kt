@@ -151,6 +151,6 @@ class CustomMarker(
     sealed class CustomMarkerType {
         data object CustomPoi : CustomMarkerType()
         data object VesselMarker : CustomMarkerType()
-        //data object HarbourMarker : CustomMarkerType()
+        data object HarbourMarker : CustomMarkerType()
     }
 }

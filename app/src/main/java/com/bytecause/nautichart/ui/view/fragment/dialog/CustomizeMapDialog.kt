@@ -69,7 +69,7 @@ class CustomizeMapDialog : DialogFragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch() {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
                 viewModel.getAllDistinctCategories.collect { distinctCategoryList ->
                     if (distinctCategoryList.isEmpty()) {

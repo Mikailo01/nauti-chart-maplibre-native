@@ -29,6 +29,7 @@ enum class LayerTypes {
     ADDITIONALOVERLAY
 }
 
+// TODO("Image rendering slows down opening of this fragment.")
 @AndroidEntryPoint
 class MapBottomSheetFragment : BottomSheetDialogFragment(R.layout.map_bottom_sheet),
     SelectLayerInterface {

@@ -38,6 +38,7 @@ class MapUtil {
             }
         }
 
+        /** This method take international date line into consideration. **/
         fun isPositionInBoundingBox(geoPoint: GeoPoint, boundingBox: BoundingBox): Boolean {
             return if (boundingBox.lonEast < boundingBox.lonWest) {
                 // Bounding box crosses the International Date Line

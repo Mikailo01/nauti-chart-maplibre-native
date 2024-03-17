@@ -122,7 +122,7 @@ class SearchMapCategoriesViewModel : ViewModel() {
             search = SearchTypes.Amenity(arrayOf("shower"))
         ),
         PoiCategoryModel(
-            drawableId = R.drawable.baseline_description_24,
+            drawableId = R.drawable.sea_waves,
             name = "Sea marks",
             search = SearchTypes.UnionSet(arrayOf("seamark:type"))
         ),

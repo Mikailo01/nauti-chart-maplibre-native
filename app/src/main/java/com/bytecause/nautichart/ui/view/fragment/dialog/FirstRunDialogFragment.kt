@@ -21,9 +21,6 @@ import com.bytecause.nautichart.ui.util.isLocationPermissionGranted
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.viewmodels.FirstRunViewModel
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
-import com.bytecause.nautichart.util.SearchTypes
-import com.bytecause.nautichart.util.SimpleOverpassQueryBuilder
-import com.bytecause.nautichart.util.StringUtil
 import com.bytecause.nautichart.util.Util
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +36,7 @@ class FirstRunDialogFragment : DialogFragment() {
 
     // Download is handled by this viewModel, that's why I scoped viewModel's lifecycle to the activity's
     // lifecycle this is temporary workaround to prevent from canceling download job when the user
-    // dismiss FirstRunDialog, in future commits I will handle download using DownloadManager service.
+    // dismiss FirstRunDialog, in future commits download will be handled by DownloadManager service.
     private val viewModel: FirstRunViewModel by activityViewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
@@ -101,14 +98,7 @@ class FirstRunDialogFragment : DialogFragment() {
 
                     // Starts download job.
                     viewModel.getPoiResult(
-                        binding.regionNameTextView.text.toString(),
-                        SimpleOverpassQueryBuilder(
-                            format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
-                            timeoutInSeconds = 120,
-                            regionNameList = listOf(binding.regionNameTextView.text.toString()),
-                            type = "node",
-                            search = SearchTypes.UnionSet(StringUtil.searchTypesStringList.toTypedArray())
-                        ).getQuery()
+                        binding.regionNameTextView.text.toString()
                     )
                 }
 

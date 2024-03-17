@@ -6,6 +6,9 @@ import com.bytecause.nautichart.data.repository.UserPreferencesRepository
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
+import com.bytecause.nautichart.util.SearchTypes
+import com.bytecause.nautichart.util.SimpleOverpassQueryBuilder
+import com.bytecause.nautichart.util.StringUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,9 +46,18 @@ class FirstRunViewModel @Inject constructor(
         this.region = region
     }
 
-    fun getPoiResult(regionName: String, query: String) {
+    fun getPoiResult(regionName: String) {
         downloadJob = viewModelScope.launch {
             _uiStateFlow.value = UiState(isLoading = true)
+
+            val query = SimpleOverpassQueryBuilder(
+                format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
+                timeoutInSeconds = 120,
+                regionNameList = listOf(regionName),
+                type = "node",
+                search = SearchTypes.UnionSet(StringUtil.searchTypesStringList.toTypedArray())
+            ).getQuery()
+
             when (val result = poiUseCase.getPoiResultByRegion(regionName, query).firstOrNull()) {
                 is ApiResult.Success -> {
                     _uiStateFlow.emit(

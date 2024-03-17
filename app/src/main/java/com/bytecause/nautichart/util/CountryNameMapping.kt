@@ -4,213 +4,207 @@ package com.bytecause.nautichart.util
 object CountryNameMapping {
 
     fun getCountryIso(name: String): String {
-        val hashMap: HashMap<String, String> = HashMap()
+        val map: Map<String, String> = mapOf(
+            // Europe
+            "Albania" to "AL",
+            "Andorra" to "AD",
+            "Austria" to "AT",
+            "Azores" to "PT",
+            "Belarus" to "BY",
+            "Belgium" to "BE",
+            "Bosnia-Herzegovina" to "BA",
+            "Bulgaria" to "BG",
+            "Croatia" to "HR",
+            "Cyprus" to "CY",
+            "Czech Republic" to "CZ",
+            "Denmark" to "DK",
+            "Estonia" to "EE",
+            "Faroe Islands" to "FO",
+            "Finland" to "FI",
+            "France" to "FR",
+            "Georgia" to "GE",
+            "Germany" to "DE",
+            "Greece" to "GR",
+            "Guernsey and Jersey" to "",
+            "Hungary" to "HU",
+            "Iceland" to "IS",
+            "Ireland and Northern Ireland" to "IE",
+            "Isle of Man" to "IM",
+            "Italy" to "IT",
+            "Kosovo" to "XK",
+            "Latvia" to "LV",
+            "Liechtenstein" to "LI",
+            "Lithuania" to "LT",
+            "Luxembourg" to "LU",
+            "Macedonia" to "MK",
+            "Malta" to "MT",
+            "Moldova" to "MD",
+            "Monaco" to "MC",
+            "Montenegro" to "ME",
+            "Netherlands" to "NL",
+            "Norway" to "NO",
+            "Poland" to "PL",
+            "Portugal" to "PO",
+            "Romania" to "RO",
+            "Russian Federation" to "RU",
+            "Serbia" to "RS",
+            "Slovakia" to "SK",
+            "Slovenia" to "SI",
+            "Spain" to "ES",
+            "Sweden" to "SE",
+            "Switzerland" to "CH",
+            "Turkey" to "TR",
+            "Ukraine (with Crimea)" to "UA",
+            "United Kingdom" to "GB",
+            // Africa
+            "Algeria" to "DZ",
+            "Angola" to "AO",
+            "Benin" to "BJ",
+            "Botswana" to "BW",
+            "Burkina Faso" to "BF",
+            "Burundi" to "BI",
+            "Cameroon" to "CM",
+            "Cape Verde" to "CV",
+            "Central African Republic" to "CF",
+            "Chad" to "TD",
+            "Comores" to "KM",
+            "Congo (Republic/Brazzaville)" to "CG",
+            "Congo (Democratic Republic/Kinshasa)" to "CD",
+            "Djibouti" to "DJ",
+            "Egypt" to "EG",
+            "Equatorial Guinea" to "GQ",
+            "Eritrea" to "ER",
+            "Ethiopia" to "ET",
+            "Gabon" to "GA",
+            "Ghana" to "GH",
+            "Guinea" to "GN",
+            "Guinea-Bissau" to "GW",
+            "Ivory Coast" to "CI",
+            "Kenya" to "KE",
+            "Lesotho" to "LS",
+            "Liberia" to "LR",
+            "Libya" to "LY",
+            "Madagascar" to "MG",
+            "Malawi" to "MW",
+            "Mali" to "ML",
+            "Mauritania" to "MR",
+            "Mauritius" to "MU",
+            "Morocco" to "MA",
+            "Mozambique" to "MZ",
+            "Namibia" to "NA",
+            "Niger" to "NE",
+            "Nigeria" to "NG",
+            "Rwanda" to "RW",
+            "Saint Helena, Ascension, and Tristan da Cunha" to "SH",
+            "Sao Tome and Principe" to "ST",
+            "Senegal and Gambia" to "SN",
+            "Seychelles" to "SC",
+            "Sierra Leone" to "SL",
+            "Somalia" to "SO",
+            "South Africa" to "ZA",
+            "South Sudan" to "SS",
+            "Sudan" to "SD",
+            "Swaziland" to "SZ",
+            "Tanzania" to "TZ",
+            "Togo" to "TG",
+            "Tunisia" to "TN",
+            "Uganda" to "UG",
+            "Zambia" to "ZM",
+            "Zimbabwe" to "ZW",
+            // Asia
+            "Afghanistan" to "AF",
+            "Armenia" to "AM",
+            "Azerbaijan" to "AZ",
+            "Bangladesh" to "BD",
+            "Bhutan" to "BT",
+            "Cambodia" to "KH",
+            "China" to "CN",
+            "East Timor" to "TL",
+            "GCC States" to "AE",
+            "India" to "IN",
+            "Indonesia (with East Timor)" to "ID",
+            "Iran" to "IR",
+            "Iraq" to "IQ",
+            "Israel and Palestine" to "IL",
+            "Japan" to "JP",
+            "Jordan" to "JO",
+            "Kazakhstan" to "KZ",
+            "Kyrgyzstan" to "KG",
+            "Laos" to "LA",
+            "Lebanon" to "LB",
+            "Malaysia, Singapore, and Brunei" to "MY",
+            "Maldives" to "MV",
+            "Mongolia" to "MN",
+            "Myanmar (a.k.a. Burma)" to "MM",
+            "Nepal" to "NP",
+            "North Korea" to "KP",
+            "Pakistan" to "PK",
+            "Philippines" to "PH",
+            "South Korea" to "KR",
+            "Sri Lanka" to "LK",
+            "Syria" to "SY",
+            "Taiwan" to "TW",
+            "Tajikistan" to "TJ",
+            "Thailand" to "TH",
+            "Turkmenistan" to "TM",
+            "Uzbekistan" to "UZ",
+            "Vietnam" to "VN",
+            "Yemen" to "YE",
+            // Australia & Oceania
+            "Australia" to "AU",
+            "Cook Islands" to "CK",
+            "Fiji" to "FJ",
+            "Île de Clipperton" to "CP",
+            "Kiribati" to "KI",
+            "Marshall Islands" to "MH",
+            "Micronesia" to "",
+            "Nauru" to "NR",
+            "New Caledonia" to "NC",
+            "New Zealand" to "NZ",
+            "Niue" to "NU",
+            "Palau" to "PW",
+            "Papua New Guinea" to "PG",
+            "Pitcairn Islands" to "PN",
+            "Polynésie française (French Polynesia)" to "PF",
+            "Samoa" to "WS",
+            "Solomon Islands" to "SB",
+            "Tokelau" to "TK",
+            "Tonga" to "TO",
+            "Tuvalu" to "TV",
+            "Vanuatu" to "VU",
+            "Wallis et Futuna" to "WF",
+            // Central America
+            "Bahamas" to "BS",
+            "Belize" to "BZ",
+            "Costa Rica" to "CR",
+            "Cuba" to "CU",
+            "El Salvador" to "SV",
+            "Guatemala" to "GT",
+            "Haiti and Dominican Republic" to "HT",
+            "Honduras" to "HN",
+            "Jamaica" to "JM",
+            "Nicaragua" to "NI",
+            "Panama" to "PA",
+            // North America
+            "Canada" to "CA",
+            "Greenland" to "GL",
+            "Mexico" to "MX",
+            "United States of America" to "US",
+            // South America
+            "Argentina" to "AR",
+            "Bolivia" to "BO",
+            "Brazil" to "BR",
+            "Chile" to "CL",
+            "Colombia" to "CO",
+            "Ecuador" to "EC",
+            "Guyana" to "GY",
+            "Paraguay" to "PY",
+            "Peru" to "PE",
+            "Suriname" to "SR",
+            "Uruguay" to "UY",
+            "Venezuela" to "VE"
+        )
 
-        // Europe
-        hashMap["Albania"] = "AL"
-        hashMap["Andorra"] = "AD"
-        hashMap["Austria"] = "AT"
-        hashMap["Azores"] = "PT"
-        hashMap["Belarus"] = "BY"
-        hashMap["Belgium"] = "BE"
-        hashMap["Bosnia-Herzegovina"] = "BA"
-        hashMap["Bulgaria"] = "BG"
-        hashMap["Croatia"] = "HR"
-        hashMap["Cyprus"] = "CY"
-        hashMap["Czech Republic"] = "CZ"
-        hashMap["Denmark"] = "DK"
-        hashMap["Estonia"] = "EE"
-        hashMap["Faroe Islands"] = "FO"
-        hashMap["Finland"] = "FI"
-        hashMap["France"] = "FR"
-        hashMap["Georgia"] = "GE"
-        hashMap["Germany"] = "DE"
-        hashMap["Greece"] = "GR"
-        hashMap["Guernsey and Jersey"] = ""
-        hashMap["Hungary"] = "HU"
-        hashMap["Iceland"] = "IS"
-        hashMap["Ireland and Northern Ireland"] = "IE"
-        hashMap["Isle of Man"] = "IM"
-        hashMap["Italy"] = "IT"
-        hashMap["Kosovo"] = "XK"
-        hashMap["Latvia"] = "LV"
-        hashMap["Liechtenstein"] = "LI"
-        hashMap["Lithuania"] = "LT"
-        hashMap["Luxembourg"] = "LU"
-        hashMap["Macedonia"] = "MK"
-        hashMap["Malta"] = "MT"
-        hashMap["Moldova"] = "MD"
-        hashMap["Monaco"] = "MC"
-        hashMap["Montenegro"] = "ME"
-        hashMap["Netherlands"] = "NL"
-        hashMap["Norway"] = "NO"
-        hashMap["Poland"] = "PL"
-        hashMap["Portugal"] = "PO"
-        hashMap["Romania"] = "RO"
-        hashMap["Russian Federation"] = "RU"
-        hashMap["Serbia"] = "RS"
-        hashMap["Slovakia"] = "SK"
-        hashMap["Slovenia"] = "SI"
-        hashMap["Spain"] = "ES"
-        hashMap["Sweden"] = "SE"
-        hashMap["Switzerland"] = "CH"
-        hashMap["Turkey"] = "TR"
-        hashMap["Ukraine (with Crimea)"] = "UA"
-        hashMap["United Kingdom"] = "GB"
-
-        // Africa
-        hashMap["Algeria"] = "DZ"
-        hashMap["Angola"] = "AO"
-        hashMap["Benin"] = "BJ"
-        hashMap["Botswana"] = "BW"
-        hashMap["Burkina Faso"] = "BF"
-        hashMap["Burundi"] = "BI"
-        hashMap["Cameroon"] = "CM"
-        hashMap["Cape Verde"] = "CV"
-        hashMap["Central African Republic"] = "CF"
-        hashMap["Chad"] = "TD"
-        hashMap["Comores"] = "KM"
-        hashMap["Congo (Republic/Brazzaville)"] = "CG"
-        hashMap["Congo (Democratic Republic/Kinshasa)"] = "CD"
-        hashMap["Djibouti"] = "DJ"
-        hashMap["Egypt"] = "EG"
-        hashMap["Equatorial Guinea"] = "GQ"
-        hashMap["Eritrea"] = "ER"
-        hashMap["Ethiopia"] = "ET"
-        hashMap["Gabon"] = "GA"
-        hashMap["Ghana"] = "GH"
-        hashMap["Guinea"] = "GN"
-        hashMap["Guinea-Bissau"] = "GW"
-        hashMap["Ivory Coast"] = "CI"
-        hashMap["Kenya"] = "KE"
-        hashMap["Lesotho"] = "LS"
-        hashMap["Liberia"] = "LR"
-        hashMap["Libya"] = "LY"
-        hashMap["Madagascar"] = "MG"
-        hashMap["Malawi"] = "MW"
-        hashMap["Mali"] = "ML"
-        hashMap["Mauritania"] = "MR"
-        hashMap["Mauritius"] = "MU"
-        hashMap["Morocco"] = "MA"
-        hashMap["Mozambique"] = "MZ"
-        hashMap["Namibia"] = "NA"
-        hashMap["Niger"] = "NE"
-        hashMap["Nigeria"] = "NG"
-        hashMap["Rwanda"] = "RW"
-        hashMap["Saint Helena, Ascension, and Tristan da Cunha"] = "SH"
-        hashMap["Sao Tome and Principe"] = "ST"
-        hashMap["Senegal and Gambia"] = "SN"
-        hashMap["Seychelles"] = "SC"
-        hashMap["Sierra Leone"] = "SL"
-        hashMap["Somalia"] = "SO"
-        hashMap["South Africa"] = "ZA"
-        hashMap["South Sudan"] = "SS"
-        hashMap["Sudan"] = "SD"
-        hashMap["Swaziland"] = "SZ"
-        hashMap["Tanzania"] = "TZ"
-        hashMap["Togo"] = "TG"
-        hashMap["Tunisia"] = "TN"
-        hashMap["Uganda"] = "UG"
-        hashMap["Zambia"] = "ZM"
-        hashMap["Zimbabwe"] = "ZW"
-
-        // Asia
-        hashMap["Afghanistan"] = "AF"
-        hashMap["Armenia"] = "AM"
-        hashMap["Azerbaijan"] = "AZ"
-        hashMap["Bangladesh"] = "BD"
-        hashMap["Bhutan"] = "BT"
-        hashMap["Cambodia"] = "KH"
-        hashMap["China"] = "CN"
-        hashMap["East Timor"] = "TL"
-        hashMap["GCC States"] = "AE"
-        hashMap["India"] = "IN"
-        hashMap["Indonesia (with East Timor)"] = "ID"
-        hashMap["Iran"] = "IR"
-        hashMap["Iraq"] = "IQ"
-        hashMap["Israel and Palestine"] = "IL"
-        hashMap["Japan"] = "JP"
-        hashMap["Jordan"] = "JO"
-        hashMap["Kazakhstan"] = "KZ"
-        hashMap["Kyrgyzstan"] = "KG"
-        hashMap["Laos"] = "LA"
-        hashMap["Lebanon"] = "LB"
-        hashMap["Malaysia, Singapore, and Brunei"] = "MY"
-        hashMap["Maldives"] = "MV"
-        hashMap["Mongolia"] = "MN"
-        hashMap["Myanmar (a.k.a. Burma)"] = "MM"
-        hashMap["Nepal"] = "NP"
-        hashMap["North Korea"] = "KP"
-        hashMap["Pakistan"] = "PK"
-        hashMap["Philippines"] = "PH"
-        hashMap["South Korea"] = "KR"
-        hashMap["Sri Lanka"] = "LK"
-        hashMap["Syria"] = "SY"
-        hashMap["Taiwan"] = "TW"
-        hashMap["Tajikistan"] = "TJ"
-        hashMap["Thailand"] = "TH"
-        hashMap["Turkmenistan"] = "TM"
-        hashMap["Uzbekistan"] = "UZ"
-        hashMap["Vietnam"] = "VN"
-        hashMap["Yemen"] = "YE"
-
-        // Australia & Oceania
-        hashMap["Australia"] = "AU"
-        hashMap["Cook Islands"] = "CK"
-        hashMap["Fiji"] = "FJ"
-        hashMap["Île de Clipperton"] = "CP"
-        hashMap["Kiribati"] = "KI"
-        hashMap["Marshall Islands"] = "MH"
-        hashMap["Micronesia"] = ""
-        hashMap["Nauru"] = "NR"
-        hashMap["New Caledonia"] = "NC"
-        hashMap["New Zealand"] = "NZ"
-        hashMap["Niue"] = "NU"
-        hashMap["Palau"] = "PW"
-        hashMap["Papua New Guinea"] = "PG"
-        hashMap["Pitcairn Islands"] = "PN"
-        hashMap["Polynésie française (French Polynesia)"] = "PF"
-        hashMap["Samoa"] = "WS"
-        hashMap["Solomon Islands"] = "SB"
-        hashMap["Tokelau"] = "TK"
-        hashMap["Tonga"] = "TO"
-        hashMap["Tuvalu"] = "TV"
-        hashMap["Vanuatu"] = "VU"
-        hashMap["Wallis et Futuna"] = "WF"
-
-        // Central America
-        hashMap["Bahamas"] = "BS"
-        hashMap["Belize"] = "BZ"
-        hashMap["Costa Rica"] = "CR"
-        hashMap["Cuba"] = "CU"
-        hashMap["El Salvador"] = "SV"
-        hashMap["Guatemala"] = "GT"
-        hashMap["Haiti and Dominican Republic"] = "HT"
-        hashMap["Honduras"] = "HN"
-        hashMap["Jamaica"] = "JM"
-        hashMap["Nicaragua"] = "NI"
-        hashMap["Panama"] = "PA"
-
-        // North America
-        hashMap["Canada"] = "CA"
-        hashMap["Greenland"] = "GL"
-        hashMap["Mexico"] = "MX"
-        hashMap["United States of America"] = "US"
-
-        // South America
-        hashMap["Argentina"] = "AR"
-        hashMap["Bolivia"] = "BO"
-        hashMap["Brazil"] = "BR"
-        hashMap["Chile"] = "CL"
-        hashMap["Colombia"] = "CO"
-        hashMap["Ecuador"] = "EC"
-        hashMap["Guyana"] = "GY"
-        hashMap["Paraguay"] = "PY"
-        hashMap["Peru"] = "PE"
-        hashMap["Suriname"] = "SR"
-        hashMap["Uruguay"] = "UY"
-        hashMap["Venezuela"] = "VE"
-
-        return hashMap[name] ?: ""
+        return map[name] ?: ""
     }
 }

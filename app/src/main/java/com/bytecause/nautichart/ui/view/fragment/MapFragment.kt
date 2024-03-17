@@ -2,7 +2,6 @@ package com.bytecause.nautichart.ui.view.fragment
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Point
@@ -99,6 +98,7 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.properties.Delegates
 
+@Suppress("UNCHECKED_CAST")
 fun <T> MutableList<Overlay>.addOverlay(
     overlay: T?,
     listener: MapFragmentInterface
@@ -119,6 +119,8 @@ fun <T> MutableList<Overlay>.addOverlay(
     }
 }
 
+
+// TODO("This Fragment gone wrong and needs to be rewritten.")
 @AndroidEntryPoint
 class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
@@ -212,7 +214,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                 else -> {
                     if (isEnabled) Toast.makeText(
                         requireContext(),
-                        "Press back again to exit.",
+                        getString(R.string.press_back_again),
                         Toast.LENGTH_SHORT
                     ).show()
                     isEnabled = false
@@ -291,7 +293,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         bottomSheetCallback = object : BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 // Handle state changes (e.g., expanded, collapsed, hidden)
-                Log.d(TAG(), "newState")
                 when (newState) {
                     STATE_HIDDEN -> {
                         when (bottomSheet.id) {
@@ -326,19 +327,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
         return super.onCreateView(inflater, container, savedInstanceState)
     }
-
-    /*fun convertBbox() {
-        val bbox = mapView.boundingBox
-        val swX = round(bbox.lonWest * 10000) / 10000
-        val swY = round(bbox.latSouth * 10000) / 10000
-        val neX = round(bbox.lonEast * 10000) / 10000
-        val neY = round(bbox.latNorth * 10000) / 10000
-
-        Log.d(
-            "mapfragment",
-            "https://www.marinetraffic.com/legacy/getxml_i?sw_x=${swX}&sw_y=${swY}&ne_x=${neX}&ne_y=${neY}&zoom=8"
-        )
-    }*/
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -406,8 +394,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                 }
 
                 it.getBoolean("measureBottomSheetVisible", false) -> {
-                    // TODO()
-                    Log.d(TAG(), "bundle not null")
                     customCompassView = binding.compassView
                     enterMeasureDistanceMode()
                 }
@@ -501,7 +487,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             setOnTextChangedListener(object :
                 CustomTextInputEditText.OnTextChangedListener {
                 override fun onTextChanged(text: CharSequence?) {
-                    Log.d(TAG(), text.toString())
                     if (!text.isNullOrEmpty()) {
                         ContextCompat.getDrawable(
                             requireContext(),
@@ -563,7 +548,11 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
             if (requireContext().isLocationPermissionGranted()) {
                 if (myLocationOverlay.myLocation == null) {
-                    Toast.makeText(requireContext(), "Location not known yet.", Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.location_not_known_yet),
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                     return@setOnClickListener
                 }
@@ -643,14 +632,14 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                     }, 200)
                 }
 
-                /* if (viewModel.harboursVisible.value == true) {
-                     harbourHandler.removeCallbacksAndMessages(null)
-                     harbourHandler.postDelayed(
-                         {
-                             harboursDatabaseRepositoryViewModel.emitVisibleHarbours(mapView.boundingBox)
-                         }, 200
-                     )
-                 }*/
+                if (viewModel.harboursVisible.value == true) {
+                    harbourHandler.removeCallbacksAndMessages(null)
+                    harbourHandler.postDelayed(
+                        {
+                            viewModel.emitVisibleHarbours(mapView.boundingBox)
+                        }, 200
+                    )
+                }
 
                 if (mapView.zoomLevelDouble >= 17) {
                     poiHandler.removeCallbacksAndMessages(null)
@@ -766,7 +755,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             if (!overlayHelper.geoPointList.contains(centerGeoPoint)) {
                 overlayHelper.setGeoPointList(overlayHelper.geoPointList + centerGeoPoint)
                 overlayHelper.drawDistancePaths(overlayHelper.geoPointList)
-                //overlayHelper.addMarkerToMap(centerGeoPoint)
                 overlayHelper.addMeasurePoint(centerGeoPoint)
             }
         }
@@ -824,14 +812,14 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         viewModel.harboursVisible.observe(viewLifecycleOwner) {
             when (it) {
                 true -> {
-                    /*overlayHelper.harboursClusterer ?: overlayHelper.initHarboursClusterer()
+                    overlayHelper.harboursClusterer ?: overlayHelper.initHarboursClusterer()
                     viewLifecycleOwner.lifecycleScope.launch {
-                        if (harboursDatabaseRepositoryViewModel.isHarboursDatabaseEmpty.firstOrNull() == true) {
+                        if (viewModel.isHarboursDatabaseEmpty.firstOrNull() == true) {
                             viewModel.fetchHarbours()
                             return@launch
                         }
-                        harboursDatabaseRepositoryViewModel.emitVisibleHarbours(mapView.boundingBox)
-                    }*/
+                        viewModel.emitVisibleHarbours(mapView.boundingBox)
+                    }
                 }
 
                 false -> {
@@ -946,8 +934,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            // TODO("CREATED")
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
                 mapSharedViewModel.showPoiStateFlow.collect { poiMap ->
                     if (poiMap.isNullOrEmpty()) return@collect
                     // poiMap holds category name and List of IDs which are used for search in database.
@@ -970,15 +957,15 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             }
         }
 
-        /*viewLifecycleOwner.lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                harboursDatabaseRepositoryViewModel.loadAllHarbours.collect { harbours ->
+                viewModel.loadAllHarbours.collect { harbours ->
                     if (viewModel.harboursVisible.value == true && harbours.isNotEmpty()) {
                         overlayHelper.drawHarbourMarkerOnMap(harbours)
                     }
                 }
             }
-        }*/
+        }
 
         // Changes location button state, if state == 1 mapView will be rotated based on current
         // device's direction.
@@ -995,82 +982,82 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             }
         }
 
-        /* viewLifecycleOwner.lifecycleScope.launch {
-             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                 viewModel.harboursFetchingState.collect { state ->
-                     state ?: return@collect
-                     if (viewModel.harboursVisible.value != true) return@collect
-
-                     if (state.error != null) {
-                         findNavController().popBackStack(
-                             R.id.customizeMapDialog,
-                             false
-                         )
-                     }
-
-                     when (state.error) {
-                         UiState.Error.NetworkError -> {
-                             Toast.makeText(
-                                 requireContext(),
-                                 getString(R.string.no_network_available),
-                                 Toast.LENGTH_SHORT
-                             ).show()
-                             viewModel.toggleHarboursLocations()
-                         }
-
-                         UiState.Error.ServiceUnavailable -> {
-                             Toast.makeText(
-                                 requireContext(),
-                                 getString(R.string.service_unavailable),
-                                 Toast.LENGTH_SHORT
-                             ).show()
-                             viewModel.toggleHarboursLocations()
-                         }
-
-                         UiState.Error.Other -> {
-                             Toast.makeText(
-                                 requireContext(),
-                                 getString(R.string.something_went_wrong),
-                                 Toast.LENGTH_SHORT
-                             ).show()
-                             viewModel.toggleHarboursLocations()
-                         }
-
-                         null -> {
-                             if (state.isLoading) {
-                                 if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
-                                     val action =
-                                         CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
-                                             getString(R.string.loading_harbours_text)
-                                         )
-                                     findNavController().navigate(action)
-                                 }
-                             } else {
-                                 if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
-                                     findNavController().popBackStack(R.id.customizeMapDialog, false)
-                                 }
-                             }
-
-                             state.items.takeIf { it.isNotEmpty() }?.let {
-                                 it.map { id -> id.harborId }.let { idList ->
-                                     if (harboursDatabaseRepositoryViewModel.isHarbourIdInDatabase(
-                                             idList
-                                         )
-                                             .firstOrNull() == false
-                                     ) {
-                                         harboursDatabaseRepositoryViewModel.addHarbours(it)
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 }
-             }
-         }*/
-
-        /*viewLifecycleOwner.lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                harboursDatabaseRepositoryViewModel.harboursInAreaSharedFlow.collect { harbourInfoList ->
+                viewModel.harboursFetchingState.collect { state ->
+                    state ?: return@collect
+                    if (viewModel.harboursVisible.value != true) return@collect
+
+                    if (state.error != null) {
+                        findNavController().popBackStack(
+                            R.id.customizeMapDialog,
+                            false
+                        )
+                    }
+
+                    when (state.error) {
+                        UiState.Error.NetworkError -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.no_network_available),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            viewModel.toggleHarboursLocations()
+                        }
+
+                        UiState.Error.ServiceUnavailable -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.service_unavailable),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            viewModel.toggleHarboursLocations()
+                        }
+
+                        UiState.Error.Other -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.something_went_wrong),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            viewModel.toggleHarboursLocations()
+                        }
+
+                        null -> {
+                            if (state.isLoading) {
+                                if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
+                                    val action =
+                                        CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
+                                            getString(R.string.loading_harbours_text)
+                                        )
+                                    findNavController().navigate(action)
+                                }
+                            } else {
+                                if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
+                                    findNavController().popBackStack(R.id.customizeMapDialog, false)
+                                }
+                            }
+
+                            state.items.takeIf { it.isNotEmpty() }?.let {
+                                it.map { id -> id.harborId }.let { idList ->
+                                    if (viewModel.isHarbourIdInDatabase(
+                                            idList
+                                        )
+                                            .firstOrNull() == false
+                                    ) {
+                                        viewModel.addHarbours(it)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.harboursInAreaSharedFlow.collect { harbourInfoList ->
                     if (viewModel.harboursVisible.value == false) return@collect
 
                     if (!harbourInfoList.isNullOrEmpty()) {
@@ -1087,7 +1074,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                     }
                 }
             }
-        }*/
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -1226,8 +1213,8 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        // TODO( WHY ? )
         if (findNavController().currentDestination?.id != R.id.map_dest) return
+
         when {
             bottomSheetLayout.isVisible -> {
                 outState.putBoolean("geoPointBottomSheetVisible", bottomSheetLayout.isVisible)
@@ -1247,11 +1234,11 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
     private fun restoreMarkerClickedState() {
         viewModel.selectedMarker?.let { selectedMarker ->
             when (selectedMarker.type) {
-                /*CustomMarker.CustomMarkerType.HarbourMarker -> {
+                CustomMarker.CustomMarkerType.HarbourMarker -> {
                     overlayHelper.harboursClusterer?.getItems()
                         ?.firstOrNull { marker -> marker.id == selectedMarker.id }
                         ?.isClicked(false)
-                }*/
+                }
 
                 CustomMarker.CustomMarkerType.VesselMarker -> {
                     vesselsClusterer?.getItems()
@@ -1469,6 +1456,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
         lifecycleScope.launch {
             marker.id ?: return@launch
+
             async {
                 when (marker.type) {
                     // Get marker info of the type VesselMarker.
@@ -1525,7 +1513,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                     }
 
                     // Get marker info of the type HarbourMarker.
-                    /*CustomMarker.CustomMarkerType.HarbourMarker -> {
+                    CustomMarker.CustomMarkerType.HarbourMarker -> {
                         viewModel.searchHarbourById(marker.id.toInt())
                             .firstOrNull()
                             ?.let { harbourInfo ->
@@ -1533,13 +1521,13 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
                                     title = harbourInfo.harborName
                                 }
                             }
-                    }*/
+                    }
                 }
             }.await().let { customMarker ->
                 // Perform UI operations based on received result.
                 customMarker ?: return@launch
                 if (bottomSheetLayout.isVisible) bottomSheetBehavior.state = STATE_HIDDEN
-                //
+
                 viewModel.setSelectedMarker(customMarker)
 
                 binding.markerBottomSheetId.apply {

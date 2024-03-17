@@ -7,5 +7,6 @@ data class PoiQueryEntity(
     val category: List<String>,
     val radius: Int,
     val position: GeoPoint,
-    val query: SimpleOverpassQueryBuilder
+    val query: SimpleOverpassQueryBuilder,
+    val appliedFilters: Map<String, List<String>>?
 )

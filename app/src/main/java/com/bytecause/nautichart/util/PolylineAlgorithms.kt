@@ -61,17 +61,18 @@ class PolylineAlgorithms {
     }
 
     private fun encode(v: Long, result: StringBuffer) {
-        var v = v
+        var value = v
         // inv() switches integer sign.
-        v = if (v < 0) (v shl 1).inv() else v shl 1
-        while (v >= 0x20) {
-            result.append(Character.toChars(((0x20L or (v and 0x1fL)) + 63).toInt()))
-            v = v shr 5
+        value = if (value < 0) (value shl 1).inv() else value shl 1
+        while (value >= 0x20) {
+            result.append(Character.toChars(((0x20L or (value and 0x1fL)) + 63).toInt()))
+            value = value shr 5
         }
-        result.append(Character.toChars((v + 63).toInt()))
+        result.append(Character.toChars((value + 63).toInt()))
     }
 
-    /** Douglas-Peucker decimation algorithm.  **/
+    /** Douglas-Peucker decimation algorithm. Country's boundaries wouldn't fit into database, so
+     * we need to lower the count of polyline points. **/
     fun simplifyPolyline(points: List<GeoPoint>, epsilon: Double): List<GeoPoint> {
         // Find the point with the maximum distance
         var dmax = 0.0
@@ -102,6 +103,7 @@ class PolylineAlgorithms {
         }
     }
 
+    // calculates distance of point A to point B.
     private fun perpendicularDistance(pt: GeoPoint, lineFrom: GeoPoint, lineTo: GeoPoint): Double {
         val numerator = abs(
             (lineTo.longitude - lineFrom.longitude) * (lineFrom.latitude - pt.latitude) -

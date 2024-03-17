@@ -27,7 +27,7 @@
         android:id="@+id/send_textview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Send"
+        android:text="@string/send"
         android:textColor="@color/adaptive_color"
         android:layout_alignTop="@id/send_image_view"
         android:layout_alignBottom="@id/send_image_view"
@@ -58,7 +58,7 @@
             android:layout_alignTop="@id/copy_coordinates_image_view"
             android:layout_toEndOf="@id/copy_coordinates_image_view"
             android:layout_marginStart="20dp"
-            android:text="Copy coordinates"
+            android:text="@string/copy_coordinates"
             android:focusable="true" />
 
         <ImageView
@@ -79,7 +79,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="20sp"
-            android:text="Third party app"
+            android:text="@string/third_party_app"
             android:textColor="@color/adaptive_color"
             android:clickable="true"
             android:layout_marginStart="20dp"

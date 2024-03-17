@@ -1,16 +1,12 @@
 package com.bytecause.nautichart.ui.view.activity
 
-import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.view.animation.OvershootInterpolator
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.animation.doOnEnd
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -33,8 +29,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Splash Screen API throws iconView NPE when navigating from implicit intent.
         // Start-up splash screen.
-        installSplashScreen().apply {
+        /*installSplashScreen().apply {
             setOnExitAnimationListener { screen ->
                 val zoomX = ObjectAnimator.ofFloat(
                     screen.iconView,
@@ -59,7 +56,7 @@ class MainActivity : AppCompatActivity() {
                 zoomX.start()
                 zoomY.start()
             }
-        }
+        } */
 
         setContentView(R.layout.navigation_activity)
 

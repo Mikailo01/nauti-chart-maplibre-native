@@ -1,6 +1,5 @@
 package com.bytecause.nautichart.ui.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -16,7 +15,6 @@ import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
 import com.bytecause.nautichart.domain.usecase.RegionUseCase
 import com.bytecause.nautichart.ui.view.fragment.getKeyByIndex
-import com.bytecause.nautichart.util.TAG
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -77,7 +75,6 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
             _regionUiStateLiveData.postValue(UiState(isLoading = true))
             when (val data = regionUseCase.getRegions(countryId, isoCode, query).firstOrNull()) {
                 is ApiResult.Success -> {
-                    Log.d(TAG(this@DownloadPoiSelectCountryViewModel), "getRegions")
                     _regionUiStateLiveData.postValue(UiState(
                         isLoading = false,
                         items = data.data?.sortedBy {
@@ -120,7 +117,6 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
             _poiDownloadUiStateLiveData.postValue(UiState(isLoading = true))
             when (val data = poiUseCase.getPoiResultByRegion(regionName, query).firstOrNull()) {
                 is ApiResult.Success -> {
-                    Log.d(TAG(this@DownloadPoiSelectCountryViewModel), "success")
                     _poiDownloadUiStateLiveData.postValue(
                         UiState(
                             isLoading = false,
@@ -274,7 +270,6 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         for ((key, value) in mapContent.value) {
             if (value.isLoading) {
                 mapContent.value[key]?.let {
-                    Log.d(TAG(this), "updateMap")
                     updateMapElement(key, item = it.copy(isLoading = false))
                 }
             }

@@ -3,6 +3,7 @@ package com.bytecause.nautichart.ui.view.fragment.bottomsheet
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.navigation.fragment.findNavController
 import com.bytecause.nautichart.R
 import com.bytecause.nautichart.databinding.MapToolsBottomSheetFragmentBinding
@@ -35,6 +36,10 @@ class MapToolsBottomSheetFragment :
         binding.customTileSourceImagebutton.setOnClickListener {
             if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_customTileSourceDialog)
+        }
+
+        binding.sallingRouteImageView.setOnClickListener {
+            Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT).show()
         }
     }
 }

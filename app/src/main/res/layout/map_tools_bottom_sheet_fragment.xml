@@ -68,11 +68,14 @@
         android:orientation="vertical">
 
         <ImageButton
+            android:id="@+id/salling_route_image_view"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:background="@color/transparent"
             android:scaleX="1.2"
             android:scaleY="1.2"
+            android:clickable="true"
+            android:focusable="true"
             android:layout_gravity="center"
             android:src="@drawable/route_icon"
             app:tint="@color/adaptive_color" />

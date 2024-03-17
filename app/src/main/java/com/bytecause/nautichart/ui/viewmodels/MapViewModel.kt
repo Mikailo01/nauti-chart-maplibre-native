@@ -9,10 +9,10 @@ import com.bytecause.nautichart.data.local.room.tables.HarboursEntity
 import com.bytecause.nautichart.data.local.room.tables.PoiCacheEntity
 import com.bytecause.nautichart.data.local.room.tables.VesselInfoEntity
 import com.bytecause.nautichart.data.repository.CustomPoiDatabaseRepository
+import com.bytecause.nautichart.data.repository.HarboursDatabaseRepository
 import com.bytecause.nautichart.data.repository.HarboursRepository
 import com.bytecause.nautichart.data.repository.PoiCacheRepository
 import com.bytecause.nautichart.data.repository.UserPreferencesRepository
-import com.bytecause.nautichart.data.repository.VesselsDatabaseRepository
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.model.VesselMappedEntity
@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
@@ -38,12 +37,15 @@ import org.osmdroid.util.GeoPoint
 import java.net.ConnectException
 import javax.inject.Inject
 
+// TODO("Refactor")
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    // I didn't use UseCase for this, because I will probably replace this API.
     private val harboursRepository: HarboursRepository,
+    private val harboursDatabaseRepository: HarboursDatabaseRepository,
+    //
     private val poiCacheRepository: PoiCacheRepository,
     private val customPoiRepository: CustomPoiDatabaseRepository,
-    private val vesselsRepository: VesselsDatabaseRepository,
     private val vesselsUseCase: VesselsUseCase,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
@@ -75,17 +77,6 @@ class MapViewModel @Inject constructor(
     var selectedMarker: CustomMarker? = null
         private set
 
-    /*val loadCachedResults: Flow<List<PoiCacheEntity>> = poiCacheRepository.loadCachedResults.mapLatest {
-        it.filter {
-            MapUtil.isPositionInBoundingBox(
-                GeoPoint(
-                    it.latitude,
-                    it.longitude
-                ), mapView.boundingBox
-            )
-        }
-    }*/
-
     fun filterPoiByBoundingBox(boundingBox: BoundingBox): Flow<List<PoiCacheEntity>> =
         poiCacheRepository.loadCachedResults
             .map { list ->
@@ -99,57 +90,16 @@ class MapViewModel @Inject constructor(
                 }
             }
 
-    fun shouldUpdateVessels(currentTimeMillis: Long): Flow<Boolean> =
-        vesselsRepository.shouldUpdateVesselDatabase(currentTimeMillis)
-
-    fun searchVesselById(id: Int): Flow<VesselInfoEntity> = vesselsRepository.searchVesselById(id)
-
-    val isCacheEmpty: Flow<Boolean> = poiCacheRepository.isCacheEmpty
-    val getAllDistinctCategories: Flow<List<String>> = poiCacheRepository.getAllDistinctCategories
+    fun searchVesselById(id: Int): Flow<VesselInfoEntity> = vesselsUseCase.searchVesselById(id)
 
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheEntity>> = poiCacheRepository.searchInCache(placeIds)
-
-    fun isPlaceCached(placeId: Long): Flow<Boolean> = poiCacheRepository.isPlaceCached(placeId)
-
-    suspend fun cacheResult(result: List<PoiCacheEntity>) {
-        withContext(Dispatchers.IO) {
-            poiCacheRepository.cacheResult(result)
-        }
-    }
-
-    suspend fun clearCache() {
-        withContext(Dispatchers.IO) {
-            poiCacheRepository.clearCache()
-        }
-    }
 
     val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi
 
     fun searchCustomPoiById(id: Int): Flow<CustomPoiEntity> =
         customPoiRepository.searchCustomPoiById(id)
 
-    /*fun getCustomPoiByCategory(category: String): Flow<List<CustomPoiEntity>> =
-        customPoiRepository.getCustomPoiByCategory(category)*/
-
-    /*fun insertCustomPoi(entity: CustomPoiEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            customPoiRepository.insertCustomPoi(entity)
-        }
-    }*/
-
-    /*fun deleteCustomPoiByNameAndCategory(name: String, category: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            customPoiRepository.deleteCustomPoiByName(name, category)
-        }
-    }*/
-
-    /*fun deleteCustomPoiByCategory(category: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            customPoiRepository.deleteCustomPoiByCategory(category)
-        }
-    }*/
-
-    /*private val _harboursInAreaSharedFlow = MutableSharedFlow<List<HarboursEntity>?>()
+    private val _harboursInAreaSharedFlow = MutableSharedFlow<List<HarboursEntity>?>()
     val harboursInAreaSharedFlow get() = _harboursInAreaSharedFlow.asSharedFlow()
 
     val loadAllHarbours: Flow<List<HarboursEntity>> = harboursDatabaseRepository.loadAllHarbours
@@ -174,7 +124,7 @@ class MapViewModel @Inject constructor(
                 }
             }
         }
-    }*/
+    }
 
     fun setIsCustomizeDialogVisible(b: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {

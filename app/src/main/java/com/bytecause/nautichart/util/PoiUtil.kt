@@ -1,11 +1,10 @@
 package com.bytecause.nautichart.util
 
-import android.util.Log
 import com.bytecause.nautichart.domain.model.OverpassNodeModel
 
-class PoiUtil {
+object PoiUtil {
 
-    // extracts category from overpass element's tags
+    /** extracts category from overpass element's tags **/
     fun extractCategoryFromPoiEntity(tagsMap: Map<String, String>): String? {
         return when {
             tagsMap.containsKey("amenity") -> tagsMap["amenity"]
@@ -89,7 +88,7 @@ class PoiUtil {
         }
 
         // otherwise return back passed argument
-        return listOf(categoryName).also { Log.d(TAG(this), categoryName) }
+        return listOf(categoryName)
     }
 
     // for category names listed in list will be used the same drawable resource.

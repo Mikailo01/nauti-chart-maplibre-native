@@ -351,7 +351,7 @@ class CustomMarkerDialog : DialogFragment(),
 
         binding.toolbar.apply {
             navBack.setOnClickListener {
-                this@CustomMarkerDialog.dismiss()
+                findNavController().popBackStack()
             }
             destNameTextView.text = getString(R.string.add_marker)
         }
