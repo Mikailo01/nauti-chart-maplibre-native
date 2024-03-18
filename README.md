@@ -5,6 +5,8 @@ NautiChart is an application designed to provide users with real-time vessel pos
 
 **_Please note that NautiChart is still in development, so some features are not implemented yet._**
 
+<img src="screenshots/Screenshot_20240318_085139.png" alt="Example Image" width="300"/> <img src="screenshots/Screenshot_20240318_085255.png" alt="Example Image" width="300"/>
+
 ## Features
 - **Vessel Tracking**: Latest positions of vessels worldwide.
 - **Harbor and Marina Information**: View positions of harbours and marinas.
@@ -26,9 +28,6 @@ NautiChart is an application designed to provide users with real-time vessel pos
 - **OSMDroid**: Provides maps and navigation functionality.
 - **OSMBonusPack**: Enhancements for OSMDroid.
 - **Dagger Hilt**: Dependency injection framework.
-
-## Usage
-
 
 ## License
 **NautiChart** is licensed under the **GNU General Public License (GPL)**. This license ensures that anyone who distributes copies of your app, whether for free or for a fee, must also make the source code available under the same license. This effectively prevents others from selling your app without also providing the source code.
