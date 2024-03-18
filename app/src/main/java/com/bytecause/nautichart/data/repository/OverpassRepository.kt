@@ -14,6 +14,8 @@ class OverpassRepository(
     val overpassRestApiService: OverpassRestApiService
 ) {
 
+    // Overpass API returns different JSON scheme for Nodes and Relations, so we have to pass correct
+    // type argument.
     suspend inline fun <reified T : OverpassElement> makeQuery(query: String): ApiResult<List<T>> {
         return withContext(Dispatchers.IO) {
             try {

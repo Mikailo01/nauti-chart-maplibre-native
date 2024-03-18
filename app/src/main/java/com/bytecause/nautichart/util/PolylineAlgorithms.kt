@@ -103,7 +103,7 @@ class PolylineAlgorithms {
         }
     }
 
-    // calculates distance of point A to point B.
+    // calculate perpendicular distance.
     private fun perpendicularDistance(pt: GeoPoint, lineFrom: GeoPoint, lineTo: GeoPoint): Double {
         val numerator = abs(
             (lineTo.longitude - lineFrom.longitude) * (lineFrom.latitude - pt.latitude) -

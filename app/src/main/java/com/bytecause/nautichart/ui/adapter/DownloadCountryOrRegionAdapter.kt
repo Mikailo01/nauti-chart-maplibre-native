@@ -178,7 +178,8 @@ class RegionChildAdapter(
 
         holder.regionNameTextView.text =
             regionElement.region.names["name:${Locale.getDefault().language}"]
-                ?: regionElement.region.names["name"]
+                ?: regionElement.region.names["name:en"]
+                        ?: regionElement.region.names["name"]
 
         holder.checkBox.apply {
             isEnabled = regionElement.isCheckBoxEnabled

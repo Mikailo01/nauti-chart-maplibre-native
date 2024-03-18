@@ -38,14 +38,14 @@ data class OverpassRelationModel(
 ): OverpassElement()
 
 class OverpassElementTypeAdapter : TypeAdapter<OverpassElement>() {
-    override fun write(writer: JsonWriter?, value: OverpassElement?) {
-        // Serialization is not needed for this example
-    }
+    override fun write(writer: JsonWriter?, value: OverpassElement?) {}
 
     override fun read(reader: JsonReader?): OverpassElement? {
         if (reader != null) {
             val jsonObject = Gson().fromJson<JsonObject>(reader, JsonObject::class.java)
 
+            // if result returned by API contains "lat" and "lon" use OverpassNodeModel, because
+            // only nodes contains latitude and longitude information.
             return when {
                 jsonObject.has("lat") && jsonObject.has("lon") -> Gson().fromJson(jsonObject, OverpassNodeModel::class.java)
                 jsonObject.has("id") && jsonObject.has("tags") -> Gson().fromJson(jsonObject, OverpassRelationModel::class.java)
@@ -56,6 +56,7 @@ class OverpassElementTypeAdapter : TypeAdapter<OverpassElement>() {
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 class OverpassElementTypeAdapterFactory : TypeAdapterFactory {
     override fun <T : Any?> create(gson: Gson?, type: TypeToken<T>?): TypeAdapter<T>? {
         if (type?.rawType == OverpassElement::class.java) {

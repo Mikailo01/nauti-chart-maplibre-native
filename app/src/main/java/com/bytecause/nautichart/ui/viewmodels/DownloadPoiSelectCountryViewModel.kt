@@ -1,5 +1,6 @@
 package com.bytecause.nautichart.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -15,6 +16,7 @@ import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
 import com.bytecause.nautichart.domain.usecase.RegionUseCase
 import com.bytecause.nautichart.ui.view.fragment.getKeyByIndex
+import com.bytecause.nautichart.util.TAG
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,7 +57,8 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
     private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<String>>(UiState())
     val poiDownloadUiStateLiveData: LiveData<UiState<String>> get() = _poiDownloadUiStateLiveData
 
-    private var downloadJob: Job? = null
+    var downloadJob: Job? = null
+        private set
 
     var recyclerViewExpandedStateList = listOf<Boolean>()
         private set
@@ -78,7 +81,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                     _regionUiStateLiveData.postValue(UiState(
                         isLoading = false,
                         items = data.data?.sortedBy {
-                            it.names["name:${Locale.getDefault().language}"] ?: it.names["name"]
+                            it.names["name:${Locale.getDefault().language}"] ?: it.names["name:en"] ?: it.names["name"]
                         } ?: listOf()
                     ))
                 }
@@ -326,7 +329,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                     RegionChildItem(
                         region = it.region,
                         isChecked = true,
-                        isDownloading = showLoading,
+                        isDownloading = showLoading.also { Log.d(TAG(this), it.toString()) },
                         isCheckBoxEnabled = it.isCheckBoxEnabled,
                         size = it.size
                     )
