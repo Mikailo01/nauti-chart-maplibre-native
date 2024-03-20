@@ -114,32 +114,6 @@
 ############################################################################
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomPoiCategory { *; }
-
-# keep the specified class members from being removed or renamed
-# only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomPoiCategory { *; }
-
-# keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomPoiCategory { *; }
-
-# keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomPoiCategory { *; }
-
-# keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomPoiCategoryList { *; }
-
-# keep the specified class members from being removed or renamed
-# only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomPoiCategoryList { *; }
-
-# keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomPoiCategoryList { *; }
-
-# keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomPoiCategoryList { *; }
-
-# keep the class and specified members from being removed or renamed
 -keep class com.bytecause.nautichart.RecentlyUsedPoiMarkerIcon { *; }
 
 # keep the specified class members from being removed or renamed
@@ -203,6 +177,34 @@
 
 # keep the specified class members from being renamed only
 -keepclassmembernames class com.google.android.icing.IcingSearchEngineImpl { *; }
+
+
+
+# keep the class and specified members from being removed or renamed
+-keep class androidx.recyclerview.widget.RecyclerView { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class androidx.recyclerview.widget.RecyclerView { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class androidx.recyclerview.widget.RecyclerView { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class androidx.recyclerview.widget.RecyclerView { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
 
 
 

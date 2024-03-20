@@ -39,8 +39,6 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     private lateinit var parentRecyclerView: RecyclerView
     private lateinit var parentAdapter: CustomPoiMarkerIconParentAdapter
 
-    private val util = Util()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -109,7 +107,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     }
 
     override fun onIconClickListener(view: View, position: Int) {
-        if (!util.lastClick(500)) return
+        if (!Util.lastClick(500)) return
         (view.findViewById<ImageButton>(R.id.icon_view_holder).tag as Int).let { drawableId ->
             // Saves clicked icon drawable resource name into proto datastore.
             viewModel.saveRecentlyUsedPoiMarkerIcon(resources.getResourceEntryName(drawableId))

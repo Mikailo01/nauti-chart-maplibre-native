@@ -106,6 +106,10 @@ class CustomizeMapDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.chipShowAll.setOnClickListener {
+            Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT).show()
+        }
+
         mapViewModel.vesselLocationsVisible.observe(viewLifecycleOwner) {
             binding.chipAis.isChecked = it
         }
@@ -151,7 +155,7 @@ class CustomizeMapDialog : DialogFragment() {
 
             navBack.apply {
                 setOnClickListener {
-                    dismiss()
+                    findNavController().popBackStack()
                 }
             }
             destNameTextView.apply {

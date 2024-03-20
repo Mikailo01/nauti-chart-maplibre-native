@@ -3,7 +3,7 @@ package com.bytecause.nautichart.data.local.datastore.preferences
 import kotlinx.coroutines.flow.Flow
 import org.osmdroid.util.GeoPoint
 
-interface UserPreferencesRepositoryInterface {
+interface UserPreferencesRepository {
 
     suspend fun saveFirstRunFlag(flag: Boolean)
     fun getFirstRunFlag(): Flow<Boolean?>

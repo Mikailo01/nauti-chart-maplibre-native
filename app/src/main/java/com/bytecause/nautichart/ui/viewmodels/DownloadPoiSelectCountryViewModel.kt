@@ -9,6 +9,7 @@ import com.bytecause.nautichart.data.local.room.tables.Country
 import com.bytecause.nautichart.data.local.room.tables.Region
 import com.bytecause.nautichart.data.repository.ContinentDatabaseRepository
 import com.bytecause.nautichart.data.repository.CountryDataExtractSizeRepository
+import com.bytecause.nautichart.data.repository.DownloadedRegionsRepositoryImpl
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.CountryParentItem
 import com.bytecause.nautichart.domain.model.RegionChildItem
@@ -21,9 +22,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.net.ConnectException
 import java.util.Locale
@@ -36,7 +40,8 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
     private val continentDatabaseRepository: ContinentDatabaseRepository,
     private val countryDataExtractSizeRepository: CountryDataExtractSizeRepository,
     private val regionUseCase: RegionUseCase,
-    private val poiUseCase: PoiUseCase
+    private val poiUseCase: PoiUseCase,
+    private val datastoreRepository: DownloadedRegionsRepositoryImpl
 ) : ViewModel() {
 
     private val _mapContent = MutableStateFlow(mapOf<String, CountryParentItem>())
@@ -56,6 +61,14 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
 
     private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<String>>(UiState())
     val poiDownloadUiStateLiveData: LiveData<UiState<String>> get() = _poiDownloadUiStateLiveData
+
+    private val downloadedRegionsStateFlow: StateFlow<Set<Long>> = flow {
+        datastoreRepository.getDownloadedRegionsIds().collect { regionIds ->
+            val longRegionIds = regionIds.map { it.toLong() }.toSet()
+            emit(longRegionIds)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
 
     var downloadJob: Job? = null
         private set
@@ -81,7 +94,8 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                     _regionUiStateLiveData.postValue(UiState(
                         isLoading = false,
                         items = data.data?.sortedBy {
-                            it.names["name:${Locale.getDefault().language}"] ?: it.names["name:en"] ?: it.names["name"]
+                            it.names["name:${Locale.getDefault().language}"] ?: it.names["name:en"]
+                            ?: it.names["name"]
                         } ?: listOf()
                     ))
                 }
@@ -109,7 +123,12 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                 }
 
                 else -> {
-
+                    _regionUiStateLiveData.postValue(
+                        UiState(
+                            isLoading = false,
+                            items = emptyList()
+                        )
+                    )
                 }
             }
         }
@@ -120,6 +139,15 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
             _poiDownloadUiStateLiveData.postValue(UiState(isLoading = true))
             when (val data = poiUseCase.getPoiResultByRegion(regionName, query).firstOrNull()) {
                 is ApiResult.Success -> {
+
+                    // save downloaded region id into preferences datastore.
+                    getRegionIdList().forEach {
+                        datastoreRepository.addDownloadedRegion(it.toString())
+                    }.also {
+                        updateRegionIsDownloaded()
+                        resetCheckedState()
+                    }
+
                     _poiDownloadUiStateLiveData.postValue(
                         UiState(
                             isLoading = false,
@@ -151,7 +179,12 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                 }
 
                 else -> {
-
+                    _poiDownloadUiStateLiveData.postValue(
+                        UiState(
+                            isLoading = false,
+                            items = emptyList()
+                        )
+                    )
                 }
             }
         }
@@ -236,6 +269,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                         isChecked = !regionChildItem.isChecked,
                         isDownloading = false,
                         isCheckBoxEnabled = true,
+                        isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size
                     )
                 } else {
@@ -243,7 +277,8 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                         region = regionChildItem.region,
                         isChecked = regionChildItem.isChecked,
                         isDownloading = false,
-                        isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,//!(!regionChildItem.isChecked && getDownloadQueueMapSize() >= MAX_REGIONS_TO_DOWNLOAD),
+                        isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
+                        isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size
                     )
                 }
@@ -259,9 +294,46 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         }
     }
 
-    fun resetCheckedState() {
-        val queue = downloadQueueMap
-        for ((countryPosition, regionPosition) in queue) {
+    private fun updateRegionIsDownloaded() {
+        for ((countryPosition, regionPositions) in downloadQueueMap) {
+            for (position in regionPositions) {
+                val regionList =
+                    mapContent.value[mapContent.value.getKeyByIndex(countryPosition)]?.regionList?.mapIndexed { index, regionChildItem ->
+                        if (index == position) {
+                            RegionChildItem(
+                                region = regionChildItem.region,
+                                isChecked = regionChildItem.isChecked,
+                                isDownloading = false,
+                                isCheckBoxEnabled = true,
+                                isDownloaded = true,
+                                size = regionChildItem.size
+                            )
+                        } else {
+                            RegionChildItem(
+                                region = regionChildItem.region,
+                                isChecked = regionChildItem.isChecked,
+                                isDownloading = false,
+                                isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
+                                isDownloaded = regionChildItem.isDownloaded,
+                                size = regionChildItem.size
+                            )
+                        }
+                    }
+
+                if (!regionList.isNullOrEmpty()) {
+                    mapContent.value[mapContent.value.getKeyByIndex(countryPosition)]?.let {
+                        updateMapElement(
+                            mapContent.value.getKeyByIndex(countryPosition),
+                            it.copy(regionList = regionList, isLoading = false)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun resetCheckedState() {
+        for ((countryPosition, regionPosition) in downloadQueueMap) {
             for (position in regionPosition) {
                 updateRegionClickedState(countryPosition, position)
             }
@@ -277,6 +349,16 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun searchForDownloadedRegions(id: Long): Boolean {
+        var isDownloaded = false
+        viewModelScope.launch {
+            isDownloaded = downloadedRegionsStateFlow.value.takeIf { it.isNotEmpty() }?.any {
+                it != 0L && it == id
+            } == true
+        }
+        return isDownloaded
     }
 
     fun showCountryRegions(items: List<Region>, continentName: String) {
@@ -300,6 +382,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                             isChecked = false,
                             isDownloading = false,
                             isCheckBoxEnabled = getDownloadQueueMapSize() < MAX_REGIONS_TO_DOWNLOAD,
+                            isDownloaded = searchForDownloadedRegions(region.id),
                             size = ""
                         )
                     },
@@ -331,6 +414,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                         isChecked = true,
                         isDownloading = showLoading.also { Log.d(TAG(this), it.toString()) },
                         isCheckBoxEnabled = it.isCheckBoxEnabled,
+                        isDownloaded = it.isDownloaded,
                         size = it.size
                     )
                 } else {
@@ -339,6 +423,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                         isChecked = false,
                         isDownloading = false,
                         isCheckBoxEnabled = it.isCheckBoxEnabled,
+                        isDownloaded = it.isDownloaded,
                         size = it.size
                     )
                 }
@@ -367,6 +452,19 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
             }
         }
         return regionList
+    }
+
+    private fun getRegionIdList(): List<Long> {
+        val idList = mutableListOf<Long>()
+
+        for ((key, values) in downloadQueueMap) {
+            for (value in values) {
+                mapContent.value[mapContent.value.getKeyByIndex(key)]?.regionList?.get(value)?.region?.id?.let {
+                    idList.add(it)
+                }
+            }
+        }
+        return idList
     }
 
     private fun fetchRegionSize(region: String, country: String? = null) {
@@ -404,6 +502,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                                     isChecked = regionChildItem.isChecked,
                                     isDownloading = regionChildItem.isDownloading,
                                     isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
+                                    isDownloaded = regionChildItem.isDownloaded,
                                     size = map[key] ?: ""
                                 )
                             }
@@ -424,7 +523,6 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                 _countryList.addAll(it.countries.sortedBy { country -> country.name })
                 _countryList.forEach { country ->
 
-                    // TODO("If no locale found ISO code is used as last-resort value, exclude all non-countries from static database.")
                     val mapKey = Locale(
                         Locale.getDefault().isO3Country,
                         country.iso2

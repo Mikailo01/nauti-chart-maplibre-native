@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.bytecause.nautichart.R
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIcon
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIconList
-import com.bytecause.nautichart.data.repository.RecentlyUsedIconsRepository
+import com.bytecause.nautichart.data.repository.RecentlyUsedIconsRepositoryImpl
 import com.bytecause.nautichart.domain.model.IconsChildItem
 import com.bytecause.nautichart.domain.model.IconsParentItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SelectPoiMarkerIconViewModel @Inject constructor(
-    private val repository: RecentlyUsedIconsRepository
+    private val repository: RecentlyUsedIconsRepositoryImpl
 ) : ViewModel() {
 
     private val _contentList = MutableStateFlow<List<IconsParentItem>?>(null)

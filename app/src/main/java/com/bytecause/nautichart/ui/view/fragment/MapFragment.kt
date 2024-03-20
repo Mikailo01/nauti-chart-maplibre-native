@@ -184,8 +184,6 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         onBackPressedCallback.isEnabled = newValue
     }
 
-    val util: Util = Util()
-
     private val activityResultLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -480,7 +478,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         // Search box settings.
         binding.searchMapBox.searchMapEditText.apply {
             setOnClickListener {
-                if (!util.lastClick(1000)) return@setOnClickListener
+                if (!Util.lastClick(1000)) return@setOnClickListener
                 findNavController().navigate(R.id.action_map_dest_to_searchMapFragmentDialog)
             }
 
@@ -544,7 +542,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.mapRightPanelLinearLayout.locationButton.setOnClickListener {
-            if (!util.lastClick(300)) return@setOnClickListener
+            if (!Util.lastClick(300)) return@setOnClickListener
 
             if (requireContext().isLocationPermissionGranted()) {
                 if (myLocationOverlay.myLocation == null) {
@@ -602,7 +600,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.mapRightPanelLinearLayout.layersButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_mapBottomSheetFragment)
         }
 
@@ -683,12 +681,12 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         })
 
         binding.mapLeftPanelLinearLayout.customizeMapImageButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_customizeMapDialog)
         }
 
         binding.bottomSheetId.addMarkerButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.customMarkerDialog)
         }
 
@@ -760,7 +758,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.bottomSheetId.shareLocationButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             val action = MapFragmentDirections.actionMapDestToMapShareBottomSheetDialog(
                 floatArrayOf(
                     overlayHelper.geoPointList[0].latitude.toFloat(),
@@ -771,7 +769,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.bottomSheetId.toolsButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_mapToolsBottomSheetFragment)
         }
 

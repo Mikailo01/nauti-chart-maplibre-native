@@ -42,6 +42,7 @@ import com.bytecause.nautichart.ui.viewmodels.CustomMarkerViewModel
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
 import com.bytecause.nautichart.util.MapUtil
 import com.bytecause.nautichart.util.TAG
+import com.bytecause.nautichart.util.Util
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -68,8 +69,6 @@ class CustomMarkerDialog : DialogFragment(),
     private val poiList = mutableListOf<CustomPoiEntity>()
 
     private var categoryAddButton by Delegates.notNull<CustomPoiCategoryEntity>()
-
-    private val util = com.bytecause.nautichart.util.Util()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -122,7 +121,7 @@ class CustomMarkerDialog : DialogFragment(),
                     }
                     itemView.apply {
                         setOnClickListener {
-                            if (!util.lastClick(300)) return@setOnClickListener
+                            if (!Util.lastClick(300)) return@setOnClickListener
 
                             if (itemPosition == categoryGenericRecyclerViewAdapter.itemCount - 1 && categoryRecyclerView.getChildAt(
                                     itemPosition

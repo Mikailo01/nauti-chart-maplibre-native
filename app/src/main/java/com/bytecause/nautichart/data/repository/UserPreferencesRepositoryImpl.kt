@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.bytecause.nautichart.data.local.datastore.preferences.UserPreferencesRepositoryInterface
+import com.bytecause.nautichart.data.local.datastore.preferences.UserPreferencesRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,9 +18,9 @@ import org.osmdroid.util.GeoPoint
 import java.io.IOException
 import javax.inject.Inject
 
-class UserPreferencesRepository @Inject constructor(
+class UserPreferencesRepositoryImpl @Inject constructor(
     private val userDataStorePreferences: DataStore<Preferences>
-) : UserPreferencesRepositoryInterface {
+) : UserPreferencesRepository {
 
     override suspend fun saveFirstRunFlag(flag: Boolean) {
         withContext(Dispatchers.IO) {
