@@ -45,8 +45,6 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
     private var zoomLevel by Delegates.notNull<Double>()
 
-    private val util = Util()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -133,7 +131,7 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         }
 
         binding.mapTileSourceType.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_downloadMapFragment_to_tileSourceTypes)
         }
 
@@ -162,7 +160,7 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         }
 
         binding.downloadTilesButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
 
             if (mapSharedViewModel.tileSource.value != CustomTileSourceFactory.SAT
                 && mapSharedViewModel.tileSource.value != TileSourceFactory.MAPNIK

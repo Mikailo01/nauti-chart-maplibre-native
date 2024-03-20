@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.bytecause.nautichart.data.repository.UserPreferencesRepository
+import com.bytecause.nautichart.data.repository.UserPreferencesRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,7 +28,7 @@ object PreferencesDataStoreModule {
 
     @Provides
     @Singleton
-    fun providesUserPreferencesRepository(@ApplicationContext applicationContext: Context): UserPreferencesRepository = UserPreferencesRepository(
+    fun providesUserPreferencesRepository(@ApplicationContext applicationContext: Context): UserPreferencesRepositoryImpl = UserPreferencesRepositoryImpl(
         providesUserDataStorePreferences(applicationContext)
     )
 }

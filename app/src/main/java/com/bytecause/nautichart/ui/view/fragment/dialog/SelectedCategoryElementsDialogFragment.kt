@@ -54,8 +54,6 @@ class SelectedCategoryElementsDialogFragment :
     private val viewModel: SelectedCategoryElementsViewModel by viewModels()
     private val sharedViewModel: SearchElementsSharedViewModel by activityViewModels()
 
-    private val util: Util = Util()
-
     private val args: SelectedCategoryElementsDialogFragmentArgs by navArgs()
 
     private lateinit var recyclerView: RecyclerView
@@ -178,7 +176,7 @@ class SelectedCategoryElementsDialogFragment :
         }
 
         binding.filterListImageButton.setOnClickListener {
-            if (!util.lastClick(1000) || filterJob?.isCompleted == false || binding.progressLayout.isVisible) return@setOnClickListener
+            if (!Util.lastClick(1000) || filterJob?.isCompleted == false || binding.progressLayout.isVisible) return@setOnClickListener
 
             filterJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                 sharedViewModel.allTagsSharedFlow.replayCache.lastOrNull().let {

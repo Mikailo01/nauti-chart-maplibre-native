@@ -3,6 +3,7 @@ package com.bytecause.nautichart.ui.view.fragment.dialog
 import android.graphics.drawable.ColorDrawable
 import android.location.Geocoder
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +22,7 @@ import com.bytecause.nautichart.ui.util.isLocationPermissionGranted
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.viewmodels.FirstRunViewModel
 import com.bytecause.nautichart.ui.viewmodels.MapSharedViewModel
+import com.bytecause.nautichart.util.TAG
 import com.bytecause.nautichart.util.Util
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -39,8 +41,6 @@ class FirstRunDialogFragment : DialogFragment() {
     // dismiss FirstRunDialog, in future commits download will be handled by DownloadManager service.
     private val viewModel: FirstRunViewModel by activityViewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
-
-    private val util = Util()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -76,12 +76,12 @@ class FirstRunDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.selectRegionImageView.setOnClickListener {
-            if (!util.lastClick(500)) return@setOnClickListener
+            if (!Util.lastClick(500)) return@setOnClickListener
             findNavController().navigate(R.id.action_firstRunDialogFragment_to_selectRegionBottomSheetDialog)
         }
 
         binding.skipTextView.setOnClickListener {
-            if (!util.lastClick(500)) return@setOnClickListener
+            if (!Util.lastClick(500)) return@setOnClickListener
             // Saves flag which indicates if app is started for the first time.
             viewModel.saveFirstRunFlag(false)
             findNavController().popBackStack()
@@ -126,6 +126,7 @@ class FirstRunDialogFragment : DialogFragment() {
                     geocoder.getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)?.let {
                         withContext(Dispatchers.Main) {
                             binding.regionNameTextView.apply {
+                                Log.d(TAG(), it.first().adminArea)
                                 it.first().adminArea.also {
                                     viewModel.setRegion(it)
                                     text = it

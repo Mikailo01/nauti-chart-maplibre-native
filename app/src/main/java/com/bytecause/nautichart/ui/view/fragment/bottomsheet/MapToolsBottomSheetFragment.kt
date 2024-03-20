@@ -8,6 +8,7 @@ import androidx.navigation.fragment.findNavController
 import com.bytecause.nautichart.R
 import com.bytecause.nautichart.databinding.MapToolsBottomSheetFragmentBinding
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
+import com.bytecause.nautichart.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
@@ -15,8 +16,6 @@ class MapToolsBottomSheetFragment :
     BottomSheetDialogFragment(R.layout.map_tools_bottom_sheet_fragment) {
 
     private val binding by viewBinding(MapToolsBottomSheetFragmentBinding::bind)
-
-    private val util = com.bytecause.nautichart.util.Util()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -29,12 +28,12 @@ class MapToolsBottomSheetFragment :
         }
 
         binding.downloadMapImageButton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_downloadMapFragment)
         }
 
         binding.customTileSourceImagebutton.setOnClickListener {
-            if (!util.lastClick(1000)) return@setOnClickListener
+            if (!Util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_customTileSourceDialog)
         }
 

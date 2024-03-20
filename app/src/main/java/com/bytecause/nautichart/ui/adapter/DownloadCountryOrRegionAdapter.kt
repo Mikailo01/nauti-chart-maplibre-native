@@ -155,6 +155,7 @@ class RegionChildAdapter(
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val imageView: ImageView = itemView.findViewById(R.id.child_region_image_view)
         val checkBox: CheckBox = itemView.findViewById(R.id.download_region_check)
         val downloadProgressBar: ProgressBar =
             itemView.findViewById(R.id.download_child_progress_bar)
@@ -176,32 +177,26 @@ class RegionChildAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val regionElement = regionEntity.regionList[position]
 
-        holder.regionNameTextView.text =
-            regionElement.region.names["name:${Locale.getDefault().language}"]
-                ?: regionElement.region.names["name:en"]
-                        ?: regionElement.region.names["name"]
-
-        holder.checkBox.apply {
-            isEnabled = regionElement.isCheckBoxEnabled
-            isChecked = regionElement.isChecked
-            setOnCheckedChangeListener { buttonView, isChecked ->
-                selectCheckBoxInterface.onCheckBoxClickListener(
-                    buttonView = buttonView,
-                    position = position,
-                    parentPosition = parentAdapterPosition,
-                    isChecked
-                )
+        if (regionElement.isDownloaded) {
+            holder.imageView.apply {
+                val color = ContextCompat.getColor(context, R.color.colorPrimary)
+                setColorFilter(color)
             }
-        }
-
-        val size = regionElement.size
-        if (size.isNotEmpty() && size != "") {
-            // If size is available and not empty
-            holder.elementSize.visibility = View.VISIBLE
-            holder.elementSize.text = size
         } else {
-            // If size is not available or empty
-            holder.elementSize.visibility = View.GONE
+            holder.checkBox.apply {
+                visibility = View.VISIBLE
+                isEnabled = regionElement.isCheckBoxEnabled
+                isChecked = regionElement.isChecked
+
+                setOnCheckedChangeListener { buttonView, isChecked ->
+                    selectCheckBoxInterface.onCheckBoxClickListener(
+                        buttonView = buttonView,
+                        position = position,
+                        parentPosition = parentAdapterPosition,
+                        isChecked
+                    )
+                }
+            }
         }
 
         when (regionElement.isDownloading) {
@@ -215,11 +210,27 @@ class RegionChildAdapter(
                 if (isDownloadInProgress) {
                     holder.downloadProgressBar.visibility = View.GONE
                     holder.checkBox.visibility = View.INVISIBLE
-                    return
                 }
-                holder.downloadProgressBar.visibility = View.GONE
-                holder.checkBox.visibility = View.VISIBLE
+                else {
+                    holder.downloadProgressBar.visibility = View.GONE
+                    holder.checkBox.visibility = if (regionElement.isDownloaded) View.INVISIBLE else View.VISIBLE
+                }
             }
+        }
+
+        holder.regionNameTextView.text =
+            regionElement.region.names["name:${Locale.getDefault().language}"]
+                ?: regionElement.region.names["name:en"]
+                        ?: regionElement.region.names["name"]
+
+        val size = regionElement.size
+        if (size.isNotEmpty() && size != "") {
+            // If size is available and not empty
+            holder.elementSize.visibility = View.VISIBLE
+            holder.elementSize.text = size
+        } else {
+            // If size is not available or empty
+            holder.elementSize.visibility = View.GONE
         }
     }
 }

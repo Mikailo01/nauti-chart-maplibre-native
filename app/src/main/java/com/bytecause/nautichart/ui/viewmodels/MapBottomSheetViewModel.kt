@@ -3,7 +3,7 @@ package com.bytecause.nautichart.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.nautichart.R
-import com.bytecause.nautichart.data.repository.UserPreferencesRepository
+import com.bytecause.nautichart.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.nautichart.domain.model.LayersChildItem
 import com.bytecause.nautichart.ui.view.fragment.bottomsheet.LayerTypes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MapBottomSheetViewModel @Inject constructor(
-    private val repository: dagger.Lazy<UserPreferencesRepository>
+    private val repository: dagger.Lazy<UserPreferencesRepositoryImpl>
 ) : ViewModel() {
 
     private val contentMap: MutableMap<LayerTypes, List<LayersChildItem>> =

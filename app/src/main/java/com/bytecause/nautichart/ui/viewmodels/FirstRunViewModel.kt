@@ -2,7 +2,7 @@ package com.bytecause.nautichart.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.nautichart.data.repository.UserPreferencesRepository
+import com.bytecause.nautichart.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
@@ -22,7 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class FirstRunViewModel @Inject constructor(
     private val poiUseCase: PoiUseCase,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepositoryImpl: UserPreferencesRepositoryImpl
 ) : ViewModel() {
 
     private val _uiStateFlow = MutableStateFlow<UiState<String>?>(null)
@@ -91,7 +91,7 @@ class FirstRunViewModel @Inject constructor(
 
     fun saveFirstRunFlag(flag: Boolean) {
         viewModelScope.launch {
-            userPreferencesRepository.saveFirstRunFlag(flag)
+            userPreferencesRepositoryImpl.saveFirstRunFlag(flag)
         }
     }
 

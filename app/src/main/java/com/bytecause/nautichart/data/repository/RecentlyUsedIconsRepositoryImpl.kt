@@ -5,7 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIcon
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIconList
-import com.bytecause.nautichart.data.local.datastore.preferences.RecentlyUsedIconsRepositoryInterface
+import com.bytecause.nautichart.data.local.datastore.preferences.RecentlyUsedIconsRepository
 import com.bytecause.nautichart.data.local.datastore.proto.serializers.RecentUsedPoiIconSerializer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -22,9 +22,9 @@ private val Context.recentUsedPoiMarkerIconDataStore: DataStore<RecentlyUsedPoiM
     serializer = RecentUsedPoiIconSerializer
 )
 
-class RecentlyUsedIconsRepository @Inject constructor(
+class RecentlyUsedIconsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
-) : RecentlyUsedIconsRepositoryInterface {
+) : RecentlyUsedIconsRepository {
 
     override suspend fun addRecentUsedPoiMarkerIconList(iconList: List<RecentlyUsedPoiMarkerIcon>) {
         withContext(Dispatchers.IO) {

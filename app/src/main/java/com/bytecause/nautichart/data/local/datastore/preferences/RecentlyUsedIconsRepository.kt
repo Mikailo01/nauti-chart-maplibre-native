@@ -4,7 +4,7 @@ import com.bytecause.nautichart.RecentlyUsedPoiMarkerIcon
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIconList
 import kotlinx.coroutines.flow.Flow
 
-interface RecentlyUsedIconsRepositoryInterface {
+interface RecentlyUsedIconsRepository {
 
     suspend fun addRecentUsedPoiMarkerIconList(iconList: List<RecentlyUsedPoiMarkerIcon>)
 

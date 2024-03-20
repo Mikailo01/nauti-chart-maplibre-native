@@ -108,9 +108,13 @@ class RegionUseCase @Inject constructor(
                 }
             }
             filteredList.let {
-                regionRepository.cacheRegions(it)
-                emit(ApiResult.Success(data = it))
-                return@flow
+                regionRepository.apply {
+                    cacheRegions(it)
+                    // we need region id from database, so we cannot emit result from API directly.
+                    getRegions(countryId).firstOrNull()?.regions?.let {
+                        emit(ApiResult.Success(data = it))
+                    }
+                }
             }
         }
             .flowOn(Dispatchers.IO)

@@ -39,8 +39,6 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
     //private val tagsList = mutableListOf<ElementTagModel>()
     private val tagsMap = mutableMapOf<String, List<ElementTagModel>>()
 
-    private val util: Util = Util()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -53,7 +51,7 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
         super.onViewCreated(view, savedInstanceState)
 
         binding.clearFiltersButton.setOnClickListener {
-            if (!util.lastClick(1000)) {
+            if (!Util.lastClick(1000)) {
                 return@setOnClickListener
             }
 

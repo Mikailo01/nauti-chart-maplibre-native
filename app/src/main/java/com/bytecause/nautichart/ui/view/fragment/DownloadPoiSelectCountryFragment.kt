@@ -2,7 +2,6 @@ package com.bytecause.nautichart.ui.view.fragment
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,7 +29,6 @@ import com.bytecause.nautichart.ui.viewmodels.DownloadPoiSelectCountryViewModel
 import com.bytecause.nautichart.util.SearchTypes
 import com.bytecause.nautichart.util.SimpleOverpassQueryBuilder
 import com.bytecause.nautichart.util.StringUtil
-import com.bytecause.nautichart.util.TAG
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -199,7 +197,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
 
                     if (uiState.items.isEmpty()) return@observe
 
-                    viewModel.resetCheckedState()
+                    //viewModel.resetCheckedState()
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.download_success),
@@ -246,7 +244,6 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
         if (!::recyclerViewParentAdapter.isInitialized) return
 
         if (isDownloading) {
-            Log.d(TAG(), "isDownloading")
             binding.downloadButton.apply {
                 binding.downloadButton.apply {
                     text = getString(R.string.cancel)

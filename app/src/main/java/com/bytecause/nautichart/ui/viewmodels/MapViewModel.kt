@@ -12,7 +12,7 @@ import com.bytecause.nautichart.data.repository.CustomPoiDatabaseRepository
 import com.bytecause.nautichart.data.repository.HarboursDatabaseRepository
 import com.bytecause.nautichart.data.repository.HarboursRepository
 import com.bytecause.nautichart.data.repository.PoiCacheRepository
-import com.bytecause.nautichart.data.repository.UserPreferencesRepository
+import com.bytecause.nautichart.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.model.VesselMappedEntity
@@ -47,7 +47,7 @@ class MapViewModel @Inject constructor(
     private val poiCacheRepository: PoiCacheRepository,
     private val customPoiRepository: CustomPoiDatabaseRepository,
     private val vesselsUseCase: VesselsUseCase,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepositoryImpl: UserPreferencesRepositoryImpl
 ) : ViewModel() {
 
     private val _harboursFetchingState = MutableStateFlow<UiState<HarboursEntity>?>(null)
@@ -279,16 +279,16 @@ class MapViewModel @Inject constructor(
     }
 
     // User Preferences DataStore operations.
-    fun getFirstRunFlag() = userPreferencesRepository.getFirstRunFlag()
+    fun getFirstRunFlag() = userPreferencesRepositoryImpl.getFirstRunFlag()
 
 
     fun saveUserLocation(position: GeoPoint) {
         viewModelScope.launch {
-            userPreferencesRepository.saveUserPosition(position)
+            userPreferencesRepositoryImpl.saveUserPosition(position)
         }
     }
 
-    fun getUserLocation() = userPreferencesRepository.getUserPosition()
+    fun getUserLocation() = userPreferencesRepositoryImpl.getUserPosition()
 
-    fun getCachedTileSource(): Flow<String?> = userPreferencesRepository.getCachedTileSource()
+    fun getCachedTileSource(): Flow<String?> = userPreferencesRepositoryImpl.getCachedTileSource()
 }
