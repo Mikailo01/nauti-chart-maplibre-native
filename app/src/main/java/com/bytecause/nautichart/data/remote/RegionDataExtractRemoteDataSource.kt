@@ -6,18 +6,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.io.IOException
-import java.util.Locale
 
 class RegionDataExtractRemoteDataSource {
 
     // Gets html structure of Geofabrik Download Server and fetch size of each region
-    suspend fun fetchRegionSize(region: String, country: String? = null): Map<String, String> =
+    suspend fun fetchSize(continentName: String, country: String? = null): Map<String, String> =
         withContext(Dispatchers.IO) {
             val map = mutableMapOf<String, String>()
             val baseUrl = "https://download.geofabrik.de/"
             val urlBuilder = StringBuilder(baseUrl)
             urlBuilder.apply {
-                append(region)
+                append(continentName)
                 if (country != null) append("/$country")
                 append(".html")
             }
@@ -30,33 +29,13 @@ class RegionDataExtractRemoteDataSource {
                 }
                 map
             } catch (e: IOException) {
-                Log.e("mapfragment", "error")
+                Log.e("RegionDataExtractRemoteDataSource", "error")
                 map
             }
         }
 
-    private fun getIsoCodeFromCountryName(countryName: String): String {
-
-        return CountryNameMapping.getCountryIso(countryName)
-
-        /*var country = countryName
-        val locales = Locale.getAvailableLocales()
-        if (countryName.contains("-") && !countryName.contains(
-                "united",
-                ignoreCase = true
-            )
-        ) {
-            country = countryName.split("-")[0]
-        } else if (countryName.contains("-")) country = countryName.replace("-", " ")
-
-        for (locale in locales) {
-            if (locale.displayCountry.contains(country, ignoreCase = true)) {
-                return locale.country
-            }
-        }
-
-        return null*/
-    }
+    private fun getIsoCodeFromCountryName(countryName: String): String =
+        CountryNameMapping.getCountryIso(countryName)
 
     private fun extractSizes(input: String, isCountry: Boolean): Map<String, String> {
         val map = mutableMapOf<String, String>()

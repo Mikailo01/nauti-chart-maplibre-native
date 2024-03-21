@@ -98,8 +98,12 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
-                viewModel.mapContent.collectLatest { content ->
-                    if (content.isEmpty()) return@collectLatest
+                viewModel.mapContent.collect { content ->
+                    if (content.isEmpty()) {
+                        setContentLoading(true)
+                        return@collect
+                    }
+                    else setContentLoading(false)
 
                     if (!::recyclerViewParentAdapter.isInitialized) {
                         recyclerViewParentAdapter = CountryParentAdapter(
@@ -125,7 +129,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
         viewModel.regionUiStateLiveData.observe(viewLifecycleOwner) { uiState ->
             when (uiState.error) {
                 is UiState.Error.NetworkError -> {
-                    viewModel.cancelRegionsLoading()
+                    viewModel.cancelRegionsLoadingState()
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.no_network_available),
@@ -134,7 +138,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 }
 
                 is UiState.Error.ServiceUnavailable -> {
-                    viewModel.cancelRegionsLoading()
+                    viewModel.cancelRegionsLoadingState()
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.service_unavailable),
@@ -143,7 +147,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 }
 
                 is UiState.Error.Other -> {
-                    viewModel.cancelRegionsLoading()
+                    viewModel.cancelRegionsLoadingState()
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.something_went_wrong),
@@ -153,8 +157,6 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
 
                 null -> {
                     if (uiState.items.isEmpty()) return@observe
-                    if (!uiState.isLoading) viewModel.cancelRegionsLoading()
-
                     viewModel.showCountryRegions(uiState.items, args.args[0])
                 }
             }
@@ -197,7 +199,6 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
 
                     if (uiState.items.isEmpty()) return@observe
 
-                    //viewModel.resetCheckedState()
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.download_success),
@@ -214,6 +215,17 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                     else binding.downloadButton.visibility = View.GONE
                 }
             }
+        }
+    }
+
+    private fun setContentLoading(isLoading: Boolean) {
+        if (isLoading) {
+            binding.progressBarLayout.visibility = View.VISIBLE
+            binding.contentRelativeLayout.visibility = View.GONE
+        }
+        else {
+            binding.progressBarLayout.visibility = View.GONE
+            binding.contentRelativeLayout.visibility = View.VISIBLE
         }
     }
 
@@ -295,9 +307,11 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
     }
 
     override fun onExpandClickListener(position: Int) {
-        viewModel.changeRegionLoadingState(position)
+        viewModel.regionIsLoadingState(position)
 
-        viewModel.countryList[position].let { country ->
+        viewModel.countryList.find {
+            it.name == viewModel.mapContent.value.getKeyByIndex(position)
+        }?.let { country ->
             viewModel.getRegions(
                 countryId = country.id,
                 isoCode = country.iso2,

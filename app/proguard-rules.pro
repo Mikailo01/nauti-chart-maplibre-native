@@ -180,34 +180,6 @@
 
 
 
-# keep the class and specified members from being removed or renamed
--keep class androidx.recyclerview.widget.RecyclerView { *; }
-
-# keep the specified class members from being removed or renamed
-# only if the class is preserved
--keepclassmembers class androidx.recyclerview.widget.RecyclerView { *; }
-
-# keep the class and specified members from being renamed only
--keepnames class androidx.recyclerview.widget.RecyclerView { *; }
-
-# keep the specified class members from being renamed only
--keepclassmembernames class androidx.recyclerview.widget.RecyclerView { *; }
-
-# keep the class and specified members from being removed or renamed
--keep class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
-
-# keep the specified class members from being removed or renamed
-# only if the class is preserved
--keepclassmembers class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
-
-# keep the class and specified members from being renamed only
--keepnames class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
-
-# keep the specified class members from being renamed only
--keepclassmembernames class androidx.recyclerview.widget.RecyclerView$LayoutManager { *; }
-
-
-
 
 
 
