@@ -1,6 +1,5 @@
 package com.bytecause.nautichart.ui.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,9 +16,7 @@ import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.usecase.PoiUseCase
 import com.bytecause.nautichart.domain.usecase.RegionUseCase
 import com.bytecause.nautichart.ui.view.fragment.getKeyByIndex
-import com.bytecause.nautichart.util.TAG
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -134,15 +131,19 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         }
     }
 
+    private suspend fun addDownloadedRegionId(regionId: String) {
+        datastoreRepository.addDownloadedRegion(regionId)
+    }
+
     fun getPois(regionName: String, query: String) {
-        downloadJob = viewModelScope.launch(Dispatchers.IO) {
+        downloadJob = viewModelScope.launch {
             _poiDownloadUiStateLiveData.postValue(UiState(isLoading = true))
             when (val data = poiUseCase.getPoiResultByRegion(regionName, query).firstOrNull()) {
                 is ApiResult.Success -> {
 
                     // save downloaded region id into preferences datastore.
                     getRegionIdList().forEach {
-                        datastoreRepository.addDownloadedRegion(it.toString())
+                        addDownloadedRegionId(it.toString())
                     }.also {
                         updateRegionIsDownloaded()
                         resetCheckedState()
@@ -251,12 +252,22 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         _mapContent.value = map
     }
 
-    fun changeRegionLoadingState(position: Int) {
+    fun regionIsLoadingState(position: Int) {
         mapContent.value[mapContent.value.getKeyByIndex(position)]?.let { field ->
             updateMapElement(
                 mapContent.value.getKeyByIndex(position),
                 field.copy(isLoading = true)
             )
+        }
+    }
+
+    fun cancelRegionsLoadingState() {
+        for ((key, value) in mapContent.value) {
+            if (value.isLoading) {
+                mapContent.value[key]?.let {
+                    updateMapElement(key, item = it.copy(isLoading = false))
+                }
+            }
         }
     }
 
@@ -341,16 +352,6 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         resetDownloadQueue()
     }
 
-    fun cancelRegionsLoading() {
-        for ((key, value) in mapContent.value) {
-            if (value.isLoading) {
-                mapContent.value[key]?.let {
-                    updateMapElement(key, item = it.copy(isLoading = false))
-                }
-            }
-        }
-    }
-
     private fun searchForDownloadedRegions(id: Long): Boolean {
         var isDownloaded = false
         viewModelScope.launch {
@@ -361,49 +362,63 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         return isDownloaded
     }
 
+    private fun getCountryName(iso2: String): String =
+        Locale(Locale.getDefault().isO3Country, iso2).displayCountry
+
     fun showCountryRegions(items: List<Region>, continentName: String) {
-        countryList.find {
-            items.any { region -> region.countryId == it.id }
-        }?.let { country ->
+        viewModelScope.launch {
+            countryList.find {
+                items.any { region -> region.countryId == it.id }
+            }?.let { country ->
 
-            val countryName = Locale(
-                Locale.getDefault().isO3Country,
-                country.iso2
-            ).displayCountry
+                val countryName = getCountryName(country.iso2)
 
-            if (mapContent.value[countryName]?.regionList?.isEmpty() == false) return@let
+                if (mapContent.value[countryName]?.regionList?.isEmpty() == false) return@let
 
-            updateMapElement(
-                key = countryName,
-                item = CountryParentItem(
-                    regionList = items.map { region ->
-                        RegionChildItem(
-                            region = region,
-                            isChecked = false,
-                            isDownloading = false,
-                            isCheckBoxEnabled = getDownloadQueueMapSize() < MAX_REGIONS_TO_DOWNLOAD,
-                            isDownloaded = searchForDownloadedRegions(region.id),
-                            size = ""
-                        )
-                    },
-                    size = mapContent.value[countryName]?.copy()?.size
-                        ?: "",
-                    isLoading = false
-                )
-            )
+                // Fetch size of each region from Geofabrik website.
+                val regionSize = getSize(continentName, countryName)
 
-            // Fetch size of each region from Geofabrik website and update
-            // size field of each region element if present.
-            mapContent.value[countryName]?.regionList?.let innerLet@{
-                if (it.size <= 1) return@innerLet
+                updateMapElement(
+                    key = countryName,
+                    item = CountryParentItem(
+                        regionList = items.map { region ->
 
-                fetchRegionSize(
-                    region = continentName,
-                    country = countryName.lowercase()
+                            val key = regionSize.keys.find { key ->
+                                region.names.any {
+                                    it.value.equals(
+                                        key,
+                                        true
+                                    )
+                                }
+                            }
+
+                            RegionChildItem(
+                                region = region,
+                                isChecked = false,
+                                isDownloading = false,
+                                isCheckBoxEnabled = getDownloadQueueMapSize() < MAX_REGIONS_TO_DOWNLOAD,
+                                isDownloaded = searchForDownloadedRegions(region.id),
+                                size = regionSize[key] ?: ""
+                            )
+                        },
+                        size = mapContent.value[countryName]?.size
+                            ?: "",
+                        isLoading = false
+                    )
                 )
             }
         }
     }
+
+    private suspend fun getSize(
+        continentName: String,
+        countryName: String? = null
+    ): Map<String, String> =
+        countryDataExtractSizeRepository.fetchSize(
+            continentName.lowercase().replace("[&\\s]+".toRegex(), "-"),
+            countryName?.lowercase()
+        )
+
 
     fun showDownloadProgressBar(showLoading: Boolean) {
         mapContent.value.forEach { mutableEntry ->
@@ -412,7 +427,7 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
                     RegionChildItem(
                         region = it.region,
                         isChecked = true,
-                        isDownloading = showLoading.also { Log.d(TAG(this), it.toString()) },
+                        isDownloading = showLoading,
                         isCheckBoxEnabled = it.isCheckBoxEnabled,
                         isDownloaded = it.isDownloaded,
                         size = it.size
@@ -467,77 +482,33 @@ class DownloadPoiSelectCountryViewModel @Inject constructor(
         return idList
     }
 
-    private fun fetchRegionSize(region: String, country: String? = null) {
-        viewModelScope.launch {
-            countryDataExtractSizeRepository.fetchRegionSize(
-                region.lowercase().replace("[&\\s]+".toRegex(), "-"),
-                country
-            ).let { map ->
-                if (country == null) {
-                    mapContent.value.keys.forEachIndexed { index, key ->
-                        updateMapElement(
-                            key = key,
-                            item = CountryParentItem(
-                                mapContent.value[key]?.regionList ?: listOf(),
-                                size = map[countryList[index].iso2]
-                                    ?: "",
-                                isLoading = false
-                            )
-                        )
-                    }
-                } else {
-                    mapContent.value.mapValues { (_, value) ->
-                        value.copy(
-                            regionList = value.regionList.map { regionChildItem ->
-                                val key = map.keys.find { key ->
-                                    regionChildItem.region.names.any {
-                                        it.value.equals(
-                                            key,
-                                            true
-                                        )
-                                    }
-                                }
-                                RegionChildItem(
-                                    region = regionChildItem.region,
-                                    isChecked = regionChildItem.isChecked,
-                                    isDownloading = regionChildItem.isDownloading,
-                                    isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
-                                    isDownloaded = regionChildItem.isDownloaded,
-                                    size = map[key] ?: ""
-                                )
-                            }
-                        )
-                    }.let {
-                        _mapContent.value = it
-                    }
-                }
-            }
-        }
-    }
-
     fun getAssociatedCountries(continentId: Int, region: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             if (countryList.isNotEmpty()) return@launch
             continentDatabaseRepository.getAssociatedCountries(continentId).firstOrNull()?.let {
+                // Fetch size of each country from Geofabrik website.
+                val countrySize = getSize(region)
 
-                _countryList.addAll(it.countries.sortedBy { country -> country.name })
-                _countryList.forEach { country ->
+                _countryList.addAll(it.countries.map { country ->
+                    Country(
+                        id = country.id,
+                        name = getCountryName(country.iso2),
+                        iso2 = country.iso2,
+                        iso3 = country.iso3,
+                        continentId = country.continentId
+                    )
+                }.sortedBy { country -> country.name })
 
-                    val mapKey = Locale(
-                        Locale.getDefault().isO3Country,
-                        country.iso2
-                    ).displayCountry
-
+                countryList.forEach { country ->
                     updateMapElement(
-                        key = mapKey,
+                        key = country.name,
                         item = CountryParentItem(
                             regionList = listOf(),
-                            size = "",
+                            size = countrySize[country.iso2] ?: "",
                             isLoading = false
                         )
                     )
                 }
-                fetchRegionSize(region = region)
             }
         }
     }

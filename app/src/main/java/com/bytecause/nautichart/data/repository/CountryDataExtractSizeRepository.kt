@@ -9,8 +9,8 @@ class CountryDataExtractSizeRepository @Inject constructor(
     private val regionDataExtractRemoteDataSource: RegionDataExtractRemoteDataSource
 ) {
 
-    suspend fun fetchRegionSize(region: String, country: String? = null): Map<String, String> =
+    suspend fun fetchSize(continentName: String, country: String? = null): Map<String, String> =
         withContext(Dispatchers.IO) {
-            regionDataExtractRemoteDataSource.fetchRegionSize(region, country)
+            regionDataExtractRemoteDataSource.fetchSize(continentName, country)
         }
 }

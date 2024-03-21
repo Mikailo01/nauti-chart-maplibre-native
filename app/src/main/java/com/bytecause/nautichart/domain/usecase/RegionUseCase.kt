@@ -104,7 +104,7 @@ class RegionUseCase @Inject constructor(
                     } else if (it.exception != null) {
                         emit(ApiResult.Failure(exception = it.exception))
                         return@flow
-                    } else Log.d(TAG(this), "$isoCode empty")
+                    } else Log.d(TAG(this@RegionUseCase), "$isoCode empty")
                 }
             }
             filteredList.let {
