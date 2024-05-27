@@ -4,7 +4,7 @@ import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
 import kotlinx.coroutines.flow.Flow
 
-interface SearchHistoryRepositoryInterface {
+interface SearchHistoryRepository {
 
     suspend fun saveRecentlySearchedPlace(entity: RecentlySearchedPlace)
 

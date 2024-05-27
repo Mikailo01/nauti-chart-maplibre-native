@@ -13,16 +13,9 @@ plugins {
 android {
 
     packagingOptions {
-        exclude("META-INF/DEPENDENCIES")
-        exclude("META-INF/LICENSE")
-        exclude("META-INF/LICENSE.txt")
-        exclude("META-INF/license.txt")
-        exclude("META-INF/NOTICE")
-        exclude("META-INF/NOTICE.txt")
-        exclude("META-INF/notice.txt")
-        exclude("META-INF/ASL2.0")
-        exclude("META-INF/*.kotlin_module")
-        exclude("mozilla/public-suffix-list.txt")
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0', 'META-INF/*.kotlin_module', 'mozilla/public-suffix-list.txt']
+        }
     }
 
     namespace 'com.bytecause.nautichart'
@@ -64,8 +57,16 @@ android {
     buildFeatures {
         viewBinding true
         buildConfig true
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.13"
     }
     ndkVersion "26.1.10909125"
+}
+
+kapt {
+    correctErrorTypes = true
 }
 
 protobuf {
@@ -100,10 +101,24 @@ dependencies {
     //ksp("androidx.appsearch:appsearch-compiler:1.1.0-alpha03")
     kapt("androidx.appsearch:appsearch-compiler:1.1.0-alpha03")
 
-    // Gson library
-    implementation 'com.google.code.gson:gson:2.10'
+    // Compose
+    implementation "androidx.hilt:hilt-navigation-compose:1.2.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.0"
+    implementation "androidx.activity:activity-compose:1.9.0"
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.material:material:$compose_version"
+    implementation "androidx.compose.material3:material3-android:1.2.1"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.6.7'
 
-    implementation 'androidx.core:core-ktx:1.12.0'
+    // Coil
+    implementation("io.coil-kt:coil:2.6.0")
+
+    // Gson library
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    implementation 'androidx.core:core-ktx:1.13.1'
     implementation "androidx.appcompat:appcompat:$rootProject.appCompatVersion"
 
     // Lifecycle components
@@ -122,7 +137,7 @@ dependencies {
     implementation "androidx.navigation:navigation-ui-ktx:$rootProject.androidNavigation"
     implementation "androidx.activity:activity-ktx:$rootProject.activityVersion"
     implementation "androidx.recyclerview:recyclerview:$rootProject.recyclerVersion"
-    implementation "androidx.viewpager2:viewpager2:1.0.0"
+    implementation "androidx.viewpager2:viewpager2:1.1.0"
 
     // OSMDroid library
     implementation "org.osmdroid:osmdroid-android:$rootProject.osmDroidVersion"
@@ -138,12 +153,12 @@ dependencies {
     implementation "ch.poole:OpeningHoursParser:0.28.0"
 
     // DataStore library
-    implementation 'androidx.datastore:datastore-preferences:1.0.0'
+    implementation 'androidx.datastore:datastore-preferences:1.1.1'
     implementation 'com.google.protobuf:protobuf-javalite:3.25.1'
 
     // Hilt DI library
-    implementation 'com.google.dagger:hilt-android:2.49'
-    ksp 'com.google.dagger:hilt-compiler:2.49'
+    implementation 'com.google.dagger:hilt-android:2.48.1'
+    ksp 'com.google.dagger:hilt-compiler:2.48.1'
 
     // SimpleStorage
     implementation "com.anggrayudi:storage:1.5.5"

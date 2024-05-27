@@ -6,7 +6,7 @@ import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.nautichart.data.local.SearchManager
 import com.bytecause.nautichart.data.local.room.tables.SearchPlaceCacheEntity
-import com.bytecause.nautichart.data.repository.SearchHistoryDataStoreRepository
+import com.bytecause.nautichart.data.repository.SearchHistoryRepositoryImpl
 import com.bytecause.nautichart.data.repository.SearchMapRepository
 import com.bytecause.nautichart.domain.model.ApiResult
 import com.bytecause.nautichart.domain.model.SearchedPlace
@@ -31,7 +31,7 @@ import javax.inject.Inject
 class SearchMapViewModel @Inject constructor(
     private val searchMapRepository: SearchMapRepository,
     private val searchManager: SearchManager,
-    private val historyRepository: SearchHistoryDataStoreRepository
+    private val historyRepository: SearchHistoryRepositoryImpl
 ) : ViewModel() {
 
     var isLoading = false

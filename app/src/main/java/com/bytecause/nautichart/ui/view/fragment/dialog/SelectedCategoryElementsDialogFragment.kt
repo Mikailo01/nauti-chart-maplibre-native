@@ -176,7 +176,7 @@ class SelectedCategoryElementsDialogFragment :
         }
 
         binding.filterListImageButton.setOnClickListener {
-            if (!Util.lastClick(1000) || filterJob?.isCompleted == false || binding.progressLayout.isVisible) return@setOnClickListener
+            if (!Util().lastClick(1000) || filterJob?.isCompleted == false || binding.progressLayout.isVisible) return@setOnClickListener
 
             filterJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                 sharedViewModel.allTagsSharedFlow.replayCache.lastOrNull().let {

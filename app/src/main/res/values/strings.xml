@@ -7,6 +7,7 @@
     <string name="navigation_drawer_open"> Open Drawer</string>
     <string name="navigation_drawer_close"> Close Drawer</string>
     <string name="my_location">This is my location</string>
+    <string name="preview">Preview</string>
 
     <string name="download_maps"> Download maps </string>
     <string name="free"> %s </string>
@@ -126,6 +127,16 @@
     <string name="category_present">Category already present!</string>
     <string name="location_not_known_yet">Location not known yet.</string>
     <string name="press_back_again">Press back again to exit.</string>
+    <string name="min_max_zoom">Min %1s | Max %2s</string>
+    <string name="tile_size">Tile size</string>
+    <string name="confirm">Confirm</string>
+    <string name="done">Done</string>
+    <string name="custom_tile_source">Custom tile source</string>
+    <string name="choose_file_format">Choose file format</string>
+    <string name="browse_files">Browse files</string>
+    <string name="online">Online</string>
+    <string name="local">Local</string>
+    <string name="delete_custom_tile_provider_prompt">Do you really wish to delete this custom tile provider?</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>

@@ -22,7 +22,7 @@ class MapSharedViewModel : ViewModel() {
     private val _permissionGranted = MutableStateFlow<Boolean?>(null)
     val permissionGranted: StateFlow<Boolean?> get() = _permissionGranted.asStateFlow()
 
-    private val _tileSource = MutableLiveData(TileSourceFactory.MAPNIK)
+    private val _tileSource = MutableLiveData<OnlineTileSourceBase>()
     val tileSource: LiveData<OnlineTileSourceBase> get() = _tileSource
 
     private val _gridOverlayVisible = MutableLiveData<Boolean>()
@@ -79,7 +79,7 @@ class MapSharedViewModel : ViewModel() {
         _gridOverlayVisible.value = _gridOverlayVisible.value != true
     }
 
-    fun setTile(src: OnlineTileSourceBase?) {
+    fun setTile(src: OnlineTileSourceBase) {
         src ?: return
         _tileSource.value = src
     }

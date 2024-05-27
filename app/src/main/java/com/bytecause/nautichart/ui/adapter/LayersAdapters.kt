@@ -8,17 +8,25 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.bytecause.nautichart.R
 import com.bytecause.nautichart.domain.model.LayersChildItem
 import com.bytecause.nautichart.interfaces.SelectLayerInterface
 import com.bytecause.nautichart.ui.view.custom.FullyExpandedRecyclerView
 import com.bytecause.nautichart.ui.view.fragment.bottomsheet.LayerTypes
+import com.bytecause.nautichart.ui.view.fragment.bottomsheet.MapBottomSheetResources
 import com.google.android.material.divider.MaterialDivider
 
 class LayerParentAdapter(
-    private val contentMap: Map<LayerTypes, List<LayersChildItem>>,
+    private var contentMap: Map<LayerTypes, List<LayersChildItem>>,
     private val selectLayerInterface: SelectLayerInterface
 ) : RecyclerView.Adapter<LayerParentAdapter.ViewHolder>() {
+
+    fun submitList(newContentMap: Map<LayerTypes, List<LayersChildItem>>) {
+        contentMap = newContentMap
+        notifyDataSetChanged()
+    }
+
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int
@@ -37,12 +45,14 @@ class LayerParentAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val entry = contentMap.entries.toList()[position]
 
-        if (entry.key == LayerTypes.ADDITIONALOVERLAY) holder.divider.visibility =
-            View.GONE
+        if (holder.divider.visibility == View.GONE) {
+            if (entry.key == LayerTypes.ADDITIONAL_OVERLAY) holder.divider.visibility =
+                View.GONE
+        }
 
         val childAdapter = LayerChildAdapter(
             entry.value.filter {
-                it.type == entry.key
+                it.layerType == entry.key
             }, selectLayerInterface
         )
         holder.childRecyclerView.apply {
@@ -77,17 +87,71 @@ class LayerChildAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val child = childList[position]
 
-        holder.imageView.setImageDrawable(
+        val imageRes = when (child.resource) {
+            MapBottomSheetResources.Default -> {
+                R.drawable.terrain
+            }
+
+            MapBottomSheetResources.Satellite -> {
+                R.drawable.satellite
+            }
+
+            MapBottomSheetResources.Topo -> {
+                R.drawable.topo_map
+            }
+
+            MapBottomSheetResources.Grid -> {
+                R.drawable.grid
+            }
+
+            is MapBottomSheetResources.Custom -> {
+                R.drawable.baseline_layers_24
+            }
+        }
+
+        val name = when (child.resource) {
+            MapBottomSheetResources.Default -> {
+                holder.itemView.context.getString(R.string.default_tile_source)
+            }
+
+            MapBottomSheetResources.Satellite -> {
+                holder.itemView.context.getString(R.string.satellite)
+            }
+
+            MapBottomSheetResources.Topo -> {
+                holder.itemView.context.getString(R.string.topography)
+            }
+
+            MapBottomSheetResources.Grid -> {
+                holder.itemView.context.getString(R.string.grid)
+            }
+
+            is MapBottomSheetResources.Custom -> {
+                child.resource.name
+            }
+        }
+
+        // Asynchronous image loading
+        holder.imageView.load(
             ContextCompat.getDrawable(
                 holder.itemView.context,
-                child.drawableId
+                imageRes
             )
         )
-        holder.textView.text = holder.itemView.context.getString(child.resourceNameId)
+        holder.textView.apply {
+            // Invokes Marquee animation for overflowed texts
+            isSelected = true
+            text = name
+        }
         holder.innerItemView.apply {
-            tag = child.type
+            tag = child.layerType
             setOnClickListener {
                 selectLayerInterface.onItemViewClickListener(it, holder.bindingAdapterPosition)
+            }
+            setOnLongClickListener {
+                if (position <= 2) return@setOnLongClickListener false
+                selectLayerInterface.onItemViewLongClickListener(it, holder.bindingAdapterPosition)
+                true
             }
         }
     }

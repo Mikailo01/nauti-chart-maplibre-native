@@ -3,10 +3,16 @@ package com.bytecause.nautichart.di
 import android.content.Context
 import com.bytecause.nautichart.data.remote.HarboursRemoteDataSource
 import com.bytecause.nautichart.data.remote.VesselsPositionsRemoteDataSource
+import com.bytecause.nautichart.data.repository.CustomOfflineTileSourceRepositoryImpl
+import com.bytecause.nautichart.data.repository.CustomOnlineTileSourceRepositoryImpl
 import com.bytecause.nautichart.data.repository.HarboursRepository
 import com.bytecause.nautichart.data.repository.VesselsDatabaseRepository
 import com.bytecause.nautichart.data.repository.VesselsPositionsRepository
+import com.bytecause.nautichart.data.repository.abstractions.CustomOfflineTileSourceRepository
+import com.bytecause.nautichart.data.repository.abstractions.CustomOnlineTileSourceRepository
+import com.bytecause.nautichart.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.nautichart.domain.usecase.VesselsUseCase
+import com.bytecause.nautichart.ui.viewmodels.CustomTileSourceDialogViewModel
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -54,4 +60,23 @@ object MapModule {
     @Provides
     fun providesVesselsRemoteDataSource(): VesselsPositionsRemoteDataSource =
         VesselsPositionsRemoteDataSource()
+
+    @Singleton
+    @Provides
+    fun providesCustomOnlineTileSourceRepository(@ApplicationContext context: Context) =
+        CustomOnlineTileSourceRepositoryImpl(context)
+
+    @Singleton
+    @Provides
+    fun providesCustomOfflineTileSourceRepository(@ApplicationContext context: Context) =
+        CustomOfflineTileSourceRepositoryImpl(context)
+
+    @Provides
+    fun providesCustomTileSourcesUseCase(
+        customOfflineTileSourceRepository: CustomOfflineTileSourceRepositoryImpl,
+        customOnlineTileSourceRepository: CustomOnlineTileSourceRepositoryImpl
+    ): CustomTileSourcesUseCase = CustomTileSourcesUseCase(
+        customOfflineTileSourceRepository,
+        customOnlineTileSourceRepository
+    )
 }

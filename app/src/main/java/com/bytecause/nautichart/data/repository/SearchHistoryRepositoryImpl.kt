@@ -5,7 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.nautichart.data.local.datastore.proto.SearchHistoryRepositoryInterface
+import com.bytecause.nautichart.data.local.datastore.proto.SearchHistoryRepository
 import com.bytecause.nautichart.data.local.datastore.proto.serializers.RecentlySearchedPlaceSerializer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,9 +20,9 @@ private val Context.recentlySearchedPlaceDatastore: DataStore<RecentlySearchedPl
     serializer = RecentlySearchedPlaceSerializer
 )
 
-class SearchHistoryDataStoreRepository @Inject constructor(
+class SearchHistoryRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
-) : SearchHistoryRepositoryInterface {
+) : SearchHistoryRepository {
 
     override suspend fun saveRecentlySearchedPlace(entity: RecentlySearchedPlace) {
         withContext(Dispatchers.IO) {

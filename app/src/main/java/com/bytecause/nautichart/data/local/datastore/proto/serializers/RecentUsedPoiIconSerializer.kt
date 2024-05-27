@@ -22,5 +22,4 @@ object RecentUsedPoiIconSerializer : Serializer<RecentlyUsedPoiMarkerIconList> {
     override suspend fun writeTo(t: RecentlyUsedPoiMarkerIconList, output: OutputStream) {
         t.writeTo(output)
     }
-
 }

@@ -61,6 +61,7 @@ import com.bytecause.nautichart.util.TAG
 import com.bytecause.nautichart.util.Util
 import com.bytecause.nautichart.util.mapAsync
 import com.bytecause.nautichart.util.swap
+import com.bytecause.nautichart.util.tilesPath
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -79,6 +80,7 @@ import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.MapTileProviderBasic
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -93,10 +95,12 @@ import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
 import org.osmdroid.views.overlay.gridlines.LatLonGridlineOverlay2
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.properties.Delegates
+
 
 @Suppress("UNCHECKED_CAST")
 fun <T> MutableList<Overlay>.addOverlay(
@@ -106,6 +110,28 @@ fun <T> MutableList<Overlay>.addOverlay(
     when (overlay) {
         is Overlay -> {
             this.add(overlay)
+            listener.overlayAddedListener()
+        }
+
+        is List<*> -> {
+            if (overlay.all { it is Overlay }) {
+                val overlayList = overlay as List<Overlay>
+                this.addAll(overlayList)
+                listener.overlayAddedListener()
+            }
+        }
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+fun <T> MutableList<Overlay>.addOverlay(
+    index: Int,
+    overlay: T?,
+    listener: MapFragmentInterface
+) {
+    when (overlay) {
+        is Overlay -> {
+            this.add(index, overlay)
             listener.overlayAddedListener()
         }
 
@@ -133,12 +159,13 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
     private var isLocationPermissionGranted = false
 
-    private lateinit var tileProvider: MapTileProviderBasic
     private lateinit var myLocationOverlay: CustomMyLocationNewOverlay
     private lateinit var rotationGestureOverlay: RotationGestureOverlay
     private lateinit var groundOverlay: GroundOverlay
     private lateinit var copyrightOverlay: CopyrightOverlay
     private lateinit var scaleBarOverlay: ScaleBarOverlay
+
+    private var tilesOverlay: TilesOverlay? = null
 
     private var highPriorityOverlays: List<Overlay> = listOf()
 
@@ -177,6 +204,8 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
     private var vesselLoadingJob: Job? = null
     private var zoomAnimationJob: Job? = null
     private var searchForPoisJob: Job? = null
+
+    private val util = Util()
 
     private lateinit var customCompassView: CustomCompassView
 
@@ -232,6 +261,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             PreferenceManager.getDefaultSharedPreferences(requireActivity())
         )
         getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+        getInstance().osmdroidBasePath = File(requireContext().tilesPath())
 
         requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
@@ -279,10 +309,12 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
             }
         }
 
-        tileProvider = MapTileProviderBasic(context, seamarks)
+        // Provides seamarks transparent tiles overlay layer
+        val seamarksProvider = MapTileProviderBasic(context, seamarks)
         groundOverlay = GroundOverlay()
         mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
-        seamarksOverlay = TilesOverlay(tileProvider, context).apply {
+
+        seamarksOverlay = TilesOverlay(seamarksProvider, context).apply {
             loadingLineColor = Color.TRANSPARENT
             loadingBackgroundColor = Color.TRANSPARENT
         }
@@ -356,8 +388,10 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
 
         mapView = binding.mapView.apply {
             viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                viewModel.getCachedTileSource().firstOrNull()?.let { tileSourceName ->
-                    mapSharedViewModel.setTile(viewModel.getCachedTileSource(tileSourceName))
+                viewModel.getCachedTileSourceType().firstOrNull()?.let { tileSource ->
+                    mapSharedViewModel.setTile(tileSource)
+                } ?: run {
+                    mapSharedViewModel.setTile(TileSourceFactory.MAPNIK)
                 }
                 setMultiTouchControls(true)
                 // Deactivate zoom-in / zoom-out buttons.
@@ -453,7 +487,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         // Loads every nautical mark, current location icon,....
         mapView.overlays.addOverlay(
             listOf(
-                seamarksOverlay,
+                //seamarksOverlay,
                 rotationGestureOverlay,
                 mapEventsOverlay,
                 myLocationOverlay,
@@ -478,7 +512,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         // Search box settings.
         binding.searchMapBox.searchMapEditText.apply {
             setOnClickListener {
-                if (!Util.lastClick(1000)) return@setOnClickListener
+                if (!util.lastClick(1000)) return@setOnClickListener
                 findNavController().navigate(R.id.action_map_dest_to_searchMapFragmentDialog)
             }
 
@@ -542,7 +576,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.mapRightPanelLinearLayout.locationButton.setOnClickListener {
-            if (!Util.lastClick(300)) return@setOnClickListener
+            if (!util.lastClick(300)) return@setOnClickListener
 
             if (requireContext().isLocationPermissionGranted()) {
                 if (myLocationOverlay.myLocation == null) {
@@ -600,7 +634,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.mapRightPanelLinearLayout.layersButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_mapBottomSheetFragment)
         }
 
@@ -681,12 +715,12 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         })
 
         binding.mapLeftPanelLinearLayout.customizeMapImageButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_customizeMapDialog)
         }
 
         binding.bottomSheetId.addMarkerButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.customMarkerDialog)
         }
 
@@ -758,7 +792,7 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.bottomSheetId.shareLocationButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             val action = MapFragmentDirections.actionMapDestToMapShareBottomSheetDialog(
                 floatArrayOf(
                     overlayHelper.geoPointList[0].latitude.toFloat(),
@@ -769,25 +803,46 @@ class MapFragment : Fragment(R.layout.fragment_map), MapFragmentInterface {
         }
 
         binding.bottomSheetId.toolsButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_map_dest_to_mapToolsBottomSheetFragment)
         }
 
-        mapSharedViewModel.tileSource.observe(viewLifecycleOwner) {
-            if (it == CustomTileSourceFactory.SAT) {
+        mapSharedViewModel.tileSource.observe(viewLifecycleOwner) { tileSource ->
+            if (tileSource == CustomTileSourceFactory.SAT) {
                 overlayHelper.addLandBoundariesLayer()
             }
+
             if (mapView.overlays.contains(overlayHelper.getLandBoundariesOverlay()) && mapSharedViewModel.tileSource.value != CustomTileSourceFactory.SAT) {
                 mapView.overlays.remove(overlayHelper.getLandBoundariesOverlay())
             }
             // Clear the current tile cache
             mapView.apply {
-                tileProvider.clearTileCache()
-                val previousOverlay = this.overlayManager.tilesOverlay
-                overlayManager.remove(previousOverlay)
-                setTileSource(mapSharedViewModel.tileSource.value)
+                /*val previousOverlay = overlayManager.tilesOverlay
+                overlayManager.remove(previousOverlay)*/
+                tilesOverlay?.let {
+                    overlayManager.remove(it)
+                }
+
+                Log.d("idk", tileSource.name())
+
+                //tileProvider = MapTileProviderBasic(context, tileSource)
+                val tileProvider = MapTileProviderBasic(context, tileSource)
+                tileProvider.tileSource = tileSource
+                tilesOverlay = TilesOverlay(tileProvider, context).apply {
+                    loadingBackgroundColor = Color.TRANSPARENT
+                    loadingLineColor = Color.TRANSPARENT
+                }
+
+                //overlayManager.tilesOverlay = tilesOverlay
+
+                //overlayManager.tilesOverlay = tilesOverlay
+
+                //  overlayManager.overlays().add(0, tilesOverlay)
+                overlayManager.addOverlay(0, tilesOverlay, this@MapFragment)
+
+                //tileProvider.clearTileCache()
+
                 maxZoomLevel = mapView.tileProvider.tileSource.maximumZoomLevel.toDouble() + 2
-                invalidate()
             }
         }
 

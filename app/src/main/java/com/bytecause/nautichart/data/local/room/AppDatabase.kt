@@ -32,8 +32,6 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun vesselInfoDao(): VesselInfoDao
 
-    //abstract fun customCategoryPoiDao(): CustomPoiCategoryDao
-
     abstract fun customPoiDao(): CustomPoiDao
 
     abstract fun searchCacheDao(): PoiCacheDao

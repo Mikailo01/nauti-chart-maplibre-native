@@ -3,6 +3,7 @@ package com.bytecause.nautichart.data.cache
 import android.content.Context
 import android.os.Environment
 import android.util.Log
+import com.bytecause.nautichart.util.basePath
 import org.osmdroid.tileprovider.cachemanager.CacheManager
 import org.osmdroid.tileprovider.modules.SqliteArchiveTileWriter
 import org.osmdroid.tileprovider.tilesource.TileSourcePolicyException
@@ -22,8 +23,7 @@ class CacheDownloaderArchive(
 
     fun downloadTile(start: Boolean) {
         val archivePath =
-            Environment.getExternalStorageDirectory().absolutePath + File.separator + "Android" + File.separator + "data" +
-                    File.separator + context.applicationContext.packageName + File.separator + "archives"
+            context.basePath() + File.separator + "files" + File.separator + "archives"
 
         val dir = File(archivePath)
 
