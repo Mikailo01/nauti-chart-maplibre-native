@@ -14,10 +14,15 @@ import com.bytecause.nautichart.data.repository.HarboursRepository
 import com.bytecause.nautichart.data.repository.PoiCacheRepository
 import com.bytecause.nautichart.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.nautichart.domain.model.ApiResult
+import com.bytecause.nautichart.domain.model.CustomTileProviderType
 import com.bytecause.nautichart.domain.model.UiState
 import com.bytecause.nautichart.domain.model.VesselMappedEntity
+import com.bytecause.nautichart.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.nautichart.domain.usecase.VesselsUseCase
 import com.bytecause.nautichart.tilesources.CustomTileSourceFactory
+import com.bytecause.nautichart.tilesources.TileProviderUrlParametersSchema
+import com.bytecause.nautichart.tilesources.YXTileSource
+import com.bytecause.nautichart.ui.view.fragment.bottomsheet.MapBottomSheetResources
 import com.bytecause.nautichart.ui.view.overlay.CustomMarker
 import com.bytecause.nautichart.util.MapUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,10 +33,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import java.net.ConnectException
@@ -47,7 +54,8 @@ class MapViewModel @Inject constructor(
     private val poiCacheRepository: PoiCacheRepository,
     private val customPoiRepository: CustomPoiDatabaseRepository,
     private val vesselsUseCase: VesselsUseCase,
-    private val userPreferencesRepositoryImpl: UserPreferencesRepositoryImpl
+    private val userPreferencesRepositoryImpl: UserPreferencesRepositoryImpl,
+    private val customTileSourcesUseCase: CustomTileSourcesUseCase
 ) : ViewModel() {
 
     private val _harboursFetchingState = MutableStateFlow<UiState<HarboursEntity>?>(null)
@@ -92,7 +100,8 @@ class MapViewModel @Inject constructor(
 
     fun searchVesselById(id: Int): Flow<VesselInfoEntity> = vesselsUseCase.searchVesselById(id)
 
-    fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheEntity>> = poiCacheRepository.searchInCache(placeIds)
+    fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheEntity>> =
+        poiCacheRepository.searchInCache(placeIds)
 
     val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi
 
@@ -104,8 +113,12 @@ class MapViewModel @Inject constructor(
 
     val loadAllHarbours: Flow<List<HarboursEntity>> = harboursDatabaseRepository.loadAllHarbours
     val isHarboursDatabaseEmpty: Flow<Boolean> = harboursDatabaseRepository.isHarboursDatabaseEmpty
-    fun isHarbourIdInDatabase(idList: List<Int>) = harboursDatabaseRepository.isHarbourIdInDatabase(idList)
-    fun searchHarbourById(id: Int): Flow<HarboursEntity> = harboursDatabaseRepository.searchHarbourById(id)
+    fun isHarbourIdInDatabase(idList: List<Int>) =
+        harboursDatabaseRepository.isHarbourIdInDatabase(idList)
+
+    fun searchHarbourById(id: Int): Flow<HarboursEntity> =
+        harboursDatabaseRepository.searchHarbourById(id)
+
     fun addHarbours(entity: List<HarboursEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
             harboursDatabaseRepository.insertAllHarbours(entity)
@@ -267,16 +280,79 @@ class MapViewModel @Inject constructor(
         _harboursFetchingState.value = _harboursFetchingState.value?.copy(isLoading = false)
     }
 
-    fun getCachedTileSource(name: String?): OnlineTileSourceBase? {
-        name ?: return null
+    private fun getCachedTileSourceType(tileSourceName: String?): Flow<OnlineTileSourceBase?> =
+        flow {
+            tileSourceName ?: emit(null)
 
-        return when (name) {
-            TileSourceFactory.MAPNIK.name() -> TileSourceFactory.MAPNIK
-            CustomTileSourceFactory.SAT.name() -> CustomTileSourceFactory.SAT
-            TileSourceFactory.OpenTopo.name() -> TileSourceFactory.OpenTopo
-            else -> null
+            emit(
+                when (tileSourceName) {
+                    TileSourceFactory.MAPNIK.name() -> TileSourceFactory.MAPNIK
+                    CustomTileSourceFactory.SAT.name() -> CustomTileSourceFactory.SAT
+                    TileSourceFactory.OpenTopo.name() -> TileSourceFactory.OpenTopo
+                    else -> {
+                        customTileSourcesUseCase.invoke().firstOrNull()?.run {
+                            find {
+                                when (it.type) {
+                                    is CustomTileProviderType.Online -> {
+                                        it.type.name
+                                    }
+
+                                    is CustomTileProviderType.Offline -> {
+                                        it.type.name
+                                    }
+                                } == tileSourceName
+                            }?.run {
+                                when (type) {
+                                    is CustomTileProviderType.Online -> {
+                                        when (type.schema) {
+                                            TileProviderUrlParametersSchema.YX.name -> {
+                                                YXTileSource(
+                                                    aName = this.type.name,
+                                                    minZoom = this.type.minZoom,
+                                                    maxZoom = this.type.maxZoom,
+                                                    tileSize = this.type.tileSize,
+                                                    filenameEnding = this.type.tileFileFormat,
+                                                    url = arrayOf(this.type.url),
+                                                    copyright = ""
+                                                )
+                                            }
+
+                                            TileProviderUrlParametersSchema.XY.name -> {
+                                                XYTileSource(
+                                                    this.type.name,
+                                                    this.type.minZoom,
+                                                    this.type.maxZoom,
+                                                    this.type.tileSize,
+                                                    this.type.tileFileFormat,
+                                                    arrayOf(
+                                                        this.type.url
+                                                    )
+                                                )
+                                            }
+
+                                            else -> {
+                                                null
+                                            }
+                                        }
+                                    }
+
+                                    is CustomTileProviderType.Offline -> {
+                                        XYTileSource(
+                                            this.type.name,
+                                            this.type.minZoom,
+                                            this.type.maxZoom,
+                                            this.type.tileSize,
+                                            "",
+                                            emptyArray()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            )
         }
-    }
 
     // User Preferences DataStore operations.
     fun getFirstRunFlag() = userPreferencesRepositoryImpl.getFirstRunFlag()
@@ -290,5 +366,9 @@ class MapViewModel @Inject constructor(
 
     fun getUserLocation() = userPreferencesRepositoryImpl.getUserPosition()
 
-    fun getCachedTileSource(): Flow<String?> = userPreferencesRepositoryImpl.getCachedTileSource()
+    fun getCachedTileSourceType(): Flow<OnlineTileSourceBase?> = flow {
+        userPreferencesRepositoryImpl.getCachedTileSource().firstOrNull()?.let {
+            emit(getCachedTileSourceType(it).firstOrNull())
+        }
+    }
 }

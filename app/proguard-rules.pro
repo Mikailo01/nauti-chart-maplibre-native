@@ -178,6 +178,65 @@
 # keep the specified class members from being renamed only
 -keepclassmembernames class com.google.android.icing.IcingSearchEngineImpl { *; }
 
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+
+# keep everything in this package from being removed or renamed
+-keep class org.osmdroid.** { *; }
+
+# keep everything in this package from being renamed only
+-keepnames class org.osmdroid.** { *; }
+
+
 
 
 

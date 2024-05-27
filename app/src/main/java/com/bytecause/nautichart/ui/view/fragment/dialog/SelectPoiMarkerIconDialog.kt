@@ -107,7 +107,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     }
 
     override fun onIconClickListener(view: View, position: Int) {
-        if (!Util.lastClick(500)) return
+        if (!Util().lastClick(500)) return
         (view.findViewById<ImageButton>(R.id.icon_view_holder).tag as Int).let { drawableId ->
             // Saves clicked icon drawable resource name into proto datastore.
             viewModel.saveRecentlyUsedPoiMarkerIcon(resources.getResourceEntryName(drawableId))

@@ -11,6 +11,7 @@ import com.bytecause.nautichart.data.remote.retrofit.OverpassRestApiService
 import com.bytecause.nautichart.data.repository.ContinentDatabaseRepository
 import com.bytecause.nautichart.data.repository.CountryDataExtractSizeRepository
 import com.bytecause.nautichart.data.repository.RegionRepository
+import com.bytecause.nautichart.data.repository.SearchHistoryRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -62,6 +63,11 @@ object SearchMapModule {
             ),
             DatabaseModule.provideCountryDao(DatabaseModule.provideDatabase(context))
         )
+
+    @Singleton
+    @Provides
+    fun providesSearchHistoryDataStoreRepo(@ApplicationContext context: Context): SearchHistoryRepositoryImpl =
+        SearchHistoryRepositoryImpl(context)
 
     @Singleton
     @Provides

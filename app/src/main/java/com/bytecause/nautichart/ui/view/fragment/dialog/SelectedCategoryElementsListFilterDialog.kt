@@ -36,7 +36,6 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
     private lateinit var parentRecyclerView: RecyclerView
     private lateinit var parentRecyclerViewAdapter: TagsFilterParentAdapter
 
-    //private val tagsList = mutableListOf<ElementTagModel>()
     private val tagsMap = mutableMapOf<String, List<ElementTagModel>>()
 
     override fun onCreateView(
@@ -51,7 +50,7 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
         super.onViewCreated(view, savedInstanceState)
 
         binding.clearFiltersButton.setOnClickListener {
-            if (!Util.lastClick(1000)) {
+            if (!Util().lastClick(1000)) {
                 return@setOnClickListener
             }
 

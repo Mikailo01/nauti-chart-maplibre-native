@@ -29,6 +29,8 @@ class SelectRegionBottomSheetDialog :
     private val viewModel: SelectRegionBottomSheetViewModel by viewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
+    private val util = Util()
+
     private val activityResultLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -51,7 +53,7 @@ class SelectRegionBottomSheetDialog :
         }
 
         binding.grantLocationPermissionLinearLayout.setOnClickListener {
-            if (!Util.lastClick(500)) return@setOnClickListener
+            if (!util.lastClick(500)) return@setOnClickListener
             if (requireContext().isLocationPermissionGranted()) {
                 findNavController().popBackStack()
             } else {
@@ -60,7 +62,7 @@ class SelectRegionBottomSheetDialog :
         }
 
         binding.pickRegionLinearLayout.setOnClickListener {
-            if (!Util.lastClick(500)) return@setOnClickListener
+            if (!util.lastClick(500)) return@setOnClickListener
             viewModel.saveFirstRunFlag(false)
             findNavController().navigate(R.id.action_selectRegionBottomSheetDialog_to_download_poi_dest)
         }

@@ -6,6 +6,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginStart="15dp"
+    android:layout_marginBottom="15dp"
     android:gravity="center"
     android:orientation="vertical">
 
@@ -27,8 +28,22 @@
 
     <TextView
         android:id="@+id/layer_text"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text=""
         android:textSize="13sp"
-        tools:text="@string/default_tile_source"/>
+        android:ellipsize="marquee"
+        android:singleLine="true"
+        android:gravity="center"
+        android:marqueeRepeatLimit ="marquee_forever"
+        android:scrollHorizontally="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:duplicateParentState="true"
+        tools:text="@string/default_tile_source">
+        <requestFocus
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:duplicateParentState="true" />
+    </TextView>
 </LinearLayout>

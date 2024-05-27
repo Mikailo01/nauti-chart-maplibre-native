@@ -141,6 +141,9 @@
         <action
             android:id="@+id/action_mapToolsBottomSheetFragment_to_downloadMapFragment"
             app:destination="@id/downloadMapFragment" />
+        <action
+            android:id="@+id/action_mapToolsBottomSheetFragment_to_customTileSourceComposedDialog"
+            app:destination="@id/customTileSourceComposedDialog" />
     </dialog>
     <dialog
         android:id="@+id/runtimeDialogFragment"
@@ -234,5 +237,9 @@
         android:name="com.bytecause.nautichart.ui.view.fragment.dialog.FullSearchHistoryListDialog"
         android:label="FullSearchHistoryListDialog"
         tools:layout="@layout/full_search_history_list_dialog"/>
+    <dialog
+        android:id="@+id/customTileSourceComposedDialog"
+        android:name="com.bytecause.nautichart.ui.view.fragment.dialog.CustomTileSourceComposedDialog"
+        android:label="CustomTileSourceComposedDialog" />
 
 </navigation>

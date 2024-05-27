@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.bytecause.nautichart.data.local.datastore.preferences.UserPreferencesRepository
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -19,11 +20,12 @@ import java.io.IOException
 import javax.inject.Inject
 
 class UserPreferencesRepositoryImpl @Inject constructor(
-    private val userDataStorePreferences: DataStore<Preferences>
+    private val userDataStorePreferences: DataStore<Preferences>,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : UserPreferencesRepository {
 
     override suspend fun saveFirstRunFlag(flag: Boolean) {
-        withContext(Dispatchers.IO) {
+        withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
                 preferences[FIRST_RUN_KEY] = flag
             }
@@ -34,14 +36,14 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val firstRunFlag = userDataStorePreferences.data.firstOrNull()?.get(FIRST_RUN_KEY)
         emit(firstRunFlag)
     }
-        .flowOn(Dispatchers.IO)
+        .flowOn(coroutineDispatcher)
         .catch { exception ->
         if (exception is IOException) emit(null)
         else throw exception
     }
 
     override suspend fun saveUserPosition(position: GeoPoint) {
-        withContext(Dispatchers.IO) {
+        withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
                 preferences[USER_POSITION_KEY] = Gson().toJson(position)
             }
@@ -53,14 +55,14 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             userDataStorePreferences.data.firstOrNull()?.get(USER_POSITION_KEY)
         emit(Gson().fromJson(jsonString, GeoPoint::class.java))
     }
-        .flowOn(Dispatchers.IO)
+        .flowOn(coroutineDispatcher)
         .catch { exception ->
         if (exception is IOException) emit(null)
         else throw exception
     }
 
     override suspend fun cacheSelectedTileSource(tileSourceName: String) {
-        withContext(Dispatchers.IO) {
+        withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
                 preferences[TILE_SOURCE_KEY] = tileSourceName
             }
@@ -71,7 +73,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val cachedTileSource = userDataStorePreferences.data.firstOrNull()?.get(TILE_SOURCE_KEY)
         emit(cachedTileSource)
     }
-        .flowOn(Dispatchers.IO)
+        .flowOn(coroutineDispatcher)
         .catch { exception ->
         if (exception is IOException) emit(null)
         else throw exception

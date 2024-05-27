@@ -27,3 +27,28 @@ message RecentlySearchedPlace {
 message RecentlySearchedPlaceList {
   repeated RecentlySearchedPlace place = 1;
 }
+
+message CustomOnlineTileSource {
+  string name = 1;
+  string url = 2;
+  string tileFileFormat = 3;
+  string schema = 4;
+  int32 minZoom = 5;
+  int32 maxZoom = 6;
+  int32 tileSize = 7;
+}
+
+message CustomOnlineTileSourceList {
+  repeated CustomOnlineTileSource onlineTileSource = 1;
+}
+
+message CustomOfflineTileSource {
+  string name = 1;
+  int32 minZoom = 3;
+  int32 maxZoom = 4;
+  int32 tileSize = 5;
+}
+
+message CustomOfflineTileSourceList {
+  repeated CustomOfflineTileSource offlineTileSource = 1;
+}

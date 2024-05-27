@@ -121,7 +121,7 @@ class CustomMarkerDialog : DialogFragment(),
                     }
                     itemView.apply {
                         setOnClickListener {
-                            if (!Util.lastClick(300)) return@setOnClickListener
+                            if (!Util().lastClick(300)) return@setOnClickListener
 
                             if (itemPosition == categoryGenericRecyclerViewAdapter.itemCount - 1 && categoryRecyclerView.getChildAt(
                                     itemPosition

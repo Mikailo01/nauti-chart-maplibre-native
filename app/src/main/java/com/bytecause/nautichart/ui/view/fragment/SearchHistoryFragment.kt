@@ -23,6 +23,7 @@ import com.bytecause.nautichart.domain.model.ArgsObjectTypeArray
 import com.bytecause.nautichart.domain.model.SearchedPlace
 import com.bytecause.nautichart.ui.adapter.GenericRecyclerViewAdapter
 import com.bytecause.nautichart.ui.adapter.RecyclerViewBindingInterface
+import com.bytecause.nautichart.ui.util.DrawableUtil
 import com.bytecause.nautichart.ui.view.custom.FullyExpandedRecyclerView
 import com.bytecause.nautichart.ui.view.delegate.viewBinding
 import com.bytecause.nautichart.ui.view.fragment.dialog.ConfirmationDialog
@@ -116,12 +117,7 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
                     return@setOnLongClickListener true
                 }
                 placeImage.setImageResource(
-                    when (item.addressType) {
-                        "city" -> R.drawable.town_icon
-                        "village" -> R.drawable.village_icon
-                        "house" -> R.drawable.house_icon
-                        else -> R.drawable.map_marker
-                    }
+                    DrawableUtil.assignDrawableToAddressType(item.addressType)
                 )
                 placeName.text =
                     if (item.displayName.startsWith(item.name)) item.displayName else item.name

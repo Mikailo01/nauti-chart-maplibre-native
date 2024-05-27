@@ -29,6 +29,7 @@ interface SearchHistoryRecyclerViewInterface {
 interface SelectLayerInterface {
 
     fun onItemViewClickListener(view: View, position: Int)
+    fun onItemViewLongClickListener(view: View, position: Int)
 }
 
 interface SelectCheckBoxInterface {

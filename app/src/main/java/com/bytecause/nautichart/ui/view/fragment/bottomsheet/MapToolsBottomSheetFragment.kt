@@ -17,6 +17,8 @@ class MapToolsBottomSheetFragment :
 
     private val binding by viewBinding(MapToolsBottomSheetFragmentBinding::bind)
 
+    private val util = Util()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -28,13 +30,13 @@ class MapToolsBottomSheetFragment :
         }
 
         binding.downloadMapImageButton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
+            if (!util.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_downloadMapFragment)
         }
 
         binding.customTileSourceImagebutton.setOnClickListener {
-            if (!Util.lastClick(1000)) return@setOnClickListener
-            findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_customTileSourceDialog)
+            if (!util.lastClick(1000)) return@setOnClickListener
+            findNavController().navigate(R.id.action_mapToolsBottomSheetFragment_to_customTileSourceComposedDialog)
         }
 
         binding.sallingRouteImageView.setOnClickListener {

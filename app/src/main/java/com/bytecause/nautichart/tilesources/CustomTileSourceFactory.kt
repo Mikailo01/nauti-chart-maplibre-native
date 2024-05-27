@@ -9,7 +9,11 @@ object CustomTileSourceFactory : TileSourceFactory() {
 
     val OPEN_SEAMAP: OnlineTileSourceBase = XYTileSource(
         "OpenSeaMapSeaMarks",
-        3, 18, 256, ".png", arrayOf(
+        3,
+        18,
+        256,
+        ".png",
+        arrayOf(
             "https://tiles.openseamap.org/seamark/",
             "https://t1.openseamap.org/seamark/"
         ),

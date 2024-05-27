@@ -1,7 +1,7 @@
 package com.bytecause.nautichart.ui.util
 
 import android.Manifest
-import android.R
+import android.R.attr
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -19,9 +19,9 @@ import com.anggrayudi.storage.file.StorageId
 
 fun Context.getProgressBarDrawable(): Drawable {
     val value = TypedValue()
-    theme.resolveAttribute(R.attr.progressBarStyleSmall, value, false)
+    theme.resolveAttribute(attr.progressBarStyleSmall, value, false)
     val progressBarStyle = value.data
-    val attributes = intArrayOf(R.attr.indeterminateDrawable)
+    val attributes = intArrayOf(attr.indeterminateDrawable)
     val array = obtainStyledAttributes(progressBarStyle, attributes)
     val drawable = array.getDrawableOrThrow(0)
     array.recycle()

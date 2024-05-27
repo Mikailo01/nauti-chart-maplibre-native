@@ -42,6 +42,8 @@ class FirstRunDialogFragment : DialogFragment() {
     private val viewModel: FirstRunViewModel by activityViewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
+    private val util = Util()
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -76,12 +78,12 @@ class FirstRunDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.selectRegionImageView.setOnClickListener {
-            if (!Util.lastClick(500)) return@setOnClickListener
+            if (!util.lastClick(500)) return@setOnClickListener
             findNavController().navigate(R.id.action_firstRunDialogFragment_to_selectRegionBottomSheetDialog)
         }
 
         binding.skipTextView.setOnClickListener {
-            if (!Util.lastClick(500)) return@setOnClickListener
+            if (!util.lastClick(500)) return@setOnClickListener
             // Saves flag which indicates if app is started for the first time.
             viewModel.saveFirstRunFlag(false)
             findNavController().popBackStack()
