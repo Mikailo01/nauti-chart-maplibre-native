@@ -1,6 +1,6 @@
 package com.bytecause.nautichart.coordinateconversions
 
-import com.bytecause.nautichart.util.MapUtil
+import com.bytecause.map.util.MapUtil
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,7 +38,7 @@ class CoordinatesValidationTest(
 
     @Test
     fun areCoordinatesValidTest() {
-        val result = MapUtil.areCoordinatesValid(coordinates)
+        val result = com.bytecause.map.util.MapUtil.areCoordinatesValid(coordinates)
         assertEquals(result, isValid)
     }
 

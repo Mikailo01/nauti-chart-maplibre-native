@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/measure_distance_top_linear_layout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentTop="true"
+    android:focusable="true"
+    android:clickable="true"
+    android:backgroundTint="@color/bottom_sheet_color"
+    android:background="@color/white"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="15dp">
+
+        <ImageButton
+            android:id="@+id/measure_distance_back_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:tint="@color/adaptive_color"
+            android:src="@drawable/baseline_arrow_back_24"
+            android:layout_alignTop="@id/measure_textview"
+            android:layout_alignBottom="@id/measure_subtext"
+            android:background="@color/transparent"
+            android:contentDescription="TODO" />
+
+        <TextView
+            android:id="@+id/measure_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/adaptive_color"
+            android:text="@string/measure_distance"
+            android:layout_toEndOf="@id/measure_distance_back_button"
+            android:layout_marginStart="15dp"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/clear_distance_lines"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            app:tint="@color/adaptive_color"
+            android:scaleX="1.4"
+            android:scaleY="1.4"
+            android:layout_marginEnd="5dp"
+            android:layout_centerVertical="true"
+            android:src="@drawable/baseline_clear_all_24"
+            android:background="@color/transparent" />
+
+        <ImageButton
+            android:id="@+id/undo_distance_line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:tint="@color/adaptive_color"
+            android:scaleX="1.2"
+            android:scaleY="1.2"
+            android:layout_toStartOf="@id/clear_distance_lines"
+            android:layout_marginEnd="20dp"
+            android:layout_centerVertical="true"
+            android:src="@drawable/baseline_undo_24"
+            android:background="@color/transparent" />
+
+        <TextView
+            android:id="@+id/measure_subtext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/adaptive_color"
+            android:text="@string/add_point_to_start_measure"
+            android:layout_below="@id/measure_textview"
+            android:layout_alignStart="@id/measure_textview" />
+
+    </RelativeLayout>
+</LinearLayout>

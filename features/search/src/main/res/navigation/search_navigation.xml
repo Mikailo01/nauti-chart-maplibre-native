@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/search_navigation"
+    app:startDestination="@id/searchMapFragmentDialog">
+
+    <dialog
+        android:id="@+id/searchMapFragmentDialog"
+        android:name="com.bytecause.search.ui.dialog.SearchMapFragmentDialog"
+        android:label="SearchMapFragmentDialog"
+        tools:layout="@layout/search_map_fragment_dialog">
+        <deepLink app:uri="search://home" />
+        <action
+            android:id="@+id/action_searchMapFragmentDialog_to_selectedCategoryElementsDialogFragment"
+            app:destination="@id/selectedCategoryElementsDialogFragment" />
+        <action
+            android:id="@+id/action_searchMapFragmentDialog_to_fullSearchHistoryListDialog"
+            app:destination="@id/fullSearchHistoryListDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectedCategoryElementsDialogFragment"
+        android:name="com.bytecause.search.ui.dialog.SelectedCategoryElementsDialogFragment"
+        android:label="SelectedCategoryElementsDialogFragment"
+        tools:layout="@layout/selected_category_elements_fragment_layout">
+        <argument
+            android:name="poiCategory"
+            app:argType="com.bytecause.search.ui.model.parcelable.PoiCategoryModel" />
+        <action
+            android:id="@+id/action_selectedCategoryElementsDialogFragment_to_selectedCategoryElementsListFilterDialog"
+            app:destination="@id/selectedCategoryElementsListFilterDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectedCategoryElementsListFilterDialog"
+        android:name="com.bytecause.search.ui.dialog.SelectedCategoryElementsListFilterDialog"
+        android:label="SelectedCategoryElementsListFilterDialog"
+        tools:layout="@layout/selected_category_elements_filter_dialog_layout" />
+    <dialog
+        android:id="@+id/fullSearchHistoryListDialog"
+        android:name="com.bytecause.search.ui.dialog.FullSearchHistoryListDialog"
+        android:label="FullSearchHistoryListDialog"
+        tools:layout="@layout/full_search_history_list_dialog"/>
+</navigation>

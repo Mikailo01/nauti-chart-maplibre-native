@@ -1,0 +1,184 @@
+[versions]
+# Dependencies
+maplibreSdk = "11.0.0"
+maplibreAnnotationPlugin = "3.0.0"
+room = "2.6.1"
+jsoup = "1.17.1"
+appSearch = "1.1.0-alpha03"
+hiltComposeNavigation = "1.2.0"
+androidxComposeBom = "2024.06.00"
+lifecycleKtx = "2.8.2"
+composeActivity = "1.9.0"
+composeUi = "1.6.7"
+composeMaterial3 = "1.2.1"
+coil = "2.6.0"
+gson = "2.10.1"
+coreKtx = "1.13.1"
+appCompat = "1.7.0"
+coroutines = "1.8.1"
+constraintLayout = "2.1.4"
+material = "1.12.0"
+androidNavigation = "2.7.7"
+activity = "1.9.0"
+recyclerView = "1.3.2"
+viewPager2 = "1.1.0"
+osmdroid = "6.1.17"
+osmBonusPack = "6.9.0"
+preference = "1.2.1"
+openingHoursParser = "0.28.0"
+datastore = "1.1.1"
+protobufJavaLite = "3.25.1"
+hilt = "2.51.1"
+storage = "1.5.5"
+splashScreen = "1.0.1"
+retrofit = "2.11.0"
+androidTools = "31.5.0"
+kotlinxSerialization = "1.7.0"
+
+# Plugins
+kotlin = "2.0.0"
+ksp = "2.0.0-1.0.22"
+kapt = "2.0.0"
+protobuf = "0.9.1"
+navigationSafeArgs = "2.7.7"
+androidGradlePlugin = "8.5.0"
+kotlinxSerializationPlugin = "2.0.0"
+
+
+# Testing
+androidxJunit = "1.1.5"
+junit = "4.13.2"
+espresso = "3.5.1"
+jetbrainsKotlinJvm = "1.9.0"
+
+[libraries]
+# UI
+# Views
+androidx-recyclerView = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerView" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewPager2" }
+androidx-constraintLayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintLayout" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity" }
+
+androidx-splashScreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashScreen" }
+
+# Compose
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
+androidx-compose-activity = { group = "androidx.activity", name = "activity-compose", version.ref = "composeActivity" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-material = { group = "androidx.compose.material", name = "material" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3-android", version.ref = "composeMaterial3" }
+androidx-compose-livedata-runtime = { group = "androidx.compose.runtime", name = "runtime-livedata" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+
+
+# MapLibre Native SDK
+maplibre = { group = "org.maplibre.gl", name = "android-sdk", version.ref = "maplibreSdk" }
+maplibre-annotation = { group = "org.maplibre.gl", name = "android-plugin-annotation-v9", version.ref = "maplibreAnnotationPlugin" }
+
+# Room
+androidx-room = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
+
+# Retrofit
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-gson-converter = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+
+# Gson
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+# Hilt
+hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+
+androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preference" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appCompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appCompat" }
+
+# Lifecycle
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleKtx" }
+androidx-lifecycle-livedate-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleKtx" }
+androidx-lifecycle-common-java8 = { group = "androidx.lifecycle", name = "lifecycle-common-java8", version.ref = "lifecycleKtx" }
+
+# Coroutines
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# AppSearch Api
+appSearchApi = { group = "androidx.appsearch", name = "appsearch", version.ref = "appSearch" }
+appSearchLocalStorage = { group = "androidx.appsearch", name = "appsearch-local-storage", version.ref = "appSearch" }
+appSearchCompiler = { group = "androidx.appsearch", name = "appsearch-compiler", version.ref = "appSearch" }
+
+# Navigation
+navigation-hilt-compose-navigation = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltComposeNavigation" }
+androidx-navigation-fragmentKtx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "androidNavigation" }
+androidx-navigation-uiKtx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "androidNavigation" }
+
+# Datastore
+androidx-datastore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+google-protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufJavaLite" }
+
+# Osmdroid
+osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+osmdroid-wms = { group = "org.osmdroid", name = "osmdroid-wms", version.ref = "osmdroid" }
+osmdroid-mapsforge = { group = "org.osmdroid", name = "osmdroid-mapsforge", version.ref = "osmdroid" }
+osmBonusPack = { group = "com.github.MKergall", name = "osmbonuspack", version.ref = "osmBonusPack" }
+
+openingHoursParser = { group = "ch.poole", name = "OpeningHoursParser", version.ref = "openingHoursParser" }
+
+simplestorage-storage = { group = "com.anggrayudi", name = "storage", version.ref = "storage" }
+
+# Testing
+androidx-room-test = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
+androidx-espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+
+# Serialization
+kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+# build-logic dependencies
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+android-tools-common = { group = "com.android.tools", name = "common", version.ref = "androidTools" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+navigation-safeargs = { id = "androidx.navigation.safeargs.kotlin", version.ref = "navigationSafeArgs" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+jetbrains-kotlin-serializable = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerializationPlugin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kapt" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+
+# Plugins defined by this project (e.g.: AndroidApplicationConventionPlugin)
+# For each plugin defined here must exist corresponding convention plugin file
+nautichart-android-application = { id = "nautichart.android.application", version = "unspecified" }
+nautichart-android-library = { id = "nautichart.android.library", version = "unspecified" }
+nautichart-android-library-compose = { id = "nautichart.android.library.compose", version = "unspecified" }
+nautichart-android-hilt = { id = "nautichart.android.hilt", version = "unspecified" }
+nautichart-android-feature = { id = "nautichart.android.feature", version = "unspecified" }
+nautichart-android-appsearchapi = { id = "nautichart.android.appsearchapi", version = "unspecified"}
+nautichart-android-library-resources = { id = "nautichart.android.library.resources", version = "unspecified" }
+nautichart-android-feature-compose = { id = "nautichart.android.feature.compose", version = "unspecified" }
+nautichart-android-application-compose = { id = "nautichart.android.application.compose", version = "unspecified" }
+nautichart-android-navigation-safeArgs = { id = "nautichart.android.navigation.safeargs.kotlin", version = "unspecified" }
+nautichart-android-kotlin = { id = "nautichart.jetbrains.kotlin.android", version = "unspecified" }
+nautichart-android-protobuf = { id = "nautichart.android.google.protobuf", version = "unspecified" }
+nautichart-android-kotlin-parcelize = { id = "nautichart.android.kotlin.parcelize", version = "unspecified" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
+
+[bundles]
+room = ["androidx-room", "androidx-room-compiler"]
+hilt = ["hilt", "hilt-compiler"]
+
+

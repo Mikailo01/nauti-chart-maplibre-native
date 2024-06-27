@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/custom_poi_navigation"
+    app:startDestination="@id/customMarkerDialog">
+
+    <dialog
+        android:id="@+id/customMarkerDialog"
+        android:name="com.bytecause.custom_poi.ui.CustomMarkerDialog"
+        android:label="CustomMarkerDialog"
+        tools:layout="@layout/add_custom_marker">
+        <deepLink app:uri="custom-poi://home" />
+        <action
+            android:id="@+id/action_customMarkerDialog_to_addCustomMarkerCategoryDialog"
+            app:destination="@id/addCustomMarkerCategoryDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/addCustomMarkerCategoryDialog"
+        android:name="com.bytecause.custom_poi.ui.AddCustomMarkerCategoryDialog"
+        android:label="AddCustomMarkerCategoryDialog"
+        tools:layout="@layout/add_custom_marker_category_dialog">
+        <action
+            android:id="@+id/action_addCustomMarkerCategoryDialog_to_selectPoiMarkerIconDialog"
+            app:destination="@id/selectPoiMarkerIconDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectPoiMarkerIconDialog"
+        android:name="com.bytecause.custom_poi.ui.SelectPoiMarkerIconDialog"
+        android:label="SelectPoiMarkerIconDialog"
+        tools:layout="@layout/select_poi_marker_icon_dialog" />
+</navigation>
