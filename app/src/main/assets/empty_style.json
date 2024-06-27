@@ -1,0 +1,21 @@
+{
+  "version": 8,
+  "name": "Empty Style",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "mbtiles:///storage/emulated/0/Android/obb/com.bytecause.nautichart/netherlands.mbtiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "my-layer",
+      "source": "my-source",
+      "source-layer": "main-source",
+      "type": "line",
+      "paint": {
+        "line-color": "#FFC0CB"
+      }
+    }
+  ]
+}

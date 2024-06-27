@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+// Support for nullable values.
+import "google/protobuf/wrappers.proto";
+
+option java_package = "com.bytecause.nautichart";
+option java_multiple_files = true;
+
+message CustomOnlineRasterTileSource {
+  string name = 1;
+  string url = 2;
+  string tileFileFormat = 3;
+  int32 minZoom = 4;
+  int32 maxZoom = 5;
+  int32 tileSize = 6;
+  bytes image = 7;
+}
+
+message CustomOnlineRasterTileSourceList {
+  repeated CustomOnlineRasterTileSource onlineRasterTileSource = 1;
+}
+
+message CustomOfflineRasterTileSource {
+  string name = 1;
+  int32 minZoom = 3;
+  int32 maxZoom = 4;
+  int32 tileSize = 5;
+  string filePath = 6;
+}
+
+message CustomOfflineRasterTileSourceList {
+  repeated CustomOfflineRasterTileSource offlineRasterTileSource = 1;
+}
+
+/*message CustomOnlineVectorTileSource {
+  string name = 1;
+  string url = 2;
+  string tileFileFormat = 3;
+  int32 minZoom = 4;
+  int32 maxZoom = 5;
+  int32 tileSize = 6;
+}
+
+message CustomOnlineTileSourceList {
+  repeated CustomOnlineRasterTileSource onlineTileSource = 1;
+}*/
+
+message CustomOfflineVectorTileSource {
+  string name = 1;
+  int32 minZoom = 3;
+  int32 maxZoom = 4;
+  string filePath = 5;
+}
+
+message CustomOfflineVectorTileSourceList {
+  repeated CustomOfflineVectorTileSource offlineVectorTileSource = 1;
+}

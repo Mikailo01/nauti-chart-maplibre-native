@@ -1,6 +1,6 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# proguardFiles setting in build.gradle.kts.
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
@@ -93,21 +93,18 @@
 -keepnames class com.bytecause.nautichart.domain.model.** { *; }
 
 ############################################################################################
-##################### RULE ALLOWING TO LOAD DRAWABLES USING FIELD ##########################
+##################### RULE ALLOWING TO LOAD DRAWABLES USING FIELDS ##########################
 ############################################################################################
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.R$drawable { *; }
+-keep class com.bytecause.core.resources.R$drawable { *; }
 
 # keep the specified class members from being removed or renamed
 # only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.R$drawable { *; }
+-keepclassmembers class com.bytecause.core.resources.R$drawable { *; }
 
 # keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.R$drawable { *; }
-
-# keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.R$drawable { *; }
+-keepnames class com.bytecause.core.resources.R$drawable { *; }
 
 ############################################################################
 ######################## PROTO DATASTORE RULES #############################
@@ -179,62 +176,100 @@
 -keepclassmembernames class com.google.android.icing.IcingSearchEngineImpl { *; }
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+-keep class com.bytecause.nautichart.CustomOfflineRasterTileSource { *; }
 
 # keep the specified class members from being removed or renamed
 # only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineRasterTileSource { *; }
 
 # keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+-keepnames class com.bytecause.nautichart.CustomOfflineRasterTileSource { *; }
 
 # keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomOfflineTileSource { *; }
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineRasterTileSource { *; }
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+-keep class com.bytecause.nautichart.CustomOfflineRasterTileSourceList { *; }
 
 # keep the specified class members from being removed or renamed
 # only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineRasterTileSourceList { *; }
 
 # keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+-keepnames class com.bytecause.nautichart.CustomOfflineRasterTileSourceList { *; }
 
 # keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomOfflineTileSourceList { *; }
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineRasterTileSourceList { *; }
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+-keep class com.bytecause.nautichart.CustomOnlineRasterTileSource { *; }
 
 # keep the specified class members from being removed or renamed
 # only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+-keepclassmembers class com.bytecause.nautichart.CustomOnlineRasterTileSource { *; }
 
 # keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+-keepnames class com.bytecause.nautichart.CustomOnlineRasterTileSource { *; }
 
 # keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomOnlineTileSource { *; }
+-keepclassmembernames class com.bytecause.nautichart.CustomOnlineRasterTileSource { *; }
 
 # keep the class and specified members from being removed or renamed
--keep class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+-keep class com.bytecause.nautichart.CustomOnlineRasterTileSourceList { *; }
 
 # keep the specified class members from being removed or renamed
 # only if the class is preserved
--keepclassmembers class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+-keepclassmembers class com.bytecause.nautichart.CustomOnlineRasterTileSourceList { *; }
 
 # keep the class and specified members from being renamed only
--keepnames class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+-keepnames class com.bytecause.nautichart.CustomOnlineRasterTileSourceList { *; }
 
 # keep the specified class members from being renamed only
--keepclassmembernames class com.bytecause.nautichart.CustomOnlineTileSourceList { *; }
+-keepclassmembernames class com.bytecause.nautichart.CustomOnlineRasterTileSourceList { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOfflineVectorTileSource { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineVectorTileSource { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOfflineVectorTileSource { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineVectorTileSource { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.CustomOfflineVectorTileSourceList { *; }
+
+# keep the specified class members from being removed or renamed
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.CustomOfflineVectorTileSourceList { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.CustomOfflineVectorTileSourceList { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.CustomOfflineVectorTileSourceList { *; }
 
 # keep everything in this package from being removed or renamed
 -keep class org.osmdroid.** { *; }
 
 # keep everything in this package from being renamed only
 -keepnames class org.osmdroid.** { *; }
+
+# keep everything in this package from being removed or renamed
+-keep class com.bytecause.search.ui.model.parcelable.** { *; }
+
+# keep everything in this package from being renamed only
+-keepnames class com.bytecause.search.ui.model.parcelable.** { *; }
+
+# keep everything in this package from being removed or renamed
+-keep class com.bytecause.domain.model.** { *; }
+
+# keep everything in this package from being renamed only
+-keepnames class com.bytecause.domain.model.** { *; }
 
 
 

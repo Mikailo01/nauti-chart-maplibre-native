@@ -23,7 +23,7 @@
         tools:targetApi="tiramisu">
 
         <activity
-            android:name="com.bytecause.nautichart.ui.view.activity.MainActivity"
+            android:name="com.bytecause.nautichart.activity.MainActivity"
             android:exported="true"
             android:theme="@style/Base.Theme.NautiChart">
             <intent-filter>

@@ -5,8 +5,6 @@
         <item name="colorPrimaryDark">#4CAF50</item>
     </style>
 
-    <style name="Theme.NautiChart" parent="Base.Theme.NautiChart" />
-
     <style name="MyCustomTheme" parent="@android:style/Theme.Panel">
         <item name="android:windowAnimationStyle">@style/MyAnimation.Window</item>
     </style>

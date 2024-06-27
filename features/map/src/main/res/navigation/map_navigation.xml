@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/map_navigation"
+    app:startDestination="@id/mapFragment">
+
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.bytecause.map.ui.MapFragment"
+        android:label="MapFragment"
+        tools:layout="@layout/fragment_map">
+        <deepLink app:uri="map://home" />
+        <action
+            android:id="@+id/action_mapFragment_to_mapBottomSheetFragment"
+            app:destination="@id/mapBottomSheetFragment" />
+        <action
+            android:id="@+id/action_mapFragment_to_customizeMapDialog"
+            app:destination="@id/customizeMapDialog" />
+        <action
+            android:id="@+id/action_mapFragment_to_mapShareBottomSheetDialog"
+            app:destination="@id/mapShareBottomSheetDialog" />
+        <action
+            android:id="@+id/action_mapFragment_to_mapToolsBottomSheetFragment"
+            app:destination="@id/mapToolsBottomSheetFragment" />
+        <action
+            android:id="@+id/action_mapFragment_to_locationDialogFragment"
+            app:destination="@id/locationDialogFragment" />
+    </fragment>
+    <dialog
+        android:id="@+id/mapBottomSheetFragment"
+        android:name="com.bytecause.map.ui.bottomsheet.MapBottomSheetFragment"
+        android:label="MapBottomSheetFragment"
+        tools:layout="@layout/map_bottom_sheet" />
+    <dialog
+        android:id="@+id/customizeMapDialog"
+        android:name="com.bytecause.map.ui.dialog.CustomizeMapDialog"
+        android:label="CustomizeMapDialog"
+        tools:layout="@layout/customize_map_dialog_fragment_layout">
+        <action
+            android:id="@+id/action_customizeMapDialog_to_loadingDialogFragment"
+            app:destination="@id/loadingDialogFragment" />
+    </dialog>
+    <dialog
+        android:id="@+id/mapToolsBottomSheetFragment"
+        android:name="com.bytecause.map.ui.bottomsheet.MapToolsBottomSheetFragment"
+        android:label="MapToolsBottomSheetFragment"
+        tools:layout="@layout/map_tools_bottom_sheet_fragment" />
+    <dialog
+        android:id="@+id/mapShareBottomSheetDialog"
+        android:name="com.bytecause.map.ui.bottomsheet.MapShareBottomSheetDialog"
+        android:label="MapShareBottomSheetDialog"
+        tools:layout="@layout/share_bottom_sheet_fragment">
+
+        <argument
+            android:name="geoPoint"
+            app:argType="float[]" />
+
+    </dialog>
+    <dialog
+        android:id="@+id/loadingDialogFragment"
+        android:name="com.bytecause.map.ui.dialog.LoadingDialogFragment"
+        android:label="LoadingDialogFragment"
+        tools:layout="@layout/loading_dialog_fragment">
+        <argument
+            android:name="text_info"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+    </dialog>
+    <dialog
+        android:id="@+id/locationDialogFragment"
+        android:name="com.bytecause.map.ui.dialog.LocationDialogFragment"
+        android:label="LocationDialogFragment"
+        tools:layout="@layout/location_alert_dialog" />
+</navigation>

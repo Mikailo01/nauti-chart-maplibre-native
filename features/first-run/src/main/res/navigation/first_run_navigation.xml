@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/first_run_navigation"
+    app:startDestination="@id/firstRunDialogFragment">
+
+    <dialog
+        android:id="@+id/firstRunDialogFragment"
+        android:name="com.bytecause.first_run.ui.FirstRunDialogFragment"
+        android:label="FirstRunDialogFragment"
+        tools:layout="@layout/first_run_dialog_fragment_layout">
+        <deepLink app:uri="first-run://home" />
+        <action
+            android:id="@+id/action_firstRunDialogFragment_to_selectRegionBottomSheetDialog"
+            app:destination="@id/selectRegionBottomSheetDialog" />
+    </dialog>
+    <dialog
+        android:id="@+id/selectRegionBottomSheetDialog"
+        android:name="com.bytecause.first_run.ui.bottomsheet.SelectRegionBottomSheetDialog"
+        android:label="SelectRegionBottomSheetDialog"
+        tools:layout="@layout/select_region_bottom_sheet_layout"/>
+</navigation>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_gravity="center"
+    android:background="@drawable/rounded_dialog">
+
+        <RadioGroup
+            android:id="@+id/tile_sources_radio_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="30dp">
+
+            <RadioButton
+                android:id="@+id/default_tile_source"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/mapnik_default" />
+
+            <RadioButton
+                android:id="@+id/satellite_tile_source"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/satellite" />
+
+            <RadioButton
+                android:id="@+id/topography_tile_source"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/topography" />
+        </RadioGroup>
+
+</LinearLayout>

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// Support for nullable values.
+import "google/protobuf/wrappers.proto";
+
+option java_package = "com.bytecause.nautichart";
+option java_multiple_files = true;
+
+message RecentlyUsedPoiMarkerIcon {
+  string drawableResourceName = 1;
+}
+
+message RecentlyUsedPoiMarkerIconList {
+  repeated RecentlyUsedPoiMarkerIcon iconDrawableResourceName = 1;
+}
