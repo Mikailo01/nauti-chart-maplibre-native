@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.FileNotFoundException
-import java.net.ConnectException
 import javax.inject.Inject
 
 private const val INIT_SEARCH_RADIUS = 30000
@@ -85,12 +83,6 @@ constructor(
 
     fun addElements(elements: List<OverpassNodeModel>) {
         _elementList.value = elements.toSet()
-    }
-
-    fun addElement(element: OverpassNodeModel) {
-        _elementList.update {
-            it + element
-        }
     }
 
     fun clearElements() {

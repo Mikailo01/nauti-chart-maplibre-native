@@ -1,7 +1,6 @@
 package com.bytecause.nautichart.di
 
 import android.content.Context
-import com.bytecause.data.repository.CustomOfflineVectorTileSourceRepositoryImpl
 import com.bytecause.data.repository.OverpassRepositoryImpl
 import com.bytecause.data.repository.PoiCacheRepositoryImpl
 import com.bytecause.data.repository.RegionRepositoryImpl
@@ -9,10 +8,12 @@ import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
+import com.bytecause.domain.usecase.FetchHarboursUseCase
 import com.bytecause.domain.usecase.FetchVesselsUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
+import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
 import com.bytecause.map.di.RepositoryModule.providesVesselsDatabaseRepository
 import com.bytecause.map.di.RepositoryModule.providesVesselsPositionsRepository
 import dagger.Module
@@ -21,6 +22,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
+// TODO("Change SingletonComponent")
 @Module
 @InstallIn(SingletonComponent::class)
 /**
@@ -53,6 +55,16 @@ object UseCaseModule {
         FetchVesselsUseCase(
             providesVesselsDatabaseRepository(context),
             providesVesselsPositionsRepository()
+        )
+
+    @Provides
+    fun providesFetchHarboursUseCase(
+        harboursDatabaseRepositoryImpl: HarboursDatabaseRepositoryImpl,
+        overpassRepositoryImpl: OverpassRepositoryImpl
+    ): FetchHarboursUseCase =
+        FetchHarboursUseCase(
+            harboursDatabaseRepositoryImpl,
+            overpassRepositoryImpl
         )
 
     @Provides

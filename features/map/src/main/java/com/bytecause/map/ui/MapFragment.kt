@@ -4,7 +4,6 @@ import android.Manifest
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -34,6 +33,56 @@ import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.viewmodel.MapViewModel
+import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
+import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
+import com.bytecause.map.util.MapFragmentConstants.COMPASS_BOTTOM_MARGIN
+import com.bytecause.map.util.MapFragmentConstants.COMPASS_LEFT_MARGIN
+import com.bytecause.map.util.MapFragmentConstants.COMPASS_RIGHT_MARGIN
+import com.bytecause.map.util.MapFragmentConstants.COMPASS_TOP_MARGIN
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_DEFAULT_SIZE
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY
+import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_SELECTED_SIZE
+import com.bytecause.map.util.MapFragmentConstants.DEFAULT_BUTTON_STATE
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_DEFAULT_SIZE
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_PROPERTY_ID_KEY
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY
+import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_SELECTED_SIZE
+import com.bytecause.map.util.MapFragmentConstants.LINE_WIDTH
+import com.bytecause.map.util.MapFragmentConstants.MAP_MARKER
+import com.bytecause.map.util.MapFragmentConstants.PIN_ICON
+import com.bytecause.map.util.MapFragmentConstants.POIS_VISIBILITY_ZOOM_LEVEL
+import com.bytecause.map.util.MapFragmentConstants.POI_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_DRAWABLE_KEY
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_SIZE
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_NAME_KEY
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_PROPERTY_ID_KEY
+import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_TEXT_OFFSET_KEY
+import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_ANIMATION_DURATION
+import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_LAYER
+import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_ANCHOR_BOTTOM
+import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_ANCHOR_CENTER
+import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_SIZE
+import com.bytecause.map.util.MapFragmentConstants.SYMBOL_TYPE
+import com.bytecause.map.util.MapFragmentConstants.TRACKING_BUTTON_STATE
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_DEFAULT_SIZE
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_ICON_ROTATION_KEY
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_PROPERTY_ID_KEY
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_PROPERTY_SELECTED_KEY
+import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_SELECTED_SIZE
+import com.bytecause.map.util.MapFragmentConstants.ZOOM_IN_DEFAULT_LEVEL
 import com.bytecause.map.util.MapUtil
 import com.bytecause.map.util.MapUtil.Companion.drawLine
 import com.bytecause.map.util.navigateToCustomPoiNavigation
@@ -52,12 +101,11 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
+import com.google.gson.JsonArray
 import com.mapbox.android.gestures.MoveGestureDetector
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -67,6 +115,7 @@ import org.maplibre.android.location.LocationComponent
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
 import org.maplibre.android.location.engine.LocationEngineCallback
+import org.maplibre.android.location.engine.LocationEngineRequest
 import org.maplibre.android.location.engine.LocationEngineResult
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
@@ -83,13 +132,16 @@ import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM
-import org.maplibre.android.style.layers.Property.ICON_ANCHOR_CENTER
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
 import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.textField
+import org.maplibre.android.style.layers.PropertyFactory.textFont
+import org.maplibre.android.style.layers.PropertyFactory.textMaxWidth
+import org.maplibre.android.style.layers.PropertyFactory.textOffset
+import org.maplibre.android.style.layers.PropertyFactory.textSize
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonOptions
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -104,65 +156,18 @@ import kotlin.math.round
 import kotlin.properties.Delegates
 
 
-private const val DEFAULT_BUTTON_STATE = 0
-private const val TRACKING_BUTTON_STATE = 1
-
-private const val ZOOM_IN_DEFAULT_LEVEL = 17.0
-private const val SYMBOL_ICON_SIZE = 1f
-private const val PIN_ICON = "pin_icon"
-private const val MAP_MARKER = "map_marker"
-private const val LINE_WIDTH = 2f
-
-private const val SYMBOL_ICON_ANCHOR_BOTTOM = ICON_ANCHOR_BOTTOM
-private const val SYMBOL_ICON_ANCHOR_CENTER = ICON_ANCHOR_CENTER
-
-private const val PULSING_CIRCLE_GEOJSON_SOURCE = "pulsing-circle-geojson-source"
-private const val PULSING_CIRCLE_LAYER = "pulsing-circle-layer"
-private const val PULSING_CIRCLE_ANIMATION_DURATION = 1500L
-private const val ANIMATED_CIRCLE_RADIUS = 15f
-private const val ANIMATED_CIRCLE_COLOR = Color.DKGRAY
-
-private const val SYMBOL_TYPE = "symbol-type"
-
-private const val POI_GEOJSON_SOURCE = "poi-geojson-source"
-private const val POI_SYMBOL_LAYER = "poi-geojson-layer"
-private const val POI_SYMBOL_ICON_SIZE = 1.3f
-private const val POI_SYMBOL_ICON_DRAWABLE_KEY = "poi_icon_drawable"
-
-private const val VESSEL_SYMBOL_PROPERTY_ID_KEY = "vessel_id"
-private const val VESSEL_GEOJSON_SOURCE = "vessel-geojson-source"
-private const val VESSEL_SYMBOL_LAYER = "vessel-geojson-layer"
-private const val VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY = "vessel_icon_drawable"
-private const val VESSEL_SYMBOL_PROPERTY_SELECTED_KEY = "vessel_selected"
-private const val VESSEL_SYMBOL_ICON_ROTATION_KEY = "vessel_icon_rotation"
-private const val VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX = "vessel_icon_"
-private const val VESSEL_SYMBOL_SELECTED_SIZE = 1.2f
-private const val VESSEL_SYMBOL_DEFAULT_SIZE = 1f
-
-private const val CUSTOM_POI_GEOJSON_SOURCE = "custom-poi-geojson-source"
-private const val CUSTOM_POI_SYMBOL_LAYER = "custom-poi-symbol-layer"
-private const val CUSTOM_POI_SYMBOL_DEFAULT_SIZE = 0.6f
-private const val CUSTOM_POI_SYMBOL_SELECTED_SIZE = 0.7f
-private const val CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY = "custom_poi_id"
-private const val CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY = "custom_poi_selected"
-private const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY = "vessel_icon_drawable"
-private const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX = "custom_poi_icon_"
-
-private const val COMPASS_LEFT_MARGIN = 20
-private const val COMPASS_RIGHT_MARGIN = 0
-private const val COMPASS_TOP_MARGIN = 330
-private const val COMPASS_BOTTOM_MARGIN = 0
-
-private const val POIS_VISIBILITY_ZOOM_LEVEL = 10.0
-
 sealed interface FeatureType {
-    data class CustomPoi(val id: String?) : FeatureType
-    data class Vessel(val id: String?) : FeatureType
+    data class Pois(val id: Long?) : FeatureType
+    data class CustomPoi(val id: Long?) : FeatureType
+    data class Vessel(val id: Long?) : FeatureType
+    data class Harbour(val id: Long?) : FeatureType
 }
 
 private enum class FeatureTypeEnum {
+    POIS,
     CUSTOM_POI,
-    VESSEL
+    VESSEL,
+    HARBOUR
 }
 
 @AndroidEntryPoint
@@ -183,9 +188,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private var boundaryManager: LineManager? = null
     private var markerSymbol: Symbol? = null
     private var vesselsFeatureCollection: FeatureCollection? = null
+    private var harboursFeatureCollection: FeatureCollection? = null
     private var customPoiFeatureCollection: FeatureCollection? = null
-
-    // private val clusterBitmapIds = mutableListOf<String>()
+    private var poisFeatureCollection: FeatureCollection? = null
 
     private var circleLayerAnimator: Animator? = null
 
@@ -335,6 +340,22 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         is FeatureType.CustomPoi -> {
                                             viewModel.setSelectedFeatureId(
                                                 (viewModel.selectedFeatureIdFlow.value as FeatureType.CustomPoi).copy(
+                                                    id = null
+                                                )
+                                            )
+                                        }
+
+                                        is FeatureType.Harbour -> {
+                                            viewModel.setSelectedFeatureId(
+                                                (viewModel.selectedFeatureIdFlow.value as FeatureType.Harbour).copy(
+                                                    id = null
+                                                )
+                                            )
+                                        }
+
+                                        is FeatureType.Pois -> {
+                                            viewModel.setSelectedFeatureId(
+                                                (viewModel.selectedFeatureIdFlow.value as FeatureType.Pois).copy(
                                                     id = null
                                                 )
                                             )
@@ -497,6 +518,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         )
 
                                         symbolManager?.deleteAll()
+
+                                        if (symbolManager == null) {
+                                            symbolManager =
+                                                SymbolManager(mapView, mapLibreMap, style)
+                                        }
 
                                         points.map { point ->
                                             symbolManager?.create(
@@ -824,25 +850,59 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             poi.latitude,
                                                         ),
                                                     ).apply {
+                                                        val splittedNames = poi.name.split(" ")
+
+                                                        val textOffsetArray = JsonArray().apply {
+                                                            add(when {
+                                                                splittedNames.all { name -> name.length <= 4 } -> -2f
+                                                                splittedNames.all { name -> name.length <= 5 } -> -2.5f
+                                                                splittedNames.any { name -> name.length == 9 } -> -3.5f
+                                                                splittedNames.any { name -> name.length >= 10 } -> -4f
+                                                                else -> -3f
+                                                            })
+                                                            add(-1f)
+                                                        }
+
+                                                        addProperty(
+                                                            POI_SYMBOL_TEXT_OFFSET_KEY,
+                                                            textOffsetArray
+                                                        )
+                                                        addStringProperty(
+                                                            SYMBOL_TYPE,
+                                                            FeatureTypeEnum.POIS.name
+                                                        )
                                                         addStringProperty(
                                                             POI_SYMBOL_ICON_DRAWABLE_KEY,
                                                             poi.drawableResourceName,
                                                         )
+                                                        addStringProperty(
+                                                            POI_SYMBOL_NAME_KEY,
+                                                            poi.name
+                                                        )
+                                                        addNumberProperty(
+                                                            POI_SYMBOL_PROPERTY_ID_KEY,
+                                                            poi.id
+                                                        )
+
+                                                        if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
+                                                            // start pulsing animation
+                                                            updatePulsingCircle(geometry() as Point)
+                                                        }
                                                     },
                                                 )
                                             }
                                         }
 
-                                        val featureCollection =
+                                        poisFeatureCollection =
                                             FeatureCollection.fromFeatures(features)
 
                                         mapStyle.getSourceAs<GeoJsonSource>(POI_GEOJSON_SOURCE)
-                                            ?.setGeoJson(featureCollection) ?: run {
+                                            ?.setGeoJson(poisFeatureCollection) ?: run {
 
                                             val geoJsonSource =
                                                 GeoJsonSource(
                                                     POI_GEOJSON_SOURCE,
-                                                    featureCollection
+                                                    poisFeatureCollection
                                                 )
 
                                             val symbolLayer =
@@ -851,6 +911,30 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     POI_GEOJSON_SOURCE
                                                 )
                                                     .withProperties(
+                                                        textField(
+                                                            get(
+                                                                POI_SYMBOL_NAME_KEY,
+                                                            )
+                                                        ),
+                                                        textMaxWidth(1f),
+                                                        textSize(12f),
+                                                       /* iconSize(
+                                                            switchCase(
+                                                                eq(
+                                                                    get(POI_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    true
+                                                                ),
+                                                                literal(POI_SYMBOL_SELECTED_SIZE),
+                                                                eq(
+                                                                    get(POI_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    false
+                                                                ),
+                                                                literal(POI_SYMBOL_DEFAULT_SIZE),
+                                                                literal(POI_SYMBOL_DEFAULT_SIZE),
+                                                            ),
+                                                        ),*/
+                                                        textFont(arrayOf("Open Sans Semibold")),
+                                                        textOffset(get(POI_SYMBOL_TEXT_OFFSET_KEY)),
                                                         iconImage(
                                                             get(
                                                                 POI_SYMBOL_ICON_DRAWABLE_KEY,
@@ -929,9 +1013,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                         CUSTOM_POI_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY,
                                                         CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + customPoi.drawableResourceName,
                                                     )
-                                                    addStringProperty(
+                                                    addNumberProperty(
                                                         CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY,
-                                                        customPoi.poiId.toString()
+                                                        customPoi.poiId
                                                     )
                                                     addStringProperty(
                                                         SYMBOL_TYPE,
@@ -939,7 +1023,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     )
                                                     addBooleanProperty(
                                                         CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY,
-                                                        ((viewModel.selectedFeatureIdFlow.value as? FeatureType.CustomPoi)?.id == customPoi.poiId.toString()).takeIf { it }
+                                                        ((viewModel.selectedFeatureIdFlow.value as? FeatureType.CustomPoi)?.id == customPoi.poiId).takeIf { it }
                                                             ?.also {
                                                                 updatePulsingCircle(this.geometry() as Point)
                                                             }
@@ -1029,13 +1113,40 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 ) == null
                                             ) return@collect
 
-                                            // Remove vessel layer and source
+                                            // Remove vessels layer and source
                                             mapStyle.apply {
                                                 removeLayer(VESSEL_SYMBOL_LAYER)
                                                 removeSource(VESSEL_GEOJSON_SOURCE)
                                                 removePulsingCircleLayer(this)
 
                                                 vesselsFeatureCollection = null
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Notify ui that harbour locations visibility state has changed.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.harboursLocationsVisible.collect { isVisible ->
+                                        if (!::mapLibre.isInitialized) return@collect
+
+                                        if (isVisible) {
+                                            viewModel.updateHarbourBbox(mapLibre.projection.visibleRegion.latLngBounds)
+                                        } else {
+                                            if (mapStyle.getSourceAs<GeoJsonSource>(
+                                                    HARBOUR_GEOJSON_SOURCE
+                                                ) == null
+                                            ) return@collect
+
+                                            // Remove harbours layer and source
+                                            mapStyle.apply {
+                                                removeLayer(HARBOUR_SYMBOL_LAYER)
+                                                removeSource(HARBOUR_GEOJSON_SOURCE)
+                                                removePulsingCircleLayer(this)
+
+                                                harboursFeatureCollection = null
                                             }
                                         }
                                     }
@@ -1078,7 +1189,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                                     vesselsFeatureCollection?.features()
                                                         ?.find { feature ->
-                                                            feature.getStringProperty(
+                                                            feature.getNumberProperty(
                                                                 VESSEL_SYMBOL_PROPERTY_ID_KEY,
                                                             ) == featureType.id
                                                         }?.let { feature ->
@@ -1130,7 +1241,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                                     customPoiFeatureCollection?.features()
                                                         ?.find { feature ->
-                                                            feature.getStringProperty(
+                                                            feature.getNumberProperty(
                                                                 CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY,
                                                             ) == featureType.id
                                                         }?.let { feature ->
@@ -1149,6 +1260,88 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             )
                                                         }
                                                     showCustomPoiInfo(featureType.id.toInt())
+                                                }
+                                            }
+
+                                            is FeatureType.Harbour -> {
+                                                if (featureType.id == null) {
+                                                    harboursFeatureCollection?.features()
+                                                        ?.forEach {
+                                                            it.properties()
+                                                                .addProperty(
+                                                                    HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
+                                                                    false
+                                                                )
+                                                        }
+                                                    mapStyle.getSourceAs<GeoJsonSource>(
+                                                        HARBOUR_GEOJSON_SOURCE
+                                                    )?.setGeoJson(
+                                                        harboursFeatureCollection
+                                                    )
+
+                                                    removePulsingCircleLayer(mapStyle)
+                                                } else {
+                                                    // Reset size for previously selected features
+                                                    harboursFeatureCollection?.features()
+                                                        ?.forEach {
+                                                            it.properties()
+                                                                .addProperty(
+                                                                    HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
+                                                                    false
+                                                                )
+                                                        }
+
+                                                    harboursFeatureCollection?.features()
+                                                        ?.find { feature ->
+                                                            feature.getNumberProperty(
+                                                                HARBOUR_SYMBOL_PROPERTY_ID_KEY,
+                                                            ) == featureType.id
+                                                        }?.let { feature ->
+                                                            feature.properties()
+                                                                .addProperty(
+                                                                    HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
+                                                                    true
+                                                                )
+
+                                                            updatePulsingCircle(feature.geometry() as Point)
+
+                                                            mapStyle.getSourceAs<GeoJsonSource>(
+                                                                HARBOUR_GEOJSON_SOURCE
+                                                            )?.setGeoJson(
+                                                                harboursFeatureCollection
+                                                            )
+                                                        }
+                                                    showHarbourInfo(featureType.id.toInt())
+                                                }
+                                            }
+
+                                            is FeatureType.Pois -> {
+                                                if (featureType.id == null) {
+                                                    mapStyle.getSourceAs<GeoJsonSource>(
+                                                        POI_GEOJSON_SOURCE
+                                                    )?.setGeoJson(
+                                                        poisFeatureCollection
+                                                    )
+
+                                                    removePulsingCircleLayer(mapStyle)
+                                                } else {
+
+                                                    poisFeatureCollection?.features()
+                                                        ?.find { feature ->
+                                                            feature.getNumberProperty(
+                                                                POI_SYMBOL_PROPERTY_ID_KEY,
+                                                            ) == featureType.id
+                                                        }?.let { feature ->
+
+                                                            updatePulsingCircle(feature.geometry() as Point)
+
+                                                            mapStyle.getSourceAs<GeoJsonSource>(
+                                                                POI_GEOJSON_SOURCE
+                                                            )?.setGeoJson(
+                                                                poisFeatureCollection
+                                                            )
+                                                        }
+                                                    showPoiInfo(featureType.id)
                                                 }
                                             }
                                         }
@@ -1184,7 +1377,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                         addOnMapClickListener { latLng ->
                             handleSymbolClick(latLng)
-
                             closeBottomSheetLayout()
                             true
                         }
@@ -1197,9 +1389,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 else viewModel.updatePoiBbox(null)
                             }
 
-                            if (mapSharedViewModel.vesselLocationsVisible.value) {
-                                viewModel.updateVesselBbox(mapLibreMap.projection.visibleRegion.latLngBounds)
-                            }
+                            if (mapSharedViewModel.vesselLocationsVisible.value) viewModel.updateVesselBbox(
+                                mapLibreMap.projection.visibleRegion.latLngBounds
+                            )
+                            if (mapSharedViewModel.harboursLocationsVisible.value) viewModel.updateHarbourBbox(
+                                mapLibreMap.projection.visibleRegion.latLngBounds
+                            )
                         }
 
                         addOnMoveListener(
@@ -1249,8 +1444,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
 
         // Get last user's position from SharedPreferences on first start if present.
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO)
-        {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.getUserLocation().firstOrNull()?.let {
                 if (mapSharedViewModel.lastKnownPosition.replayCache.firstOrNull() != null) return@let
                 mapSharedViewModel.setLastKnownPosition(it)
@@ -1486,6 +1680,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.vesselsFlow.collect { vessels ->
+                    if (!mapSharedViewModel.vesselLocationsVisible.value) return@collect
                     if (vessels.isEmpty()) return@collect
 
                     val drawableCache = mutableMapOf<String, Drawable>()
@@ -1525,9 +1720,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY,
                                     VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type,
                                 )
-                                addStringProperty(
+                                addNumberProperty(
                                     VESSEL_SYMBOL_PROPERTY_ID_KEY,
-                                    vessel.id
+                                    vessel.id.toLong()
                                 )
                                 addStringProperty(
                                     SYMBOL_TYPE,
@@ -1536,12 +1731,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 addBooleanProperty(
                                     VESSEL_SYMBOL_PROPERTY_SELECTED_KEY,
                                     // Check if vessel is selected
-                                    ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Vessel)?.id == vessel.id).takeIf { it }
+                                    ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Vessel)?.id == vessel.id.toLong()).takeIf { it }
                                         ?.also {
                                             // start pulsing animation
-                                            withContext(Dispatchers.Main) {
-                                                updatePulsingCircle(this@apply.geometry() as Point)
-                                            }
+                                            updatePulsingCircle(this@apply.geometry() as Point)
                                         },
                                 )
                             },
@@ -1562,14 +1755,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     .withCluster(true)
                                     .withClusterMaxZoom(2)
                             )
-
-                        /* val clusterLayer =
-                             SymbolLayer("cluster-layer", VESSEL_GEOJSON_SOURCE)
-                                 .withProperties(
-                                     iconImage(get("icon_bitmap_1"))
-                                 )
-                                 .withFilter(Expression.has("point_count"))*/
-
 
                         val unclusteredLayer =
                             SymbolLayer(VESSEL_SYMBOL_LAYER, VESSEL_GEOJSON_SOURCE).apply {
@@ -1593,20 +1778,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     ),
                                     iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
                                 )
-                                //withFilter(Expression.not(Expression.has("point_count")))
                             }
-
-                        /*// Step 4: Add a layer for the cluster labels (optional)
-                        val clusterCountLayer =
-                            SymbolLayer("cluster-count-layer", VESSEL_GEOJSON_SOURCE).apply {
-                                setProperties(
-                                    PropertyFactory.textField(Expression.toString(get("point_count"))),
-                                    PropertyFactory.textSize(12f),
-                                    PropertyFactory.textColor(Color.WHITE),
-                                    PropertyFactory.textIgnorePlacement(true),
-                                    PropertyFactory.textAllowOverlap(true)
-                                )
-                            }*/
 
                         mapStyle.apply {
                             drawableCache.entries.forEach { entry ->
@@ -1614,36 +1786,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             }
 
                             addSource(geoJsonSource)
-                            // addLayer(clusterLayer)
                             addLayer(unclusteredLayer)
-                            //addLayer(clusterCountLayer)
                         }
-
-                        /* val vesselSymbolLayer =
-                             SymbolLayer(VESSEL_SYMBOL_LAYER, VESSEL_GEOJSON_SOURCE)
-                                 .withProperties(
-                                     iconRotate(get(VESSEL_SYMBOL_ICON_ROTATION_KEY)),
-                                     iconImage(get(VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY)),
-                                     iconSize(
-                                         switchCase(
-                                             eq(get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY), true),
-                                             literal(VESSEL_SYMBOL_SELECTED_SIZE),
-                                             eq(get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY), false),
-                                             literal(VESSEL_SYMBOL_DEFAULT_SIZE),
-                                             literal(VESSEL_SYMBOL_DEFAULT_SIZE),
-                                         ),
-                                     ),
-                                     iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
-                                 )
-
-                         mapLibre.style?.apply {
-                             drawableCache.entries.forEach { entry ->
-                                 addImage(entry.key, entry.value)
-                             }
-
-                             addSource(geoJsonSource)
-                             addLayer(vesselSymbolLayer)
-                         }*/
                         return@collect
                     }
 
@@ -1651,20 +1795,110 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         drawableCache.entries.forEach { entry ->
                             addImage(entry.key, entry.value)
                         }
+                    }
+                }
+            }
+        }
 
-                        /* getSourceAs<GeoJsonSource>(VESSEL_GEOJSON_SOURCE)?.apply {
-                             querySourceFeatures(
-                                 Expression.all(
-                                     Expression.has("point_count"),
-                                     eq(get("cluster"), true)
-                                 )
-                             ).takeIf { it.isNotEmpty() }?.let {
-                                 updateGeoJsonSourceWithIcons(
-                                     mapLibre.style!!,
-                                     it
-                                 )
-                             }
-                         }*/
+        // Draw harbours in the given bounding box.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.harboursFlow.collect { harbours ->
+                    if (!mapSharedViewModel.harboursLocationsVisible.value) return@collect
+                    if (harbours.isEmpty()) return@collect
+
+                    val features = mutableListOf<Feature>()
+
+                    for (harbour in harbours) {
+                        features.add(
+                            Feature.fromGeometry(
+                                Point.fromLngLat(
+                                    harbour.longitude,
+                                    harbour.latitude,
+                                ),
+                            ).apply {
+                                addNumberProperty(
+                                    HARBOUR_SYMBOL_PROPERTY_ID_KEY,
+                                    harbour.id.toLong()
+                                )
+                                addStringProperty(
+                                    SYMBOL_TYPE,
+                                    FeatureTypeEnum.HARBOUR.name
+                                )
+                                addBooleanProperty(
+                                    HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
+                                    // Check if vessel is selected
+                                    ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Harbour)?.id == harbour.id.toLong()).takeIf { it }
+                                        ?.also {
+                                            // start pulsing animation
+                                            updatePulsingCircle(this@apply.geometry() as Point)
+                                        },
+                                )
+                            },
+                        )
+                    }
+
+                    harboursFeatureCollection =
+                        FeatureCollection.fromFeatures(features)
+
+                    mapStyle.getSourceAs<GeoJsonSource>(HARBOUR_GEOJSON_SOURCE)
+                        ?.setGeoJson(harboursFeatureCollection) ?: run {
+
+                        val geoJsonSource =
+                            GeoJsonSource(
+                                HARBOUR_GEOJSON_SOURCE,
+                                harboursFeatureCollection,
+                                GeoJsonOptions()
+                                    .withCluster(true)
+                                    .withClusterMaxZoom(2)
+                            )
+
+                        val unclusteredLayer =
+                            SymbolLayer(HARBOUR_SYMBOL_LAYER, HARBOUR_GEOJSON_SOURCE).apply {
+                                setProperties(
+                                    iconImage("harbour_icon"),
+                                    iconSize(
+                                        switchCase(
+                                            eq(
+                                                get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                true
+                                            ),
+                                            literal(HARBOUR_SYMBOL_SELECTED_SIZE),
+                                            eq(
+                                                get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                false
+                                            ),
+                                            literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
+                                            literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
+                                        ),
+                                    ),
+                                    iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                )
+                            }
+
+                        mapStyle.apply {
+                            addImage(
+                                "harbour_icon",
+                                ContextCompat.getDrawable(
+                                    requireContext(),
+                                    com.bytecause.core.resources.R.drawable.harbour_marker_icon
+                                )!!
+                            )
+
+                            addSource(geoJsonSource)
+                            addLayer(unclusteredLayer)
+                        }
+                        return@collect
+                    }
+
+                    mapStyle.apply {
+                        addImage(
+                            "harbour_icon",
+                            ContextCompat.getDrawable(
+                                requireContext(),
+                                com.bytecause.core.resources.R.drawable.harbour_marker_icon
+                            )!!
+                        )
                     }
                 }
             }
@@ -1682,217 +1916,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 }
             }
         }
-
-        /*viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.harboursFetchingState.collect { state ->
-                    state ?: return@collect
-                    if (viewModel.harboursVisible.value != true) return@collect
-
-                    if (state.error != null) {
-                        findNavController().popBackStack(
-                            R.id.customizeMapDialog,
-                            false
-                        )
-                    }
-
-                    when (state.error) {
-                        UiState.Error.NetworkError -> {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.no_network_available),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            viewModel.toggleHarboursLocations()
-                        }
-
-                        UiState.Error.ServiceUnavailable -> {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.service_unavailable),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            viewModel.toggleHarboursLocations()
-                        }
-
-                        UiState.Error.Other -> {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.something_went_wrong),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            viewModel.toggleHarboursLocations()
-                        }
-
-                        null -> {
-                            if (state.isLoading) {
-                                if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
-                                    val action =
-                                        CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
-                                            getString(R.string.loading_harbours_text)
-                                        )
-                                    findNavController().navigate(action)
-                                }
-                            } else {
-                                if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
-                                    findNavController().popBackStack(R.id.customizeMapDialog, false)
-                                }
-                            }
-
-                            state.items.takeIf { it.isNotEmpty() }?.let {
-                                it.map { id -> id.harborId }.let { idList ->
-                                    if (viewModel.isHarbourIdInDatabase(
-                                            idList
-                                        )
-                                            .firstOrNull() == false
-                                    ) {
-                                        viewModel.addHarbours(it)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }*/
-
-        /* viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.harboursInAreaSharedFlow.collect { harbourInfoList ->
-                    if (viewModel.harboursVisible.value == false) return@collect
-
-                    if (!harbourInfoList.isNullOrEmpty()) {
-                        overlayHelper.drawHarbourMarkerOnMap(
-                            harbourInfoList,
-                            viewModel.selectedMarker?.id
-                        )
-                        overlayHelper.harboursClusterer?.getItems().let markerList@{ itemList ->
-                            itemList ?: return@markerList
-                            if (itemList.isEmpty()) return@markerList
-                        }
-                    } else {
-                        viewModel.fetchHarbours(mapView.boundingBox, mapView.zoomLevelDouble)
-                    }
-                }
-            }
-        }*/
-
-        /* viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.vesselsInAreaSharedFlow.collect { visibleVessels ->
-                    if (viewModel.vesselLocationsVisible.value == false || visibleVessels.isEmpty()) return@collect
-
-                    vesselsClusterer?.let { clusterer ->
-                        clusterer.clearItems()
-
-                        vesselLoadingJob?.cancel()
-                        vesselLoadingJob = lifecycleScope.launch(Dispatchers.Default) {
-                            val vesselList = visibleVessels.mapAsync { vesselInfo ->
-                                val geoPoint =
-                                    GeoPoint(
-                                        vesselInfo.latitude.toDouble(),
-                                        vesselInfo.longitude.toDouble()
-                                    )
-                                val marker = CustomMarker(mapView).apply marker@{
-                                    setOnMarkerClickListener(this@MapFragment)
-                                    id = vesselInfo.id
-                                    // If selected marker id is equal to currently drawn, set isClicked to true
-                                    if (viewModel.selectedMarker?.id == vesselInfo.id) {
-                                        isClicked(true)
-                                    }
-                                    setMarkerType(CustomMarker.CustomMarkerType.VesselMarker)
-                                    rotation =
-                                        if (vesselInfo.heading.isEmpty()) 0f else vesselInfo.heading.toFloat()
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    setDrawableId(R.drawable.vessel_marker)
-                                    ContextCompat.getDrawable(
-                                        requireContext(),
-                                        R.drawable.vessel_marker
-                                    )?.apply {
-                                        ContextCompat.getColor(
-                                            requireContext(),
-                                            MapUtil.determineVesselColorType(vesselInfo.type)
-                                        ).let { color ->
-                                            setTint(color)
-                                            setDrawableColor(color)
-                                        }
-                                        icon = this
-                                    }
-                                    position = geoPoint
-                                }
-
-                                viewModel.selectedMarker?.id?.let id@{ id ->
-                                    if (marker.id != id) return@id
-                                    mapView.projection.toPixels(marker.position, null)
-                                        .let { point ->
-                                            mapView.performLongClick(
-                                                point.x.toFloat(),
-                                                point.y.toFloat()
-                                            )
-                                        }
-                                }
-                                marker
-                            }
-                            clusterer.apply {
-                                addAll(vesselList)
-                                viewModel.saveVesselsMarkers(vesselList)
-                                invalidate()
-                            }
-                            mapView.invalidate()
-                        }
-                    }
-                }
-            }
-        }*/
     }
-
-// Function to update GeoJSON source with new icons
-    /*private fun updateGeoJsonSourceWithIcons(style: Style, vesselFeatures: List<Feature>) {
-        if (vesselFeatures.isEmpty()) return
-        if (clusterBitmapIds.isNotEmpty()) {
-            for (id in clusterBitmapIds) {
-                style.removeImage(id)
-            }
-            clusterBitmapIds.clear()
-        }
-
-        val source = style.getSourceAs<GeoJsonSource>(VESSEL_GEOJSON_SOURCE)
-
-        val updatedFeatures = vesselFeatures.map { feature ->
-
-            val pieChartIcon =
-                DrawableUtil.drawCircle(requireContext(), calculateVesselColors(feature))
-            val iconId = "icon_bitmap_1"
-
-            clusterBitmapIds.add(iconId)
-            // Add icon to style
-            style.addImage(iconId, pieChartIcon)
-
-            // Update feature property to use this icon
-            feature.addStringProperty("icon_bitmap", iconId)
-            feature
-        }
-
-       source?.setGeoJson(FeatureCollection.fromFeatures(updatedFeatures))
-    }
-
-    private fun calculateVesselColors(clusterFeature: Feature): List<Int> {
-        val colorList = mutableListOf<Int>()
-
-        val pointCount = clusterFeature.getNumberProperty("point_count").toLong()
-        val clusterLeaves = mapLibre.style?.getSourceAs<GeoJsonSource>(VESSEL_GEOJSON_SOURCE)
-            ?.getClusterLeaves(cluster = clusterFeature, limit = pointCount, offset = 0)
-
-        clusterLeaves?.features()?.forEach { feature ->
-            if (feature.hasProperty("vesselType")) {
-                val vesselType = feature.getStringProperty("vesselType")
-                val vesselColor = MapUtil.determineVesselColorType2(vesselType)
-
-                colorList.add(vesselColor)
-            }
-        }
-        return colorList
-    }*/
 
     // Adds a layer on which to render the tapped animation.
     private fun addPulsingCircleLayer(style: Style) {
@@ -1975,34 +1999,49 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         val features = mapLibre.queryRenderedFeatures(
             screenPoint,
             VESSEL_SYMBOL_LAYER,
-            CUSTOM_POI_SYMBOL_LAYER
+            HARBOUR_SYMBOL_LAYER,
+            CUSTOM_POI_SYMBOL_LAYER,
+            POI_SYMBOL_LAYER
         )
 
         if (features.isNotEmpty()) {
             val selectedFeature = features.first()
-
             val symbolType = selectedFeature.getStringProperty(SYMBOL_TYPE)
 
             when (symbolType) {
                 FeatureTypeEnum.VESSEL.name -> {
                     val vesselId =
-                        selectedFeature.getStringProperty(VESSEL_SYMBOL_PROPERTY_ID_KEY)
+                        selectedFeature.getNumberProperty(VESSEL_SYMBOL_PROPERTY_ID_KEY)
 
-                    viewModel.setSelectedFeatureId(FeatureType.Vessel(vesselId))
+                    viewModel.setSelectedFeatureId(FeatureType.Vessel(vesselId.toLong()))
                 }
 
                 FeatureTypeEnum.CUSTOM_POI.name -> {
                     val customPoiId =
-                        selectedFeature.getStringProperty(CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY)
+                        selectedFeature.getNumberProperty(CUSTOM_POI_SYMBOL_PROPERTY_ID_KEY)
 
-                    viewModel.setSelectedFeatureId(FeatureType.CustomPoi(customPoiId))
+                    viewModel.setSelectedFeatureId(FeatureType.CustomPoi(customPoiId.toLong()))
+                }
+
+                FeatureTypeEnum.HARBOUR.name -> {
+                    val harbourId =
+                        selectedFeature.getNumberProperty(HARBOUR_SYMBOL_PROPERTY_ID_KEY)
+
+                    viewModel.setSelectedFeatureId(FeatureType.Harbour(harbourId.toLong()))
+                }
+
+                FeatureTypeEnum.POIS.name -> {
+                    val poiId =
+                        selectedFeature.getNumberProperty(POI_SYMBOL_PROPERTY_ID_KEY)
+
+                    viewModel.setSelectedFeatureId(FeatureType.Pois(poiId.toLong()))
                 }
             }
         }
     }
 
     // Gets information about custom poi from the database and pass this state into showMarkerBottomSheet,
-// which will render this state.
+    // which will render this state.
     private fun showCustomPoiInfo(customPoiId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchCustomPoiById(customPoiId).firstOrNull()?.let { customPoi ->
@@ -2025,8 +2064,23 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private fun showPoiInfo(poiId: Long) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.searchPoiWithInfoById(poiId).firstOrNull()?.let { poi ->
+                showMarkerBottomSheet(
+                    MarkerInfoModel(
+                        title = poi.tags["name"] ?: "",
+                        image = null,
+                        description = poi.tags.toList().joinToString("\n"),
+                        position = LatLng(poi.latitude, poi.longitude)
+                    )
+                )
+            }
+        }
+    }
+
     // Gets information about vessel from the database and pass this state into showMarkerBottomSheet,
-// which will render this state.
+    // which will render this state.
     private fun showVesselInfo(vesselId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchVesselById(vesselId).firstOrNull()?.let { vesselInfoEntity ->
@@ -2101,6 +2155,23 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    // Gets information about harbour from the database and pass this state into showMarkerBottomSheet,
+    // which will render this state.
+    private fun showHarbourInfo(harbourId: Int) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.searchHarbourById(harbourId).firstOrNull()?.let { harbour ->
+                showMarkerBottomSheet(
+                    MarkerInfoModel(
+                        title = harbour.tags["name"] ?: "",
+                        image = null,
+                        description = harbour.tags.toList().joinToString("\n"),
+                        position = LatLng(harbour.latitude, harbour.longitude)
+                    )
+                )
+            }
+        }
+    }
+
     // Takes MarkerInfoModel state as an argument and renders it.
     private fun showMarkerBottomSheet(markerInfo: MarkerInfoModel) {
         shouldInterceptBackEvent = true
@@ -2160,7 +2231,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         map: MapLibreMap,
         onStyleLoaded: (Style) -> Unit
     ) {
-
         map.setStyle(
             Style.Builder().fromUri("asset://style.json")
         ) { style ->
@@ -2437,11 +2507,16 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 isLocationComponentEnabled = true
                 renderMode = RenderMode.COMPASS
 
+                val request = LocationEngineRequest.Builder(10000)
+                    .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                    .setFastestInterval(5000)
+                    .build()
+
                 setEnabledLocationDrawable()
 
                 val locationLooper = Looper.getMainLooper()
                 locationEngine?.requestLocationUpdates(
-                    locationEngineRequest,
+                    request,
                     object : LocationEngineCallback<LocationEngineResult> {
                         override fun onSuccess(result: LocationEngineResult?) {
                             if (result == null) return
@@ -2461,6 +2536,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     viewModel.saveUserLocation(it)
                                     mapSharedViewModel.setLastKnownPosition(it)
                                 }
+                                locationComponent?.forceLocationUpdate(this)
                             }
                         }
 

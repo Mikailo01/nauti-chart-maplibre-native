@@ -6,7 +6,7 @@ import com.bytecause.domain.abstractions.makeQuery
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.OverpassRelationModel
 import com.bytecause.domain.model.RegionModel
-import com.bytecause.domain.util.SimpleOverpassQueryBuilder
+import com.bytecause.domain.util.OverpassQueryBuilder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -91,13 +91,13 @@ class GetRegionsUseCase(
                                 // If list is empty, do another query with adminLevel 6 (original query uses adminLevel 4)
                                 val newResult =
                                     overpassRepository.makeQuery<OverpassRelationModel>(
-                                        SimpleOverpassQueryBuilder(
-                                            format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
-                                            timeoutInSeconds = 90,
-                                            geocodeAreaISO = isoCode,
-                                            type = SimpleOverpassQueryBuilder.Type.Relation,
-                                            adminLevel = 6,
-                                        ).getQuery(),
+                                        OverpassQueryBuilder
+                                            .format(OverpassQueryBuilder.FormatTypes.JSON)
+                                            .timeout(90)
+                                            .geocodeAreaISO(isoCode)
+                                            .type(OverpassQueryBuilder.Type.Relation)
+                                            .adminLevel(6)
+                                            .build()
                                     )
 
                                 when {

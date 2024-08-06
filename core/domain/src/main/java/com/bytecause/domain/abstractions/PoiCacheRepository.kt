@@ -8,6 +8,7 @@ interface PoiCacheRepository {
     fun isCacheEmpty(): Flow<Boolean>
     fun getAllDistinctCategories(): Flow<List<String>>
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheModel>>
+    fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel>
     fun isPlaceCached(placeId: Long): Flow<Boolean>
     fun loadPoiCacheByBoundingBox(
         minLat: Double,

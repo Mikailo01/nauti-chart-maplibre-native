@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/downloadPoiFragment"
         android:name="com.bytecause.pois.ui.DownloadPoiFragment"
-        android:label="DownloadPoiFragment"
+        android:label="@string/download_poi"
         tools:layout="@layout/download_poi_fragment_layout">
         <deepLink app:uri="nautichart://download_poi_dest_deep_link" />
         <action

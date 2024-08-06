@@ -1,8 +1,5 @@
 package com.bytecause.domain.model
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 // search types to distinguish what type to search in query
 sealed class SearchTypes {
 

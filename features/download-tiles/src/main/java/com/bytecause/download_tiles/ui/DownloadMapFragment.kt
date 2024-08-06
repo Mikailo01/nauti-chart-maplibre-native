@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -17,7 +18,6 @@ import androidx.navigation.fragment.findNavController
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.download_tiles.CustomTileSourceFactory
-import com.bytecause.download_tiles.cache.CacheDownloaderArchive
 import com.bytecause.features.download_tiles.R
 import com.bytecause.features.download_tiles.databinding.DownloadTilesFragmentLayoutBinding
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
@@ -29,6 +29,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.offline.OfflineManager
+import org.maplibre.android.offline.OfflineRegion
+import org.maplibre.android.offline.OfflineRegionError
+import org.maplibre.android.offline.OfflineRegionStatus
+import org.maplibre.android.offline.OfflineTilePyramidRegionDefinition
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -50,6 +56,8 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
 
     private val lastClick = com.bytecause.util.common.LastClick()
 
+    private var offlineManager: OfflineManager? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -69,6 +77,8 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
+
+        offlineManager = OfflineManager.getInstance(requireContext())
 
         zoomLevel = mapSharedViewModel.cameraPosition?.zoom ?: 6.0
 
@@ -160,7 +170,8 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
                     if (customMapView.zoomLevelDouble > customMapView.tileProvider.tileSource.maximumZoomLevel) {
                         customMapView.apply {
                             controller.setZoom((customMapView.tileProvider.tileSource.maximumZoomLevel).toDouble())
-                            maxZoomLevel = customMapView.tileProvider.tileSource.maximumZoomLevel.toDouble()
+                            maxZoomLevel =
+                                customMapView.tileProvider.tileSource.maximumZoomLevel.toDouble()
                         }
                         // mapSharedViewModel.setZoomLevel(customMapView.zoomLevelDouble)
                     }
@@ -178,7 +189,7 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         }
 
         binding.toolbar.navBack.setOnClickListener {
-          //  findNavController().popBackStack(R.id.map_dest, false)
+            //  findNavController().popBackStack(R.id.map_dest, false)
             findNavController().popBackStack()
         }
 
@@ -203,21 +214,88 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         }
 
         binding.downloadTilesButton.setOnClickListener {
-            if (!lastClick.lastClick(1000)) return@setOnClickListener
 
-            if (mapSharedViewModel.tileSource.value != CustomTileSourceFactory.SAT &&
-                mapSharedViewModel.tileSource.value != TileSourceFactory.MAPNIK
-            ) {
-                CacheDownloaderArchive(
-                    binding.minZoomLevelTextView.text.toString().toInt(),
-                    binding.maxZoomLevelTextView.text.toString().toInt(),
-                    customMapView,
-                    requireContext(),
+            val tileSourceUrl = "asset://style.json"
+
+            val bounds = customMapView.boundingBox.run {
+                LatLngBounds.from(
+                    latNorth = latNorth,
+                    lonEast = lonEast,
+                    latSouth = latSouth,
+                    lonWest = lonWest
                 )
-                    .downloadTile(true)
-            } else {
-                findNavController().navigate(R.id.action_downloadMapFragment_to_runtimeDialogFragment)
             }
+            val minZoom = customMapView.minZoomLevel
+            val maxZoom = customMapView.maxZoomLevel
+
+            OfflineTilePyramidRegionDefinition
+
+            val definition = OfflineTilePyramidRegionDefinition(
+                tileSourceUrl,
+                bounds,
+                minZoom,
+                maxZoom,
+                requireContext().resources.displayMetrics.density
+            )
+
+            val metadata: ByteArray = "{}".toByteArray() // Example metadata
+
+            offlineManager?.createOfflineRegion(
+                definition,
+                metadata,
+                object : OfflineManager.CreateOfflineRegionCallback {
+                    override fun onCreate(offlineRegion: OfflineRegion) {
+                        // Download the region
+                        offlineRegion.setDownloadState(OfflineRegion.STATE_ACTIVE)
+
+                        offlineRegion.setObserver(object : OfflineRegion.OfflineRegionObserver {
+                            override fun onStatusChanged(status: OfflineRegionStatus) {
+                                if (status.isComplete) {
+                                    // Download complete
+                                    Log.d("OfflineRegion", "Region downloaded successfully.")
+                                } else {
+                                    // Download progress
+                                    val percentage = if (status.requiredResourceCount >= 0) {
+                                        100.0 * status.completedResourceCount / status.requiredResourceCount
+                                    } else {
+                                        0.0
+                                    }
+                                    Log.d("OfflineRegion", "Download progress: $percentage%")
+                                }
+                            }
+
+                            override fun onError(error: OfflineRegionError) {
+                                Log.e("OfflineRegion", "Error: ${error.reason}")
+                            }
+
+                            override fun mapboxTileCountLimitExceeded(limit: Long) {
+                                Log.e("OfflineRegion", "Tile count limit exceeded: $limit")
+                            }
+                        })
+                    }
+
+                    override fun onError(error: String) {
+                        Log.e("OfflineRegion", "Error: $error")
+                    }
+                })
+
+
+            /*
+                        if (!lastClick.lastClick(1000)) return@setOnClickListener
+
+                        if (mapSharedViewModel.tileSource.value != CustomTileSourceFactory.SAT &&
+                            mapSharedViewModel.tileSource.value != TileSourceFactory.MAPNIK
+                        ) {
+                            CacheDownloaderArchive(
+                                binding.minZoomLevelTextView.text.toString().toInt(),
+                                binding.maxZoomLevelTextView.text.toString().toInt(),
+                                customMapView,
+                                requireContext(),
+                            )
+                                .downloadTile(true)
+                        } else {
+                            findNavController().navigate(R.id.action_downloadMapFragment_to_runtimeDialogFragment)
+                        }*/
         }
     }
 
@@ -282,7 +360,10 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
         requireContext().storageAvailable().let {
             binding.availableStorage.apply {
                 freeSpaceTextview.text =
-                    resources.getString(com.bytecause.core.resources.R.string.free, it.entries.firstOrNull()?.key ?: "-")
+                    resources.getString(
+                        com.bytecause.core.resources.R.string.free,
+                        it.entries.firstOrNull()?.key ?: "-"
+                    )
                 storageProgressBar.isIndeterminate = false
                 storageProgressBar.progress = it.entries.firstOrNull()?.value ?: 0
             }

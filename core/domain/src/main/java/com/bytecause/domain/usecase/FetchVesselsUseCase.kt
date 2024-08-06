@@ -14,7 +14,6 @@ class FetchVesselsUseCase(
 ) {
     operator fun invoke(): Flow<ApiResult<List<VesselModel>>> =
         vesselsDatabaseRepository.loadAllVessels().map {
-
             val result = when {
                 it.isEmpty() -> updateVesselsFromRemote()
                 shouldUpdateVessels() -> {
@@ -24,7 +23,6 @@ class FetchVesselsUseCase(
 
                 else -> ApiResult.Success(data = it)
             }
-
             result
         }
 

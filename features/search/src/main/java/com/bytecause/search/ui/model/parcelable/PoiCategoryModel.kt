@@ -1,7 +1,7 @@
 package com.bytecause.search.ui.model.parcelable
 
 import android.os.Parcelable
-import com.bytecause.domain.model.SearchTypes
+import com.bytecause.domain.util.SearchTypes
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 

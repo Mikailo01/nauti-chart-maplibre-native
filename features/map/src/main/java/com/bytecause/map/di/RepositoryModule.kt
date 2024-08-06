@@ -2,12 +2,12 @@ package com.bytecause.map.di
 
 import android.content.Context
 import com.bytecause.data.di.DatabaseModule
+import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsPositionsRemoteRepository
 import com.bytecause.map.data.remote.HarboursRemoteDataSource
 import com.bytecause.map.data.remote.VesselsPositionsRemoteDataSource
-import com.bytecause.map.data.repository.HarboursDatabaseRepository
-import com.bytecause.map.data.repository.HarboursRepository
+import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsRemoteRepositoryImpl
 import dagger.Module
@@ -31,7 +31,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun providesHarboursDatabaseRepository(@ApplicationContext context: Context): HarboursDatabaseRepository =
-        HarboursDatabaseRepository(
+        HarboursDatabaseRepositoryImpl(
             DatabaseModule.provideHarboursDao(DatabaseModule.provideDatabase(context))
         )
 

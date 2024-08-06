@@ -25,7 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiQueryModel
-import com.bytecause.domain.util.SimpleOverpassQueryBuilder
+import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SelectedCategoryElementsFragmentLayoutBinding
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
@@ -385,15 +385,16 @@ class SelectedCategoryElementsDialogFragment :
                     category = PoiUtil.unifyPoiCategory(args.poiCategory.name),
                     radius = viewModel.radius,
                     position = latLng.asLatLngModel(),
-                    query =
-                    SimpleOverpassQueryBuilder(
-                        format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
-                        timeoutInSeconds = 120,
-                        type = SimpleOverpassQueryBuilder.Type.Node,
-                        radiusInMeters = viewModel.radius,
-                        geoPoint = latLng.asLatLngModel(),
-                        search = args.poiCategory.search,
-                    ).getQuery(),
+                    query = OverpassQueryBuilder
+                        .format(OverpassQueryBuilder.FormatTypes.JSON)
+                        .timeout(120)
+                        .radius()
+                        .search(
+                            OverpassQueryBuilder.Type.Node,
+                            args.poiCategory.search
+                        )
+                        .area(viewModel.radius, latLng.asLatLngModel())
+                        .build(),
                     appliedFilters = sharedViewModel.filteredTagsStateFlow.value,
                 ),
             )

@@ -11,82 +11,80 @@
         android:layout_height="wrap_content"
         android:layout_margin="25dp">
 
-    <ImageView
-        android:id="@+id/send_image_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="5dp"
-        android:layout_marginBottom="5dp"
-        android:layout_marginTop="5dp"
-        app:tint="@color/adaptive_color"
-        android:scaleX="1.5"
-        android:scaleY="1.5"
-        android:src="@drawable/send_icon" />
+        <ImageView
+            android:id="@+id/send_image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="5dp"
+            android:layout_marginStart="5dp"
+            android:scaleX="1.2"
+            android:scaleY="1.2"
+            android:src="@drawable/send_icon"
+            app:tint="@color/adaptive_color" />
 
-    <TextView
-        android:id="@+id/send_textview"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/send"
-        android:textColor="@color/adaptive_color"
-        android:layout_alignTop="@id/send_image_view"
-        android:layout_alignBottom="@id/send_image_view"
-        android:layout_toEndOf="@id/send_image_view"
-        android:layout_marginStart="20dp"
-        android:textSize="20sp" />
+        <TextView
+            android:id="@+id/send_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/send_image_view"
+            android:layout_alignBottom="@id/send_image_view"
+            android:layout_marginStart="20dp"
+            android:layout_toEndOf="@id/send_image_view"
+            android:text="@string/send"
+            android:textColor="@color/adaptive_color"
+            android:textSize="18sp" />
 
         <ImageView
             android:id="@+id/copy_coordinates_image_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/copy_icon"
+            android:layout_below="@id/send_image_view"
             android:layout_marginStart="5dp"
-            android:layout_marginBottom="5dp"
-            android:scaleX="1.5"
-            android:scaleY="1.5"
-            app:tint="@color/adaptive_color"
             android:layout_marginTop="40dp"
-            android:layout_below="@id/send_image_view" />
+            android:layout_marginBottom="5dp"
+            android:scaleX="1.2"
+            android:scaleY="1.2"
+            android:src="@drawable/copy_icon"
+            app:tint="@color/adaptive_color" />
 
         <TextView
             android:id="@+id/copy_coordinates_textview"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/adaptive_color"
-            android:textSize="20sp"
-            android:clickable="true"
             android:layout_alignTop="@id/copy_coordinates_image_view"
-            android:layout_toEndOf="@id/copy_coordinates_image_view"
             android:layout_marginStart="20dp"
+            android:layout_toEndOf="@id/copy_coordinates_image_view"
+            android:clickable="true"
+            android:focusable="true"
             android:text="@string/copy_coordinates"
-            android:focusable="true" />
+            android:textColor="@color/adaptive_color"
+            android:textSize="18sp" />
 
         <ImageView
             android:id="@+id/third_party_app_image_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/geo_icon"
-            android:layout_marginTop="40dp"
+            android:layout_below="@id/copy_coordinates_image_view"
             android:layout_marginStart="5dp"
+            android:layout_marginTop="40dp"
             android:layout_marginBottom="5dp"
-            app:tint="@color/adaptive_color"
-            android:scaleX="1.5"
-            android:scaleY="1.5"
-            android:layout_below="@id/copy_coordinates_image_view" />
+            android:scaleX="1.2"
+            android:scaleY="1.2"
+            android:src="@drawable/geo_icon"
+            app:tint="@color/adaptive_color" />
 
         <TextView
             android:id="@+id/third_party_app_textview"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="20sp"
+            android:layout_alignTop="@id/third_party_app_image_view"
+            android:layout_marginStart="20dp"
+            android:layout_toEndOf="@id/third_party_app_image_view"
+            android:clickable="true"
+            android:focusable="true"
             android:text="@string/third_party_app"
             android:textColor="@color/adaptive_color"
-            android:clickable="true"
-            android:layout_marginStart="20dp"
-            android:layout_alignTop="@id/third_party_app_image_view"
-            android:layout_toEndOf="@id/third_party_app_image_view"
-            android:focusable="true" />
-
+            android:textSize="18sp" />
 
 
     </RelativeLayout>

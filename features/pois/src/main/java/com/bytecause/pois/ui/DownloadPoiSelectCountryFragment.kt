@@ -2,7 +2,6 @@ package com.bytecause.pois.ui
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,9 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bytecause.domain.model.SearchTypes
-import com.bytecause.domain.model.UiState
-import com.bytecause.domain.util.SimpleOverpassQueryBuilder
+import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.features.pois.R
 import com.bytecause.features.pois.databinding.DownloadPoiFragmentLayoutBinding
 import com.bytecause.pois.ui.model.CountryParentItem
@@ -234,13 +231,13 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
             true -> {
                 viewModel.getPois(
                     regionName = "",
-                    query = SimpleOverpassQueryBuilder(
-                        format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
-                        timeoutInSeconds = 120,
-                        regionNameList = viewModel.getRegionNameFromQueue(),
-                        type = SimpleOverpassQueryBuilder.Type.Node,
-                        search = SearchTypes.UnionSet(StringUtil.searchTypesStringList.toTypedArray())
-                    ).getQuery()
+                    query = OverpassQueryBuilder
+                        .format(OverpassQueryBuilder.FormatTypes.JSON)
+                        .timeout(120)
+                        .region(viewModel.getRegionNameFromQueue())
+                        .type(OverpassQueryBuilder.Type.Node)
+                        .search(com.bytecause.domain.util.SearchTypes.UnionSet(StringUtil.searchTypesStringList))
+                        .build()
                 )
                 setDownloadUiState(true)
             }
@@ -315,13 +312,13 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
             viewModel.getRegions(
                 countryId = country.id,
                 isoCode = country.iso2,
-                query = SimpleOverpassQueryBuilder(
-                    format = SimpleOverpassQueryBuilder.FormatTypes.JSON,
-                    timeoutInSeconds = 120,
-                    geocodeAreaISO = country.iso2,
-                    type = SimpleOverpassQueryBuilder.Type.Relation,
-                    adminLevel = 4
-                ).getQuery()
+                query = OverpassQueryBuilder
+                    .format(OverpassQueryBuilder.FormatTypes.JSON)
+                    .timeout(120)
+                    .geocodeAreaISO(country.iso2)
+                    .type(OverpassQueryBuilder.Type.Relation)
+                    .adminLevel(4)
+                    .build()
             )
         }
     }

@@ -1,13 +1,13 @@
 package com.bytecause.pois.data.repository
 
-import com.bytecause.data.di.IoDispatcher
 import com.bytecause.data.local.room.dao.ContinentDao
 import com.bytecause.data.local.room.dao.CountryDao
 import com.bytecause.data.mappers.asContinentCountriesModel
-import com.bytecause.data.mappers.asContinentModelList
+import com.bytecause.data.mappers.asContinentModel
 import com.bytecause.domain.model.ContinentCountriesModel
 import com.bytecause.domain.model.ContinentModel
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
+import com.bytecause.util.mappers.mapList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -19,14 +19,15 @@ import javax.inject.Inject
 class ContinentRepositoryImpl @Inject constructor(
     private val continentDao: ContinentDao,
     private val countryDao: CountryDao,
-    @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ): ContinentRepository {
 
     override fun getAllContinents(): Flow<List<ContinentModel>> = continentDao.getAllContinents()
-        .map { it.asContinentModelList() }
+        .map { originalList -> mapList(originalList) { it.asContinentModel() } }
         .flowOn(coroutineDispatcher)
-        .catch {
-            emit(listOf())
+        .catch { exception ->
+            emit(emptyList())
+            throw exception
         }
 
     override fun getAssociatedCountries(continentId: Int): Flow<ContinentCountriesModel> =

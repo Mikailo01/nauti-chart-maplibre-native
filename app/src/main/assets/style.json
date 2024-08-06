@@ -7,7 +7,7 @@
         17.65431710431244,
         32.954120326746775
     ],
-    "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
     "layers": [
         {
             "id": "background",

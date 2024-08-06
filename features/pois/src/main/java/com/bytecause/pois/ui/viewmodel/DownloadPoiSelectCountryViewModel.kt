@@ -1,7 +1,6 @@
 package com.bytecause.pois.ui.viewmodel
 
-import android.accounts.NetworkErrorException
-import android.util.Log
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -126,7 +125,6 @@ constructor(
                         }
 
                         is NoSuchElementException -> {
-                            Log.d("idk99", "no element")
                             _regionEntityUiStateLiveData.postValue(
                                 UiState(
                                     isLoading = false,
@@ -284,12 +282,6 @@ constructor(
         map[key] = item
 
         _mapContent.update { map }
-
-        Log.d("idk", key)
-        Log.d("idk2", item.size)
-        Log.d("idk3", _mapContent.value[key]!!.size)
-
-        // _mapContent.value = map
     }
 
     fun regionIsLoadingState(position: Int) {

@@ -84,7 +84,7 @@
     <string name="grant">Grant</string>
     <string name="close">Close</string>
     <string name="download_map">Download map</string>
-    <string name="download_poi">Download poi</string>
+    <string name="download_poi">Download POI</string>
     <string name="customize_map">Customize map</string>
     <string name="custom_map">Custom map</string>
     <string name="sailing_route">Sailing route</string>

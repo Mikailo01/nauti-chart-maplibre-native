@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/downloadMapFragment"
         android:name="com.bytecause.download_tiles.ui.DownloadMapFragment"
-        android:label="DownloadMapFragment"
+        android:label="@string/download_map"
         tools:layout="@layout/download_tiles_fragment_layout">
         <deepLink app:uri="download-tiles://home" />
         <action

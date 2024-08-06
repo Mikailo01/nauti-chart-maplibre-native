@@ -1,13 +1,13 @@
 package com.bytecause.map.data.repository
 
-import com.bytecause.data.di.IoDispatcher
 import com.bytecause.data.local.room.dao.VesselInfoDao
-import com.bytecause.data.mappers.asVesselInfoEntityList
+import com.bytecause.data.mappers.asVesselInfoEntity
 import com.bytecause.data.mappers.asVesselInfoModel
-import com.bytecause.data.mappers.asVesselModelList
+import com.bytecause.data.mappers.asVesselModel
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.model.VesselInfoModel
 import com.bytecause.domain.model.VesselModel
+import com.bytecause.util.mappers.mapList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +24,7 @@ constructor(
 ) : VesselsDatabaseRepository {
     override fun loadAllVessels(): Flow<List<VesselModel>> =
         vesselInfoDao.loadAllVessels()
-            .map { it.asVesselModelList() }
+            .map { originalList -> mapList(originalList) { it.asVesselModel() } }
             .flowOn(coroutineDispatcher)
 
     override fun isVesselDatabaseEmpty(): Flow<Boolean> = vesselInfoDao.isVesselDatabaseEmpty()
@@ -47,7 +47,7 @@ constructor(
 
     override suspend fun addAllVessels(vesselInfo: List<VesselInfoModel>) {
         withContext(coroutineDispatcher) {
-            vesselInfoDao.addAllVessels(vesselInfo.asVesselInfoEntityList())
+            vesselInfoDao.addAllVessels(mapList(vesselInfo) { it.asVesselInfoEntity() })
         }
     }
 }

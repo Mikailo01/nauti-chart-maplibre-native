@@ -128,21 +128,17 @@ class CustomizeMapDialog : DialogFragment() {
         binding.chipAis.apply {
             isChecked = mapSharedViewModel.vesselLocationsVisible.value
             setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    viewModel.fetchVessels()
-                } else {
-                    mapSharedViewModel.toggleVesselLocations()
-                }
-                // mapSharedViewModel.toggleVesselLocations()
+                if (isChecked) viewModel.fetchVessels()
+                else mapSharedViewModel.toggleVesselLocations()
             }
         }
 
-        binding.chipHarbours.setOnCheckedChangeListener { _, isChecked ->
-            /*if (isChecked && mapSharedViewModel.harboursVisible.value != true) {
-                mapSharedViewModel.toggleHarboursLocations()
-            } else if (!isChecked && mapSharedViewModel.harboursVisible.value == true) {
-                mapSharedViewModel.toggleHarboursLocations()
-            }*/
+        binding.chipHarbours.apply {
+            isChecked = mapSharedViewModel.harboursLocationsVisible.value
+            setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) viewModel.fetchHarbours()
+                else mapSharedViewModel.toggleHarboursLocations()
+            }
         }
 
         val layoutParams = binding.invisibleWindow.layoutParams
@@ -243,9 +239,65 @@ class CustomizeMapDialog : DialogFragment() {
             }
         }
 
-        /*mapSharedViewModel.harboursVisible.observe(viewLifecycleOwner) {
-            binding.chipHarbours.isChecked = it
-        }*/
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.harboursFetchingState.collect { state ->
+                    state ?: return@collect
+                    if (mapSharedViewModel.harboursLocationsVisible.value) return@collect
+
+                    if (state.error != null) {
+                        findNavController().popBackStack(
+                            R.id.customizeMapDialog,
+                            false,
+                        )
+                    }
+
+                    when (val exception = state.error) {
+                        is IOException -> {
+                            if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
+                                Toast.makeText(
+                                    requireContext(),
+                                    getString(
+                                        if (exception is ConnectException) com.bytecause.core.resources.R.string.service_unavailable
+                                        else com.bytecause.core.resources.R.string.no_network_available
+                                    ),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                                mapSharedViewModel.toggleHarboursLocations()
+                                binding.chipHarbours.isChecked = false
+                            }
+                        }
+
+                        null -> {
+                            if (state.isLoading) {
+                                if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
+                                    val action =
+                                        CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
+                                            "Fetching harbours..."
+                                        )
+                                    findNavController().navigate(action)
+                                }
+                            } else {
+                                mapSharedViewModel.toggleHarboursLocations()
+                                if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
+                                    findNavController().popBackStack(R.id.customizeMapDialog, false)
+                                }
+                            }
+                        }
+
+                        else -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(com.bytecause.core.resources.R.string.something_went_wrong),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                            mapSharedViewModel.toggleHarboursLocations()
+                            binding.chipHarbours.isChecked = false
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onStart() {

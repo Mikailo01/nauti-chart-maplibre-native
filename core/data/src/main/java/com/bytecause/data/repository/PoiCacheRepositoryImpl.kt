@@ -38,6 +38,11 @@ class PoiCacheRepositoryImpl @Inject constructor(
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
             .flowOn(coroutineDispatcher)
 
+    override fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
+        poiCacheDao.searchPoiWithInfoById(id)
+            .map { it.asPoiCacheModel() }
+            .flowOn(coroutineDispatcher)
+
     override fun isPlaceCached(placeId: Long): Flow<Boolean> = poiCacheDao.isPlaceCached(placeId)
         .flowOn(coroutineDispatcher)
 

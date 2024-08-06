@@ -16,12 +16,12 @@ interface HarboursDao {
     @Query("SELECT * FROM harbours")
     fun loadAllHarbours(): Flow<List<HarboursEntity>>
 
-    @Query("SELECT * FROM harbours WHERE harborId = :id")
+    @Query("SELECT * FROM harbours WHERE id = :id")
     fun searchHarbourById(id: Int): Flow<HarboursEntity>
 
     @Query("SELECT (SELECT COUNT(*) FROM harbours) == 0")
     fun isHarbourDatabaseEmpty(): Flow<Boolean>
 
-    @Query("SELECT (SELECT COUNT(*) FROM harbours WHERE harborId IN (:idList)) >= 1")
+    @Query("SELECT (SELECT COUNT(*) FROM harbours WHERE id IN (:idList)) >= 1")
     fun isHarbourIdInDatabase(idList: List<Int>): Flow<Boolean>
 }

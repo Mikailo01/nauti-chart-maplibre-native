@@ -1,11 +1,11 @@
 package com.bytecause.search.data.repository
 
-import com.bytecause.data.di.IoDispatcher
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.SearchedPlace
 import com.bytecause.search.data.remote.retrofit.NominatimRestApiService
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
-import com.bytecause.search.mapper.asSearchedPlaceList
+import com.bytecause.search.mapper.asSearchedPlace
+import com.bytecause.util.mappers.mapNullInputList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 class SearchMapRepositoryImpl @Inject constructor(
     private val nominatimRestApiService: NominatimRestApiService,
-    @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SearchMapRepository {
 
     override suspend fun searchPlaces(query: String): Flow<ApiResult<List<SearchedPlace>>> = flow {
@@ -24,14 +24,13 @@ class SearchMapRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 emit(
                     ApiResult.Success(
-                        response.body()?.asSearchedPlaceList()
-                            ?: emptyList()
+                        mapNullInputList(response.body()) { it.asSearchedPlace() }
                     )
                 )
             } else emit(ApiResult.Failure(exception = Exception("${response.code()}")))
         } catch (e: Exception) {
-            e.printStackTrace()
             emit(ApiResult.Failure(exception = e))
+            throw e
         }
     }
         .flowOn(coroutineDispatcher)

@@ -1,9 +1,8 @@
 package com.bytecause.domain.model
 
-data class VesselModel(
-    val id: Int,
+data class HarboursModel(
+    val id: Int = 0,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
-    val type: String = "",
-    val heading: String = "",
+    val tags: Map<String, String> = emptyMap()
 )
