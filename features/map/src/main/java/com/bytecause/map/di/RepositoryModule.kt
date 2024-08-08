@@ -23,13 +23,6 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun providesHarboursRepository(): HarboursRepository =
-        HarboursRepository(
-            providesHarboursRemoteDataSource(),
-        )
-
-    @Provides
-    @Singleton
     fun providesHarboursDatabaseRepository(@ApplicationContext context: Context): HarboursDatabaseRepository =
         HarboursDatabaseRepositoryImpl(
             DatabaseModule.provideHarboursDao(DatabaseModule.provideDatabase(context))
