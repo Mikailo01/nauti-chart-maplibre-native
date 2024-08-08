@@ -85,6 +85,12 @@ constructor(
         _elementList.value = elements.toSet()
     }
 
+    fun addElement(element: OverpassNodeModel) {
+        _elementList.update {
+            it + element
+        }
+    }
+
     fun clearElements() {
         _elementList.value = setOf()
     }
