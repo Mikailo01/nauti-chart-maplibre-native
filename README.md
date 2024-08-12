@@ -10,7 +10,7 @@ NautiChart is an application designed to provide users with real-time vessel pos
 
 ## Features
 - **Vessel Tracking**: Latest positions of vessels worldwide.
-- **Harbor and Marina Information**: View positions of harbours and marinas.
+- **Harbour and Marina Information**: View positions of harbours and marinas.
 - **Points of Interest**: Discover various points of interest around you that are part of Open Source OpenStreetMap database.
 - **Search Functionality**: Easily search for addresses and other places using Nominatim integration.
 
@@ -18,7 +18,6 @@ NautiChart is an application designed to provide users with real-time vessel pos
 - **Kotlin, [Coroutines](https://developer.android.com/kotlin/coroutines) & [Flow](https://developer.android.com/kotlin/flow)**
 - **MarineTraffic API**: Provides real-time vessel positions and other maritime data.
 - **Overpass API**: Fetches points of interest around the user's location.
-- **OpenSeaMap API**: Fetches harbours and marinas locations.
 - **Nominatim**: Used for searching addresses and places.
 - **Room**: Persistence library for storing app data.
 - **Jetpack DataStore**: Data storage solution from the Android Jetpack libraries.
@@ -26,9 +25,8 @@ NautiChart is an application designed to provide users with real-time vessel pos
 - **Retrofit**: A type-safe HTTP client for Android and Java.
 - **AppSearch API**: For advanced search capabilities.
 - **Gson**: Library for JSON serialization and deserialization.
-- **OSMDroid**: Provides maps and navigation functionality.
-- **OSMBonusPack**: Enhancements for OSMDroid.
 - **Dagger Hilt**: Dependency injection framework.
+- **Coil**: An image loading library for Android and Compose Multiplatform.
 
 ## License
 **NautiChart** is licensed under the **GNU General Public License (GPL)**. This license ensures that anyone who distributes copies of your app, whether for free or for a fee, must also make the source code available under the same license. This effectively prevents others from selling your app without also providing the source code.
