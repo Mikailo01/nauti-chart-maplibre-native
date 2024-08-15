@@ -1,6 +1,7 @@
 package com.bytecause.custom_poi.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.bytecause.custom_poi.data.local.datastore.proto.serializer.RecentUsedPoiIconSerializer
@@ -8,6 +9,7 @@ import com.bytecause.custom_poi.data.repository.abstraction.RecentlyUsedIconsRep
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIcon
 import com.bytecause.nautichart.RecentlyUsedPoiMarkerIconList
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -22,11 +24,12 @@ private val Context.recentUsedPoiMarkerIconDataStore: DataStore<RecentlyUsedPoiM
 )
 
 class RecentlyUsedIconsRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : RecentlyUsedIconsRepository {
 
     override suspend fun addRecentUsedPoiMarkerIconList(iconList: List<RecentlyUsedPoiMarkerIcon>) {
-        withContext(Dispatchers.IO) {
+        withContext(coroutineDispatcher) {
             context.recentUsedPoiMarkerIconDataStore.updateData { addIcon: RecentlyUsedPoiMarkerIconList ->
                 addIcon.toBuilder().addAllIconDrawableResourceName(iconList).build()
             }
@@ -34,7 +37,7 @@ class RecentlyUsedIconsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateRecentUsedPoiMarkerIconList(newList: List<RecentlyUsedPoiMarkerIcon>) {
-        withContext(Dispatchers.IO) {
+        withContext(coroutineDispatcher) {
             context.recentUsedPoiMarkerIconDataStore.updateData {
                 it.toBuilder().clear().build().toBuilder().addAllIconDrawableResourceName(newList)
                     .build()
@@ -44,7 +47,7 @@ class RecentlyUsedIconsRepositoryImpl @Inject constructor(
 
     override fun getRecentUsedPoiMarkerIcons(): Flow<RecentlyUsedPoiMarkerIconList> =
         context.recentUsedPoiMarkerIconDataStore.data
-            .flowOn(Dispatchers.IO)
+            .flowOn(coroutineDispatcher)
             .catch { exception ->
                 if (exception is IOException) emit(
                     RecentlyUsedPoiMarkerIconList.newBuilder().build()

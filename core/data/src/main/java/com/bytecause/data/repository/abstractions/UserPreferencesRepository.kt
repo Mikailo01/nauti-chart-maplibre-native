@@ -16,4 +16,13 @@ interface UserPreferencesRepository {
 
     suspend fun cacheLoadedStyle(styleName: String)
     fun getCachedStyle(): Flow<String?>
+
+    suspend fun saveSelectedPoiCategories(set: Set<String>)
+    fun getSelectedPoiCategories(): Flow<Set<String>?>
+
+    suspend fun saveIsAisActivated(boolean: Boolean)
+    fun getIsAisActivated(): Flow<Boolean>
+
+    suspend fun saveAreHarboursVisible(boolean: Boolean)
+    fun getAreHarboursVisible(): Flow<Boolean>
 }

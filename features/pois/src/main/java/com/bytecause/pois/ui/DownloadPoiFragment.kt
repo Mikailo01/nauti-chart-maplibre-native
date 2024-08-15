@@ -78,24 +78,24 @@ class DownloadPoiFragment : Fragment(R.layout.download_poi_fragment_layout) {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.continentListStateFlow.collect { continentList ->
-                    continentList ?: return@collect
+                viewModel.getAllContinents.collect { continentList ->
+                    if (continentList.isEmpty()) {
+                        return@collect
+                    }
 
-                    withContext(Dispatchers.Main) {
-                        genericRecyclerViewAdapter =
-                            GenericRecyclerViewAdapter(
-                                continentList,
-                                com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
-                                bindingInterface
-                            )
+                    genericRecyclerViewAdapter =
+                        GenericRecyclerViewAdapter(
+                            continentList,
+                            com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
+                            bindingInterface
+                        )
 
-                        recyclerView = binding.recyclerView.apply {
-                            layoutManager = LinearLayoutManager(requireContext())
-                            adapter = genericRecyclerViewAdapter
-                            setHasFixedSize(true)
-                        }
+                    recyclerView = binding.recyclerView.apply {
+                        layoutManager = LinearLayoutManager(requireContext())
+                        adapter = genericRecyclerViewAdapter
+                        setHasFixedSize(true)
                     }
                 }
             }
@@ -120,6 +120,14 @@ class DownloadPoiFragment : Fragment(R.layout.download_poi_fragment_layout) {
         }
 
         storageAvailable()
+    }
+
+    private fun showProgressBar() {
+        binding.progressBarLayout.visibility = View.VISIBLE
+    }
+
+    private fun hideProgressBar() {
+        binding.progressBarLayout.visibility = View.GONE
     }
 
     private fun storageAvailable() {

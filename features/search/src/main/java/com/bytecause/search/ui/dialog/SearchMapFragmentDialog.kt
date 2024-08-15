@@ -39,7 +39,7 @@ import com.bytecause.util.KeyboardUtils
 import com.bytecause.util.context.getProgressBarDrawable
 import com.bytecause.util.context.hideKeyboard
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.drawable.DrawableUtil
+import com.bytecause.util.poi.PoiUtil.assignDrawableToAddressType
 import com.bytecause.util.string.StringUtil
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -101,7 +101,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                 }
 
                 placeImage.setImageResource(
-                    DrawableUtil.assignDrawableToAddressType(item.addressType)
+                    assignDrawableToAddressType(item.addressType)
                 )
                 placeName.text =
                     ContextCompat.getString(requireContext(), R.string.split_two_strings_formatter)
@@ -242,7 +242,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                 }
             })
 
-            setOnStartDrawableClickListener(object :
+            setOnDrawableClickListener(object :
                 CustomTextInputEditText.OnDrawableClickListener {
                 override fun onStartDrawableClick(view: CustomTextInputEditText) {
                     //   findNavController().popBackStack(R.id.map_dest, false)

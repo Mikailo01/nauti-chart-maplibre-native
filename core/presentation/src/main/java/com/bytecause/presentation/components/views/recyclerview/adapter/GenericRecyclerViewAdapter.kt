@@ -15,13 +15,8 @@ class GenericRecyclerViewAdapter<T : Any>(
 ) : RecyclerView.Adapter<GenericRecyclerViewAdapter.ViewHolder>() {
 
     fun updateContent(list: List<T>) {
-        if (dataList.isNotEmpty()) {
-            val size = dataList.size
-            dataList = listOf()
-            notifyItemRangeRemoved(0, size)
-        }
         dataList = list
-        notifyItemRangeChanged(0, list.size)
+        notifyDataSetChanged()
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

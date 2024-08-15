@@ -7,6 +7,14 @@ object StringUtil {
     val searchTypesStringList =
         listOf("shop", "amenity", "leisure", "tourism", "seamark:type", "public_transport")
 
+    val excludeObjectFiltersList = listOf(
+        "clock",
+        "fixme",
+        "public_building",
+        "smoking_area",
+        "internet_kiosk"
+    )
+
     fun extractCoordinatesToGeoPointList(polygonKml: String): List<LatLng> {
         val coordinatesRegex = Regex("<coordinates>(.*?)</coordinates>")
         val matchResult = coordinatesRegex.find(polygonKml)
@@ -47,10 +55,10 @@ object StringUtil {
             meters < 1000 -> round(meters).toInt().toString() + " m"
             meters >= 1000 && ("%.1f".format(meters / 1000)).endsWith(".0") ->
                 (
-                    "%.0f".format(
-                        meters / 1000,
-                    )
-                ) + " km"
+                        "%.0f".format(
+                            meters / 1000,
+                        )
+                        ) + " km"
 
             else -> ("%.1f".format(meters / 1000)) + " km"
         }
@@ -59,4 +67,15 @@ object StringUtil {
     fun formatBearingDegrees(bearing: Double): String {
         return round(bearing).toInt().toString() + "°"
     }
+
+    fun replaceHttpWithHttps(url: String?): String? {
+        url ?: return null
+
+        return if (url.startsWith("http://") && !url.startsWith("https://")) {
+            url.replace("http://", "https://")
+        } else {
+            url
+        }
+    }
+
 }

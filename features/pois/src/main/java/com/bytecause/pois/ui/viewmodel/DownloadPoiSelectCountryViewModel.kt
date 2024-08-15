@@ -57,14 +57,10 @@ constructor(
     private val _countryEntityList = mutableListOf<CountryModel>()
     val countryEntityList get() = _countryEntityList.toList()
 
-    private val _regionEntityUiStateLiveData = MutableLiveData<UiState<RegionModel>>(
-        UiState()
-    )
+    private val _regionEntityUiStateLiveData = MutableLiveData<UiState<RegionModel>>(UiState())
     val regionEntityUiStateLiveData: LiveData<UiState<RegionModel>> get() = _regionEntityUiStateLiveData
 
-    private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<String>>(
-        UiState()
-    )
+    private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<String>>(UiState())
     val poiDownloadUiStateLiveData: LiveData<UiState<String>> get() = _poiDownloadUiStateLiveData
 
     private val downloadedRegionsStateFlow: StateFlow<Set<Long>> =
@@ -100,16 +96,15 @@ constructor(
             _regionEntityUiStateLiveData.postValue(UiState(isLoading = true))
             when (val data = getRegionsUseCase(countryId, isoCode, query).firstOrNull()) {
                 is ApiResult.Success -> {
-                    _regionEntityUiStateLiveData.postValue(
-                        UiState(
-                            isLoading = false,
-                            items =
-                            data.data?.sortedBy {
-                                it.names["name:${Locale.getDefault().language}"]
-                                    ?: it.names["name:en"]
-                                    ?: it.names["name"]
-                            } ?: emptyList(),
-                        ),
+                    _regionEntityUiStateLiveData.postValue(UiState(
+                        isLoading = false,
+                        items =
+                        data.data?.sortedBy {
+                            it.names["name:${Locale.getDefault().language}"]
+                                ?: it.names["name:en"]
+                                ?: it.names["name"]
+                        } ?: emptyList(),
+                    )
                     )
                 }
 
@@ -120,7 +115,7 @@ constructor(
                                 UiState(
                                     isLoading = false,
                                     error = ConnectException(),
-                                ),
+                                )
                             )
                         }
 
@@ -129,7 +124,7 @@ constructor(
                                 UiState(
                                     isLoading = false,
                                     error = NoSuchElementException(),
-                                ),
+                                )
                             )
                         }
 
@@ -138,7 +133,7 @@ constructor(
                                 UiState(
                                     isLoading = false,
                                     error = IOException(),
-                                ),
+                                )
                             )
                         }
                     }
@@ -149,7 +144,7 @@ constructor(
                         UiState(
                             isLoading = false,
                             items = emptyList(),
-                        ),
+                        )
                     )
                 }
             }
@@ -166,11 +161,7 @@ constructor(
     ) {
         downloadJob =
             viewModelScope.launch {
-                _poiDownloadUiStateLiveData.postValue(
-                    UiState(
-                        isLoading = true
-                    )
-                )
+                _poiDownloadUiStateLiveData.postValue(UiState(isLoading = true))
                 when (val data = getPoiResultByRegionUseCase(regionName, query).firstOrNull()) {
                     is ApiResult.Success -> {
                         // save downloaded region id into preferences datastore.
@@ -185,7 +176,7 @@ constructor(
                             UiState(
                                 isLoading = false,
                                 items = listOf(data.data ?: ""),
-                            ),
+                            )
                         )
                     }
 
@@ -194,7 +185,7 @@ constructor(
                             UiState(
                                 isLoading = false,
                                 error = data.exception,
-                            ),
+                            )
                         )
                     }
 
@@ -203,7 +194,7 @@ constructor(
                             UiState(
                                 isLoading = false,
                                 items = emptyList(),
-                            ),
+                            )
                         )
                     }
                 }

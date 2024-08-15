@@ -11,4 +11,5 @@ android {
 
 dependencies {
     implementation(projects.core.util)
+    implementation(projects.core.presentation)
 }

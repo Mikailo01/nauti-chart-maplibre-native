@@ -1,7 +1,6 @@
 package com.bytecause.custom_poi.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.bytecause.core.resources.R
 import com.bytecause.custom_poi.data.repository.abstraction.RecentlyUsedIconsRepository
 import com.bytecause.custom_poi.ui.model.IconsChildItem
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -76,49 +74,47 @@ class SelectPoiMarkerIconViewModel @Inject constructor(
         return null
     }
 
-    fun saveRecentlyUsedPoiMarkerIcon(drawableResourceName: String) {
-        viewModelScope.launch {
-            repository.getRecentUsedPoiMarkerIcons().firstOrNull().let {
-                it ?: return@launch
+    suspend fun saveRecentlyUsedPoiMarkerIcon(drawableResourceName: String) {
+        repository.getRecentUsedPoiMarkerIcons().firstOrNull().let {
+            it ?: return
 
-                if (it.iconDrawableResourceNameList.isNullOrEmpty()) {
-                    RecentlyUsedPoiMarkerIcon.newBuilder()
-                        .setDrawableResourceName(drawableResourceName).build()
-                        .let { newValue ->
-                            repository.addRecentUsedPoiMarkerIconList(
-                                listOf(newValue)
+            if (it.iconDrawableResourceNameList.isNullOrEmpty()) {
+                RecentlyUsedPoiMarkerIcon.newBuilder()
+                    .setDrawableResourceName(drawableResourceName).build()
+                    .let { newValue ->
+                        repository.addRecentUsedPoiMarkerIconList(
+                            listOf(newValue)
+                        )
+                    }
+            } else {
+                RecentlyUsedPoiMarkerIcon.newBuilder()
+                    .setDrawableResourceName(drawableResourceName).build()
+                    .let { newValue ->
+                        // If new value is already present, update proto datastore with updated list of values.
+                        if (it.iconDrawableResourceNameList.contains(
+                                newValue
                             )
-                        }
-                } else {
-                    RecentlyUsedPoiMarkerIcon.newBuilder()
-                        .setDrawableResourceName(drawableResourceName).build()
-                        .let { newValue ->
-                            // If new value is already present, update proto datastore with updated list of values.
-                            if (it.iconDrawableResourceNameList.contains(
-                                    newValue
-                                )
-                            ) {
+                        ) {
+                            val updatedList =
+                                (it.iconDrawableResourceNameList.filter { drawable -> drawable != newValue } + newValue).toList()
+                            repository.updateRecentUsedPoiMarkerIconList(updatedList)
+                        } else {
+                            if (recentlyUsedIcons.size >= 24) {
                                 val updatedList =
-                                    (it.iconDrawableResourceNameList.filter { drawable -> drawable != newValue } + newValue).toList()
-                                repository.updateRecentUsedPoiMarkerIconList(updatedList)
+                                    it.iconDrawableResourceNameList.toMutableList().apply {
+                                        removeFirst()
+                                        add(newValue)
+                                    }
+                                repository.updateRecentUsedPoiMarkerIconList(
+                                    updatedList
+                                )
                             } else {
-                                if (recentlyUsedIcons.size >= 24) {
-                                    val updatedList =
-                                        it.iconDrawableResourceNameList.toMutableList().apply {
-                                            removeFirst()
-                                            add(newValue)
-                                        }
-                                    repository.updateRecentUsedPoiMarkerIconList(
-                                        updatedList
-                                    )
-                                } else {
-                                    repository.addRecentUsedPoiMarkerIconList(
-                                        listOf(newValue)
-                                    )
-                                }
+                                repository.addRecentUsedPoiMarkerIconList(
+                                    listOf(newValue)
+                                )
                             }
                         }
-                }
+                    }
             }
         }
     }

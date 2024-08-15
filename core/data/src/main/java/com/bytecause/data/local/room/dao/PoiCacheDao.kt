@@ -34,6 +34,12 @@ interface PoiCacheDao {
     @Query("SELECT EXISTS(SELECT 1 FROM poi_cache WHERE placeId = :placeId LIMIT 1)")
     fun isPlaceCached(placeId: Long): Flow<Boolean>
 
-    @Query("SELECT * FROM poi_cache WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLon AND :maxLon")
-    fun loadPoiCacheByBoundingBox(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double): Flow<List<PoiCacheEntity>>
+    @Query("SELECT * FROM poi_cache WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLon AND :maxLon AND category IN (:selectedCategories)")
+    fun loadPoiCacheByBoundingBox(
+        minLat: Double,
+        maxLat: Double,
+        minLon: Double,
+        maxLon: Double,
+        selectedCategories: Set<String>
+    ): Flow<List<PoiCacheEntity>>
 }

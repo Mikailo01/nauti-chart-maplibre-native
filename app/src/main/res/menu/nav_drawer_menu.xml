@@ -14,7 +14,7 @@
             android:id="@+id/settings_navigation"
             android:menuCategory="secondary"
             android:icon="@drawable/baseline_settings_applications_24"
-            android:title="@string/action_settings" />
+            android:title="@string/settings" />
     </group>
 
 </menu>

@@ -2,6 +2,7 @@ package com.bytecause.custom_poi.ui
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -48,6 +49,8 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.getRecentUsedPoiMarkerIcons().collect {
                     it.iconDrawableResourceNameList.reversed().let { drawableResourceNameList ->
+
+                        Log.d("idk", drawableResourceNameList.joinToString())
 
                         // create recycler view with icons content.
                         viewModel.contentList.value?.let { newContent ->
@@ -108,11 +111,13 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
     override fun onIconClickListener(view: View, position: Int) {
         if (!com.bytecause.util.common.LastClick().lastClick(500)) return
         (view.findViewById<ImageButton>(com.bytecause.features.custom_poi.R.id.icon_view_holder).tag as Int).let { drawableId ->
-            // Saves clicked icon drawable resource name into proto datastore.
-            viewModel.saveRecentlyUsedPoiMarkerIcon(resources.getResourceEntryName(drawableId))
+            viewLifecycleOwner.lifecycleScope.launch {
+                // Saves clicked icon drawable resource name into proto datastore.
+                viewModel.saveRecentlyUsedPoiMarkerIcon(resources.getResourceEntryName(drawableId))
 
-            sharedViewModel.setDrawableId(drawableId)
-            findNavController().popBackStack()
+                sharedViewModel.setDrawableId(drawableId)
+                findNavController().popBackStack()
+            }
         }
     }
 

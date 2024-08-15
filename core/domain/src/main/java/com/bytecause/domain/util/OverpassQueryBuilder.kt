@@ -133,10 +133,22 @@ class OverpassQueryBuilder {
                 }
 
                 is SearchTypes.UnionSet -> {
-                    search.list.forEach { s ->
+                    search.list.forEachIndexed { index, s ->
                         appendType(queryBuilder, type.lowerCaseName)
                         appendSearchArea(queryBuilder, false)
-                        appendUnionSet(queryBuilder, s)
+
+                        val key = search.excludeFilters.keys.toList().takeIf { it.isNotEmpty() }
+                            ?.get(index)
+                        appendUnionSetWithFilter(
+                            queryBuilder,
+                            s,
+                            if (key == null) null
+                            else {
+                                search.excludeFilters.takeIf { !it[key].isNullOrEmpty() }
+                                    ?.run { Pair(key, this[key]!!) }
+                            }
+                        )
+
                         queryBuilder.append(";")
                     }
                 }
@@ -187,9 +199,21 @@ class OverpassQueryBuilder {
                 }
 
                 is SearchTypes.UnionSet -> {
-                    for (value in search.list) {
+                    search.list.forEachIndexed { index, s ->
                         appendType(queryBuilder, type.lowerCaseName)
-                        appendUnionSet(queryBuilder, value)
+
+                        val key = search.excludeFilters.keys.toList().takeIf { it.isNotEmpty() }
+                            ?.get(index)
+                        appendUnionSetWithFilter(
+                            queryBuilder,
+                            s,
+                            if (key == null) null
+                            else {
+                                search.excludeFilters.takeIf { !it[key].isNullOrEmpty() }
+                                    ?.run { Pair(key, this[key]!!) }
+                            }
+                        )
+
                         appendRadius(queryBuilder, radiusInMeters, geoPoint)
                     }
                 }
@@ -218,9 +242,21 @@ class OverpassQueryBuilder {
                 }
 
                 is SearchTypes.UnionSet -> {
-                    for (value in search.list) {
+                    search.list.forEachIndexed { index, s ->
                         appendType(queryBuilder, type.lowerCaseName)
-                        appendUnionSet(queryBuilder, value)
+
+                        val key = search.excludeFilters.keys.toList().takeIf { it.isNotEmpty() }
+                            ?.get(index)
+                        appendUnionSetWithFilter(
+                            queryBuilder,
+                            s,
+                            if (key == null) null
+                            else {
+                                search.excludeFilters.takeIf { !it[key].isNullOrEmpty() }
+                                    ?.run { Pair(key, this[key]!!) }
+                            }
+                        )
+
                         queryBuilder.append(";")
                     }
                 }
@@ -288,8 +324,21 @@ class OverpassQueryBuilder {
         builder.append("[amenity~\"${amenity.values.joinToString("|")}\"]")
     }
 
-    private fun appendUnionSet(builder: StringBuilder, s: String) {
-        builder.append("[$s](if: count_tags() > 0)")
+    private fun appendUnionSetWithFilter(
+        builder: StringBuilder,
+        s: String,
+        filters: Pair<String, List<String>>? = null
+    ) {
+        if (filters == null) {
+            builder.append("[$s](if: count_tags() > 0)")
+        } else {
+            builder.append("[$s](if: count_tags() > 0")
+
+            for (filter in filters.second) {
+                builder.append(" && t[${filters.first}] != $filter")
+            }
+            builder.append(")")
+        }
     }
 }
 
@@ -322,39 +371,124 @@ sealed class SearchTypes {
         var list: List<String> = keys.map { "\"$it\"" }
             private set
 
+        var excludeFilters: Map<String, List<String>> = emptyMap()
+            private set
+
         /**
-         * Filters the search objects based on the provided filters (values).
+         * Filter the search objects based on the provided filters (values).
          *
-         * This function takes a variable number of filter strings and combines them
-         * with the existing values in the `value` list to create a new list of formatted
-         * search parameters. Each formatted search parameter is a string in the format
-         * `"<key>"="<value>"`.
+         * This function takes a variable number of `List<String>` and combines those values with the
+         * existing values in the `keys` list to create a new list of formatted search parameters.
+         * If filter list contains single value, then each formatted search parameter
+         * is a string in the format: `"<key>"~"<value>"`. If filter list contains multiple values, then
+         * each formatted search parameter is a string in format: `"<key>"~"<value1>|<value2>| ... |valueN"`.
          *
-         * @param filters A variable number of filter strings.
+         * @param filters A variable number of filter lists. Each list with filters corresponding to an
+         * index of the key in UnionSet.
          * @return The current instance of [UnionSet] with the updated list of formatted search parameters.
+         *
          * Example usage:
          * ```
          * val query: String = OverpassQueryBuilder
-         *                     .format(OverpassQueryBuilder.FormatTypes.JSON)
+         *                     .format(
+         *                     OverpassQueryBuilder.FormatTypes.JSON
+         *                     )
          *                     .timeout(60)
          *                     .wholeWorld()
          *                     .search(
          *                         OverpassQueryBuilder.Type.Node,
          *                         SearchTypes.UnionSet(
          *                             listOf(
-         *                                 "seamark:type",
-         *                                 "leisure"
+         *                                 "leisure",
+         *                                 "tourism"
          *                             )
-         *                         ).filter("harbour", "marina")
+         *                         ).filter(
+         *                          emptyList(), // if we don't want to apply any filters to this object, we must pass emptyList() or IllegalArgumentException will be thrown
+         *                          listOf("hotel")
+         *                         )
          *                     )
          *                     .build()
          * ```
          *
-         * Notice that the order of filters must correspond to the order of key list passed into UnionSet object.
+         * Notice that the order of `List<String>` filters must correspond to the order of key list passed into UnionSet object.
          */
-        fun filter(vararg filters: String): UnionSet {
-            list = keys.zip(filters) { v, f -> "\"$v\"=\"$f\"" }
-            return this
+        fun filter(vararg filters: List<String>): UnionSet {
+            when {
+                filters.size > keys.size -> {
+                    throw IllegalArgumentException(
+                        "Number of filter lists must match the number of keys."
+                    )
+                }
+
+                filters.size < keys.size -> {
+                    throw IllegalArgumentException(
+                        "Number of filter lists must match the number of keys. Pass empty list if you don't want to apply filters to it."
+                    )
+                }
+
+                else -> {
+                    list = keys.zip(filters) { key, filterList ->
+                        if (filterList.isEmpty()) {
+                            "\"$key\""
+                        } else {
+                            val filterExpression = filterList.joinToString(separator = "|") { it }
+                            "\"$key\"~\"$filterExpression\""
+                        }
+                    }
+                    return this
+                }
+            }
+        }
+
+        /**
+         * Filter out the search objects based on the provided filters (values).
+         *
+         * Example usage:
+         *```
+         * val query: String = OverpassQueryBuilder
+         *                     .format(
+         *                     OverpassQueryBuilder.FormatTypes.JSON
+         *                     )
+         *                     .timeout(60)
+         *                     .wholeWorld()
+         *                     .search(
+         *                         OverpassQueryBuilder.Type.Node,
+         *                         SearchTypes.UnionSet(
+         *                             listOf(
+         *                                 "tourism",
+         *                                 "seamark:type"
+         *                             )
+         *                         ).filterNot(
+         *                          emptyList(), // if we don't want to apply any filters to this object, we must pass emptyList() or IllegalArgumentException will be thrown
+         *                          listOf("harbour")
+         *                         )
+         *                     )
+         *                     .build()
+         * ```
+         *
+         * Notice that the order of `List<String>` filters must correspond to the order of key list passed into UnionSet object.
+         */
+        fun filterNot(vararg filters: List<String>): UnionSet {
+            when {
+                filters.size > keys.size -> {
+                    throw IllegalArgumentException(
+                        "Number of filter lists must match the number of keys."
+                    )
+                }
+
+                filters.size < keys.size -> {
+                    throw IllegalArgumentException(
+                        "Number of filter lists must match the number of keys. Pass empty list if you don't want to apply filters to it."
+                    )
+                }
+
+                else -> {
+                    filters.forEachIndexed { index, filterList ->
+                        excludeFilters += mapOf("\"${keys[index]}\"" to filterList.map { "\"${it}\"" })
+                    }
+                    return this
+                }
+            }
         }
     }
 }

@@ -16,28 +16,29 @@ import com.bytecause.domain.model.VesselModel
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
-import com.bytecause.domain.usecase.FetchHarboursUseCase
-import com.bytecause.domain.usecase.FetchVesselsUseCase
+import com.bytecause.domain.usecase.GetHarboursUseCase
+import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.mappers.mapList
-import com.bytecause.util.mappers.mapNullInputList
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
@@ -51,8 +52,8 @@ constructor(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
     private val poiCacheRepository: PoiCacheRepository,
     private val customPoiRepository: CustomPoiRepository,
-    fetchVesselsUseCase: FetchVesselsUseCase,
-    fetchHarboursUseCase: FetchHarboursUseCase,
+    getVesselsUseCase: GetVesselsUseCase,
+    getHarboursUseCase: GetHarboursUseCase,
     private val vesselsDatabaseRepository: VesselsDatabaseRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
@@ -61,8 +62,8 @@ constructor(
     private var _locationButtonStateFlow = MutableStateFlow<Int?>(null)
     val locationButtonStateFlow get() = _locationButtonStateFlow.asStateFlow()
 
-    private val vesselsBbox = MutableSharedFlow<LatLngBounds>(replay = 1)
-    private val harboursBbox = MutableSharedFlow<LatLngBounds>(replay = 1)
+    private val vesselsBbox = Channel<LatLngBounds>(Channel.CONFLATED)
+    private val harboursBbox = Channel<LatLngBounds>(Channel.CONFLATED)
     private val poisBbox = MutableStateFlow<LatLngBounds?>(null)
 
     private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType>(
@@ -70,39 +71,37 @@ constructor(
     )
     val selectedFeatureIdFlow = _selectedFeatureIdFlow.asStateFlow()
 
+    val isAisActivated: StateFlow<Boolean> = userPreferencesRepository.getIsAisActivated()
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val areHarboursVisible: StateFlow<Boolean> = userPreferencesRepository.getAreHarboursVisible()
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
     var isMeasuring = false
         private set
 
     private val _measurePointsSharedFlow = MutableSharedFlow<List<LatLng>>(replay = 1)
     val measurePointsSharedFlow get() = _measurePointsSharedFlow.asSharedFlow()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val vesselsFlow: Flow<List<VesselModel>> = vesselsBbox.mapLatest {
-        fetchVesselsUseCase().firstOrNull()?.data?.let { vessels ->
-            filterVisible(
-                latLngBounds = it,
-                list = vessels
-            )
-        } ?: emptyList()
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val harboursFlow: Flow<List<HarboursUiModel>> = harboursBbox.mapLatest {
-        fetchHarboursUseCase().map { originalList -> mapNullInputList(originalList.data) { it.asHarbourUiModel() } }
-            .firstOrNull()?.let { harbours ->
-                filterVisible(
-                    latLngBounds = it,
-                    list = harbours
-                )
+    val vesselsFlow: Flow<List<VesselModel>> =
+        combine(
+            getVesselsUseCase(),
+            vesselsBbox.receiveAsFlow()
+        ) { vessels, bbox ->
+            vessels.data?.let {
+                filterVisible(bbox, it)
             } ?: emptyList()
-    }
+        }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val poisFlow: Flow<List<PoiUiModel>?> = poisBbox.flatMapLatest {
-        it?.let {
-            loadPoiCacheByBoundingBox(it)
-        } ?: flowOf(null)
-    }
+    val harboursFlow: Flow<List<HarboursUiModel>> =
+        combine(
+            getHarboursUseCase(),
+            harboursBbox.receiveAsFlow()
+        ) { harbours, bbox ->
+            harbours.data?.let { harboursList ->
+                filterVisible(bbox, harboursList.map { it.asHarbourUiModel() })
+            } ?: emptyList()
+        }
 
     fun setSelectedFeatureId(featureType: com.bytecause.map.ui.FeatureType) {
         _selectedFeatureIdFlow.update { featureType }
@@ -110,13 +109,13 @@ constructor(
 
     fun updateVesselBbox(bbox: LatLngBounds) {
         viewModelScope.launch {
-            vesselsBbox.emit(bbox)
+            vesselsBbox.send(bbox)
         }
     }
 
     fun updateHarbourBbox(bbox: LatLngBounds) {
         viewModelScope.launch {
-            harboursBbox.emit(bbox)
+            harboursBbox.send(bbox)
         }
     }
 
@@ -179,13 +178,25 @@ constructor(
     fun searchCustomPoiById(id: Int): Flow<CustomPoiEntity> =
         customPoiRepository.searchCustomPoiById(id)
 
-    private fun loadPoiCacheByBoundingBox(latLngBounds: LatLngBounds): Flow<List<PoiUiModel>> =
-        poiCacheRepository.loadPoiCacheByBoundingBox(
-            minLat = latLngBounds.latitudeSouth,
-            maxLat = latLngBounds.latitudeNorth,
-            minLon = latLngBounds.longitudeWest,
-            maxLon = latLngBounds.longitudeEast
-        ).map { originalList -> mapList(originalList) { it.asPoiUiModel() } }
+    val selectedPoiCategories: StateFlow<Set<String>?> =
+        userPreferencesRepository.getSelectedPoiCategories()
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
+
+    val loadPoiCacheByBoundingBox: Flow<List<PoiUiModel>?> = combine(
+        poisBbox,
+        selectedPoiCategories
+    ) { bbox, selectedCategories ->
+
+        bbox.takeIf { it != null }?.let {
+            poiCacheRepository.loadPoiCacheByBoundingBox(
+                minLat = it.latitudeSouth,
+                maxLat = it.latitudeNorth,
+                minLon = it.longitudeWest,
+                maxLon = it.longitudeEast,
+                selectedCategories ?: emptySet()
+            ).firstOrNull()?.map { poi -> poi.asPoiUiModel() }
+        }
+    }
 
     fun searchHarbourById(id: Int): Flow<HarboursModel> =
         harboursDatabaseRepository.searchHarbourById(id)

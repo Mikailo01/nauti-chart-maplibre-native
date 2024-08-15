@@ -2,6 +2,7 @@ package com.bytecause.search.ui.dialog
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,7 +35,7 @@ import com.bytecause.search.ui.viewmodel.SearchElementsSharedViewModel
 import com.bytecause.search.ui.viewmodel.SelectedCategoryElementsViewModel
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.mappers.asLatLngModel
-import com.bytecause.util.poi.PoiUtil
+import com.bytecause.util.poi.PoiUtil.unifyPoiCategoryForSearch
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -109,7 +110,7 @@ class SelectedCategoryElementsDialogFragment :
                         ),
                     )
                     placeName.text =
-                        viewModel.getItemName(item, args.poiCategory.name)
+                        viewModel.getItemName(item, args.poiCategory.name.asString(requireContext()))
                             ?.replaceFirstChar { it.uppercase() }
                     distance.text =
                         if (mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull() != null) {
@@ -170,7 +171,7 @@ class SelectedCategoryElementsDialogFragment :
         binding.showResultsOnTheMapRelativeLayout.setOnClickListener {
             mapSharedViewModel.setPoiToShow(
                 viewModel.elementList.value
-                    .groupBy { args.poiCategory.name }
+                    .groupBy { args.poiCategory.name.asString(requireContext()) }
                     .mapValues { entry -> entry.value.map { it.id } },
             )
 
@@ -185,7 +186,7 @@ class SelectedCategoryElementsDialogFragment :
                 adapter = genericRecyclerViewAdapter
             }
 
-        binding.categoryNameTextView.text = args.poiCategory.name
+        binding.categoryNameTextView.text = args.poiCategory.name.asString(requireContext())
 
         binding.backButton.setOnClickListener {
             // Set filter StateFlow to null to reset it's state.
@@ -373,7 +374,7 @@ class SelectedCategoryElementsDialogFragment :
             binding.showResultsOnTheMapRelativeLayout.visibility = View.VISIBLE
             binding.showResultsOnTheMapTextView.text =
                 getString(com.bytecause.core.resources.R.string.show_results_on_the_map_place_holder).format(
-                    args.poiCategory.name,
+                    args.poiCategory.name.asString(requireContext()),
                 )
         }
     }
@@ -382,7 +383,7 @@ class SelectedCategoryElementsDialogFragment :
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
             viewModel.getPoiResult(
                 PoiQueryModel(
-                    category = PoiUtil.unifyPoiCategory(args.poiCategory.name),
+                    category = unifyPoiCategoryForSearch(args.poiCategory.name.asString(requireContext())),
                     radius = viewModel.radius,
                     position = latLng.asLatLngModel(),
                     query = OverpassQueryBuilder

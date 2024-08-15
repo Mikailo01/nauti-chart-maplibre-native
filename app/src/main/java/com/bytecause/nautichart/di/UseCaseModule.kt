@@ -8,11 +8,13 @@ import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
-import com.bytecause.domain.usecase.FetchHarboursUseCase
-import com.bytecause.domain.usecase.FetchVesselsUseCase
+import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
+import com.bytecause.domain.usecase.GetVesselsUseCase
+import com.bytecause.domain.usecase.UpdateHarboursUseCase
+import com.bytecause.domain.usecase.UpdateVesselsUseCase
 import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
 import com.bytecause.map.di.RepositoryModule.providesVesselsDatabaseRepository
 import com.bytecause.map.di.RepositoryModule.providesVesselsPositionsRepository
@@ -22,7 +24,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
-// TODO("Change SingletonComponent")
 @Module
 @InstallIn(SingletonComponent::class)
 /**
@@ -51,20 +52,34 @@ object UseCaseModule {
         GetPoiResultByRadiusUseCase(poiCacheRepositoryImpl, overpassRepositoryImpl)
 
     @Provides
-    fun providesFetchVesselsUseCase(@ApplicationContext context: Context): FetchVesselsUseCase =
-        FetchVesselsUseCase(
+    fun providesGetVesselsUseCase(@ApplicationContext context: Context): GetVesselsUseCase =
+        GetVesselsUseCase(
             providesVesselsDatabaseRepository(context),
-            providesVesselsPositionsRepository()
+            providesUpdateVesselsIfNecessaryUseCase(context)
         )
 
     @Provides
-    fun providesFetchHarboursUseCase(
+    fun providesUpdateVesselsIfNecessaryUseCase(@ApplicationContext context: Context): UpdateVesselsUseCase =
+        UpdateVesselsUseCase(
+            vesselsDatabaseRepository = providesVesselsDatabaseRepository(context),
+            vesselsPositionsRemoteRepository = providesVesselsPositionsRepository()
+        )
+
+    @Provides
+    fun providesUpdateHarboursUseCase(
         harboursDatabaseRepositoryImpl: HarboursDatabaseRepositoryImpl,
         overpassRepositoryImpl: OverpassRepositoryImpl
-    ): FetchHarboursUseCase =
-        FetchHarboursUseCase(
+    ): UpdateHarboursUseCase =
+        UpdateHarboursUseCase(harboursDatabaseRepositoryImpl, overpassRepositoryImpl)
+
+    @Provides
+    fun providesGetHarboursUseCase(
+        harboursDatabaseRepositoryImpl: HarboursDatabaseRepositoryImpl,
+        overpassRepositoryImpl: OverpassRepositoryImpl
+    ): GetHarboursUseCase =
+        GetHarboursUseCase(
             harboursDatabaseRepositoryImpl,
-            overpassRepositoryImpl
+            providesUpdateHarboursUseCase(harboursDatabaseRepositoryImpl, overpassRepositoryImpl)
         )
 
     @Provides

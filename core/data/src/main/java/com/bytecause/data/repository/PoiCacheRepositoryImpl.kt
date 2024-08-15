@@ -7,8 +7,8 @@ import com.bytecause.data.mappers.asPoiCacheModel
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
-import com.bytecause.util.drawable.DrawableUtil
 import com.bytecause.util.poi.PoiUtil
+import com.bytecause.util.poi.PoiUtil.getResourceName
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -50,9 +50,10 @@ class PoiCacheRepositoryImpl @Inject constructor(
         minLat: Double,
         maxLat: Double,
         minLon: Double,
-        maxLon: Double
+        maxLon: Double,
+        selectedCategories: Set<String>
     ): Flow<List<PoiCacheModel>> =
-        poiCacheDao.loadPoiCacheByBoundingBox(minLat, maxLat, minLon, maxLon)
+        poiCacheDao.loadPoiCacheByBoundingBox(minLat, maxLat, minLon, maxLon, selectedCategories)
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
 
 
@@ -61,7 +62,7 @@ class PoiCacheRepositoryImpl @Inject constructor(
             result.map {
                 it.asPoiCacheEntity(
                     // Extracts drawable resource name from poi's tags
-                    DrawableUtil.getResourceName(PoiUtil.extractCategoryFromPoiEntity(it.tags)
+                    getResourceName(PoiUtil.extractCategoryFromPoiEntity(it.tags)
                         .takeIf { category -> !category.isNullOrEmpty() }
                         .let { tagValue -> formatTagString(tagValue) })
                 )

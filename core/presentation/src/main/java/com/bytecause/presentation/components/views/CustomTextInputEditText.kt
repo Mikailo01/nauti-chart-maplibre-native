@@ -38,7 +38,7 @@ class CustomTextInputEditText : TextInputEditText {
         fun onTextChanged(text: CharSequence?)
     }
 
-    fun setOnStartDrawableClickListener(listener: OnDrawableClickListener) {
+    fun setOnDrawableClickListener(listener: OnDrawableClickListener) {
         this.drawableClickListener = listener
     }
 

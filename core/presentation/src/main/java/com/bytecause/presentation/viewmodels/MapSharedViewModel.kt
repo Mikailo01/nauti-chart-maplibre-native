@@ -22,12 +22,6 @@ class MapSharedViewModel : ViewModel() {
     private val _tileSource = MutableStateFlow<TileSources?>(null)
     val tileSource: StateFlow<TileSources?> = _tileSource.asStateFlow()
 
-    private val _vesselLocationsVisible = MutableStateFlow(false)
-    val vesselLocationsVisible: StateFlow<Boolean> = _vesselLocationsVisible.asStateFlow()
-
-    private val _harboursLocationsVisible = MutableStateFlow(false)
-    val harboursLocationsVisible: StateFlow<Boolean> = _harboursLocationsVisible.asStateFlow()
-
     private val _placeToFindStateFlow = MutableStateFlow<SearchPlaceCacheEntity?>(null)
     val placeToFindStateFlow get() = _placeToFindStateFlow.asStateFlow()
 
@@ -52,23 +46,8 @@ class MapSharedViewModel : ViewModel() {
     private val _lastKnownPosition = MutableSharedFlow<LatLng?>(1)
     val lastKnownPosition get() = _lastKnownPosition.asSharedFlow()
 
-    private val _showAllPois = MutableStateFlow(false)
-    val showAllPois = _showAllPois.asStateFlow()
-
     fun permissionGranted(bool: Boolean?) {
         _permissionGranted.value = bool
-    }
-
-    fun toggleVesselLocations() {
-        _vesselLocationsVisible.update { !it }
-    }
-
-    fun toggleHarboursLocations() {
-        _harboursLocationsVisible.update { !it }
-    }
-
-    fun toggleShowAllPois() {
-        _showAllPois.update { !it }
     }
 
     fun setIsCustomizeDialogVisible(b: Boolean) {

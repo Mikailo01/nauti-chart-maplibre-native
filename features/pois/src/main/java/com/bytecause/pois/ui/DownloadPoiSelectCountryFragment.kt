@@ -27,6 +27,7 @@ import com.bytecause.presentation.components.views.recyclerview.StatefulRecycler
 import com.bytecause.util.context.storageAvailable
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.string.StringUtil
+import com.bytecause.util.string.StringUtil.excludeObjectFiltersList
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -236,7 +237,17 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                         .timeout(120)
                         .region(viewModel.getRegionNameFromQueue())
                         .type(OverpassQueryBuilder.Type.Node)
-                        .search(com.bytecause.domain.util.SearchTypes.UnionSet(StringUtil.searchTypesStringList))
+                        .search(
+                            com.bytecause.domain.util.SearchTypes.UnionSet(StringUtil.searchTypesStringList)
+                                .filterNot(
+                                    emptyList(),
+                                    excludeObjectFiltersList,
+                                    emptyList(),
+                                    emptyList(),
+                                    emptyList(),
+                                    emptyList()
+                                )
+                        )
                         .build()
                 )
                 setDownloadUiState(true)

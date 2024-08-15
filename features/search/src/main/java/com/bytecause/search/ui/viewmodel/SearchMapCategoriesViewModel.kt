@@ -4,53 +4,54 @@ import androidx.lifecycle.ViewModel
 import com.bytecause.core.resources.R
 import com.bytecause.domain.util.SearchTypes
 import com.bytecause.search.ui.model.parcelable.PoiCategoryModel
+import com.bytecause.util.string.UiText
 
 class SearchMapCategoriesViewModel : ViewModel() {
 
     val categoryList = listOf(
         PoiCategoryModel(
             drawableId = R.drawable.rent,
-            name = "Rent",
+            name = UiText.StringResource(R.string.rent),
             search = SearchTypes.Amenity(listOf("boat_rental", "bicycle_rental", "car_rental"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.bench,
-            name = "Bench",
+            name = UiText.StringResource(R.string.bench),
             search = SearchTypes.Amenity(listOf("bench"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.air_icon,
-            name = "Compressed air",
+            name = UiText.StringResource(R.string.compressed_air),
             search = SearchTypes.Amenity(listOf("compressed_air"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.drinking_water,
-            name = "Drinking water",
+            name = UiText.StringResource(R.string.drinking_water),
             search = SearchTypes.Amenity(listOf("drinking_water"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.toilets,
-            name = "Toilets",
+            name = UiText.StringResource(R.string.toilets),
             search = SearchTypes.Amenity(listOf("toilets"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.parking,
-            name = "Parking",
+            name = UiText.StringResource(R.string.parking),
             search = SearchTypes.Amenity(listOf("parking"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.restaurant,
-            name = "Food",
-            search = SearchTypes.Amenity(listOf("restaurant", "fast_food"))
+            name = UiText.StringResource(R.string.food),
+            search = SearchTypes.Amenity(listOf("restaurant", "fast_food", "bbq"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.cafe,
-            name = "Cafe",
+            name = UiText.StringResource(R.string.cafe),
             search = SearchTypes.Amenity(listOf("cafe"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.hospital,
-            name = "Health",
+            name = UiText.StringResource(R.string.health),
             search = SearchTypes.Amenity(
                 listOf(
                     "hospital",
@@ -63,88 +64,105 @@ class SearchMapCategoriesViewModel : ViewModel() {
         ),
         PoiCategoryModel(
             drawableId = R.drawable.park,
-            name = "Park",
+            name = UiText.StringResource(R.string.park),
             search = SearchTypes.Amenity(listOf("park"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.bar,
-            name = "Drink",
+            name = UiText.StringResource(R.string.drink),
             search = SearchTypes.Amenity(listOf("bar", "pub"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.study,
-            name = "Study",
+            name = UiText.StringResource(R.string.study),
             search = SearchTypes.Amenity(listOf("school", "university", "college"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.theatre,
-            name = "Theatre",
+            name = UiText.StringResource(R.string.theatre),
             search = SearchTypes.Amenity(listOf("theatre"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.cinema,
-            name = "Cinema",
+            name = UiText.StringResource(R.string.cinema),
             search = SearchTypes.Amenity(listOf("cinema"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.place_of_worship,
-            name = "Place of worship",
+            name = UiText.StringResource(R.string.worship_and_memorial_grounds),
             search = SearchTypes.Amenity(listOf("place_of_worship"))
         ),
         PoiCategoryModel(
-            drawableId = R.drawable.fuel,
-            name = "Fuel station",
-            search = SearchTypes.Amenity(listOf("fuel"))
+            drawableId = R.drawable.fuel_station,
+            name = UiText.StringResource(R.string.fuel_station),
+            search = SearchTypes.Amenity(listOf("fuel", "charging_station"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.charging_station,
-            name = "Charging station",
+            name = UiText.StringResource(R.string.charging_station),
             search = SearchTypes.Amenity(listOf("charging_station"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.money_icon,
-            name = "Finance",
+            name = UiText.StringResource(R.string.finance),
             search = SearchTypes.Amenity(listOf("atm", "bank", "bureau_de_change"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.nightclub,
-            name = "Nightclub",
+            name = UiText.StringResource(R.string.nightclub),
             search = SearchTypes.Amenity(listOf("nightclub"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.library,
-            name = "Library",
+            name = UiText.StringResource(R.string.library),
             search = SearchTypes.Amenity(listOf("library"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.shower,
-            name = "Public shower",
+            name = UiText.StringResource(R.string.shower),
             search = SearchTypes.Amenity(listOf("shower"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.sea_waves,
-            name = "Sea marks",
+            name = UiText.StringResource(R.string.nautical),
             search = SearchTypes.UnionSet(listOf("seamark:type"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.shop,
-            name = "Shops",
+            name = UiText.StringResource(R.string.shop),
             search = SearchTypes.UnionSet(listOf("shop"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.tourism,
-            name = "Tourism",
+            name = UiText.StringResource(R.string.tourism),
             search = SearchTypes.UnionSet(listOf("tourism"))
         ),
         PoiCategoryModel(
             drawableId = R.drawable.bus_station,
-            name = "Public transport",
+            name = UiText.StringResource(R.string.public_transport),
             search = SearchTypes.UnionSet(listOf("public_transport"))
         ),
         PoiCategoryModel(
-            drawableId = R.drawable.activity,
-            name = "Activity",
+            drawableId = R.drawable.leisure,
+            name = UiText.StringResource(R.string.leisure),
             search = SearchTypes.UnionSet(listOf("leisure"))
+        ),
+        PoiCategoryModel(
+            drawableId = R.drawable.accommodation,
+            name = UiText.StringResource(R.string.accommodation),
+            search = SearchTypes.UnionSet(listOf("tourism")).filter(
+                listOf(
+                    "apartment",
+                    "hostel",
+                    "hotel",
+                    "love_hotel",
+                    "chalet",
+                    "guest_house",
+                    "motel",
+                    "wilderness_hut",
+                    "alpine_hut"
+                )
+            )
         )
-    ).sortedBy { it.name }
+    )
 }

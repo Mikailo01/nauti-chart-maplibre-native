@@ -1,5 +1,6 @@
 package com.bytecause.domain.model
 
+import com.bytecause.domain.util.GsonProvider
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.TypeAdapter
@@ -29,26 +30,36 @@ data class OverpassNodeModel(
     val lat: Double,
     val lon: Double,
     val tags: Map<String, String>
-): OverpassElement()
+) : OverpassElement()
 
 data class OverpassRelationModel(
     val type: String,
     val id: Long,
     val tags: Map<String, String>
-): OverpassElement()
+) : OverpassElement()
 
 class OverpassElementTypeAdapter : TypeAdapter<OverpassElement>() {
     override fun write(writer: JsonWriter?, value: OverpassElement?) {}
 
     override fun read(reader: JsonReader?): OverpassElement? {
+
         if (reader != null) {
-            val jsonObject = Gson().fromJson<JsonObject>(reader, JsonObject::class.java)
+            val gson = GsonProvider.gson
+            val jsonObject = gson.fromJson<JsonObject>(reader, JsonObject::class.java)
 
             // if result returned by API contains "lat" and "lon" use OverpassNodeModel, because
             // only nodes contains latitude and longitude information.
             return when {
-                jsonObject.has("lat") && jsonObject.has("lon") -> Gson().fromJson(jsonObject, OverpassNodeModel::class.java)
-                jsonObject.has("id") && jsonObject.has("tags") -> Gson().fromJson(jsonObject, OverpassRelationModel::class.java)
+                jsonObject.has("lat") && jsonObject.has("lon") -> gson.fromJson(
+                    jsonObject,
+                    OverpassNodeModel::class.java
+                )
+
+                jsonObject.has("id") && jsonObject.has("tags") -> gson.fromJson(
+                    jsonObject,
+                    OverpassRelationModel::class.java
+                )
+
                 else -> null
             }
         }
@@ -59,7 +70,7 @@ class OverpassElementTypeAdapter : TypeAdapter<OverpassElement>() {
 @Suppress("UNCHECKED_CAST")
 class OverpassElementTypeAdapterFactory : TypeAdapterFactory {
     override fun <T : Any?> create(gson: Gson?, type: TypeToken<T>?): TypeAdapter<T>? {
-       if (type?.rawType == OverpassElement::class.java) {
+        if (type?.rawType == OverpassElement::class.java) {
             return OverpassElementTypeAdapter() as TypeAdapter<T>
         }
         return null

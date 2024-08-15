@@ -35,7 +35,7 @@
     <dialog
         android:id="@+id/customizeMapDialog"
         android:name="com.bytecause.map.ui.dialog.CustomizeMapDialog"
-        android:label="CustomizeMapDialog"
+        android:label="@string/customize_map"
         tools:layout="@layout/customize_map_dialog_fragment_layout">
         <action
             android:id="@+id/action_customizeMapDialog_to_loadingDialogFragment"

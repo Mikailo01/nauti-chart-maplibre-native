@@ -27,8 +27,8 @@ class GetPoiResultByRegionUseCase(
             if (result.exception == null && result.data != null) {
                 // val region = PoiUtil().extractRegionFromQuery(query)
                 result.data.map {
-                    val category =
-                        extractCategoryFromPoiEntity(it.tags)
+
+                    val category = extractCategoryFromPoiEntity(it.tags)
                             .takeIf { category -> !category.isNullOrEmpty() }
                             .let { tagValue -> formatTagString(tagValue) } ?: ""
 

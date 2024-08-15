@@ -8,6 +8,6 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.bytecause.settings.ui.SettingsFragment"
-        android:label="SettingsFragment"
+        android:label="@string/settings"
         tools:layout="@layout/settings_fragment"/>
 </navigation>

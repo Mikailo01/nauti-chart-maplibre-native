@@ -14,7 +14,8 @@ interface PoiCacheRepository {
         minLat: Double,
         maxLat: Double,
         minLon: Double,
-        maxLon: Double
+        maxLon: Double,
+        selectedCategories: Set<String>
     ): Flow<List<PoiCacheModel>>
 
     suspend fun cacheResult(result: List<PoiCacheModel>)

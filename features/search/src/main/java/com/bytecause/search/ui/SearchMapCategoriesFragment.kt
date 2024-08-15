@@ -64,13 +64,13 @@ class SearchMapCategoriesFragment : Fragment(R.layout.search_map_categories_frag
                         item.drawableId
                     )
                 )
-                categoryName.text = item.name
+                categoryName.text = item.name.asString(requireContext())
                 distance.visibility = View.GONE
             }
         }
 
         genericRecyclerViewAdapter = GenericRecyclerViewAdapter(
-            viewModel.categoryList,
+            viewModel.categoryList.sortedBy { it.name.asString(requireContext()) },
             com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
             bindingInterface
         )

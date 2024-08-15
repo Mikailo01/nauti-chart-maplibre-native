@@ -1,15 +1,14 @@
 package com.bytecause.data.repository
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.bytecause.data.di.IoDispatcher
 import com.bytecause.data.repository.abstractions.UserPreferencesRepository
-import com.google.gson.Gson
+import com.bytecause.domain.util.GsonProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.maplibre.android.geometry.LatLng
 import java.io.IOException
@@ -42,13 +42,13 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            else throw exception
+            throw exception
         }
 
     override suspend fun saveUserPosition(position: LatLng) {
         withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
-                preferences[USER_POSITION_KEY] = Gson().toJson(position)
+                preferences[USER_POSITION_KEY] = GsonProvider.gson.toJson(position)
             }
         }
     }
@@ -56,12 +56,12 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override fun getUserPosition(): Flow<LatLng?> = flow {
         val jsonString =
             userDataStorePreferences.data.firstOrNull()?.get(USER_POSITION_KEY)
-        emit(Gson().fromJson(jsonString, LatLng::class.java))
+        emit(GsonProvider.gson.fromJson(jsonString, LatLng::class.java))
     }
         .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            else throw exception
+            throw exception
         }
 
     override suspend fun cacheSelectedTileSource(tileSourceName: String) {
@@ -79,7 +79,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            else throw exception
+            throw exception
         }
 
     override suspend fun cacheLoadedStyle(styleName: String) {
@@ -96,14 +96,76 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            else throw exception
+            throw exception
         }
 
+    override fun getSelectedPoiCategories(): Flow<Set<String>?> {
+        return userDataStorePreferences.data
+            .map { preferences ->
+                preferences[SELECTED_POI_CATEGORIES_KEY] ?: emptySet()
+            }
+            .flowOn(coroutineDispatcher)
+            .catch { exception ->
+                if (exception is IOException) emit(emptySet())
+                throw exception
+            }
+    }
+
+    override suspend fun saveIsAisActivated(boolean: Boolean) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[IS_AIS_ACTIVATED] = boolean
+            }
+        }
+    }
+
+    override fun getIsAisActivated(): Flow<Boolean> {
+        return userDataStorePreferences.data
+            .map { preferences ->
+                preferences[IS_AIS_ACTIVATED] ?: false
+            }
+            .flowOn(coroutineDispatcher)
+            .catch { exception ->
+                if (exception is IOException) emit(false)
+                throw exception
+            }
+    }
+
+    override suspend fun saveAreHarboursVisible(boolean: Boolean) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[ARE_HARBOURS_VISIBLE] = boolean
+            }
+        }
+    }
+
+    override fun getAreHarboursVisible(): Flow<Boolean> {
+        return userDataStorePreferences.data
+            .map { preferences ->
+                preferences[ARE_HARBOURS_VISIBLE] ?: false
+            }
+            .flowOn(coroutineDispatcher)
+            .catch { exception ->
+                if (exception is IOException) emit(false)
+                throw exception
+            }
+    }
+
+    override suspend fun saveSelectedPoiCategories(set: Set<String>) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[SELECTED_POI_CATEGORIES_KEY] = set
+            }
+        }
+    }
 
     private companion object {
-        val USER_POSITION_KEY = stringPreferencesKey("user_position")
-        val TILE_SOURCE_KEY = stringPreferencesKey("tile_source")
-        val STYLE_KEY = stringPreferencesKey("style_key")
-        val FIRST_RUN_KEY = booleanPreferencesKey("first_run")
+        private val USER_POSITION_KEY = stringPreferencesKey("user_position")
+        private val TILE_SOURCE_KEY = stringPreferencesKey("tile_source")
+        private val STYLE_KEY = stringPreferencesKey("style_key")
+        private val FIRST_RUN_KEY = booleanPreferencesKey("first_run")
+        private val SELECTED_POI_CATEGORIES_KEY = stringSetPreferencesKey("selected_poi_categories")
+        private val IS_AIS_ACTIVATED = booleanPreferencesKey("is_ais_activated")
+        private val ARE_HARBOURS_VISIBLE = booleanPreferencesKey("are_harbours_visible")
     }
 }

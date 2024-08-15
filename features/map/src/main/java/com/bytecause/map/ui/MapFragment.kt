@@ -4,15 +4,19 @@ import android.Manifest
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.content.res.Resources
 import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Looper
+import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -27,8 +31,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import coil.load
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
+import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
+import com.bytecause.domain.util.PoiTagsUtil.extractContactsFromTags
+import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
@@ -97,6 +105,8 @@ import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.map.MapUtil.Companion.bearingTo
 import com.bytecause.util.map.TileSourceLoader
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
+import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
+import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -177,7 +187,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private val viewModel: MapViewModel by viewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
-    private lateinit var mapView: MapView
+    private var mapView: MapView? = null
     private lateinit var mapLibre: MapLibreMap
     private var locationComponent: LocationComponent? = null
 
@@ -239,11 +249,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     }
 
                     bottomSheetBehavior.state == STATE_EXPANDED -> {
-                        bottomSheetBehavior.state = STATE_HIDDEN
+                        closeBottomSheetLayout()
                     }
 
                     markerBottomSheetBehavior.state == STATE_EXPANDED -> {
-                        markerBottomSheetBehavior.state = STATE_HIDDEN
+                        closeMarkerBottomSheetLayout()
+                    }
+
+                    mapSharedViewModel.showPoiStateFlow.value != null -> {
+                        mapSharedViewModel.setPoiToShow(null)
                     }
 
                     else -> {
@@ -395,7 +409,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetLayout = binding.bottomSheetId.bottomSheetLayout
         bottomSheetBehavior =
             BottomSheetBehavior.from(bottomSheetLayout).apply {
-                peekHeight = 400
+                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
                 isHideable = true
                 state = STATE_HIDDEN
             }
@@ -403,7 +417,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         markerBottomSheetLayout = binding.markerBottomSheetId.markerBottomSheetLayout
         markerBottomSheetBehavior =
             BottomSheetBehavior.from(markerBottomSheetLayout).apply {
-                peekHeight = 600
+                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
                 isHideable = true
                 state = STATE_HIDDEN
             }
@@ -411,14 +425,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         measureBottomSheetLayout = binding.measureDistanceBottomSheet.measureDistanceBottomSheet
         measureBottomSheetBehavior =
             BottomSheetBehavior.from(measureBottomSheetLayout).apply {
-                peekHeight = 400
+                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
                 isHideable = true
                 isDraggable = false
                 state = STATE_HIDDEN
             }
 
         mapView = binding.mapView
-        mapView.getMapAsync { mapLibreMap ->
+        mapView?.getMapAsync { mapLibreMap ->
             mapLibre = mapLibreMap
 
             mapLibreMap.apply {
@@ -503,7 +517,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                         if (lineManager == null) {
                                             lineManager =
-                                                LineManager(mapView, mapLibreMap, mapStyle)
+                                                LineManager(mapView!!, mapLibreMap, mapStyle)
                                         }
 
                                         // Clear any existing polylines if necessary
@@ -521,7 +535,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                         if (symbolManager == null) {
                                             symbolManager =
-                                                SymbolManager(mapView, mapLibreMap, style)
+                                                SymbolManager(mapView!!, mapLibreMap, style)
                                         }
 
                                         points.map { point ->
@@ -565,7 +579,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             symbolManager?.delete(markerSymbol)
                                             markerSymbol = null
 
-                                            mapView.invalidate()
+                                            mapView?.invalidate()
 
                                             return@collect
                                         }
@@ -574,7 +588,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         if (symbolManager == null) {
                                             symbolManager =
                                                 SymbolManager(
-                                                    mapView,
+                                                    mapView!!,
                                                     mapLibreMap,
                                                     mapStyle
                                                 )
@@ -602,7 +616,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                                         boundaryManager =
                                                             LineManager(
-                                                                mapView,
+                                                                mapView!!,
                                                                 mapLibreMap,
                                                                 mapStyle
                                                             ).apply {
@@ -722,16 +736,55 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                         poi.latitude,
                                                                     ),
                                                                 ).apply {
+                                                                    val splittedNames =
+                                                                        poi.name.split(" ")
+
+                                                                    val textOffsetArray =
+                                                                        JsonArray().apply {
+                                                                            add(when {
+                                                                                splittedNames.all { name -> name.length <= 4 } -> -2f
+                                                                                splittedNames.all { name -> name.length <= 5 } -> -2.5f
+                                                                                splittedNames.any { name -> name.length == 9 } -> -3.5f
+                                                                                splittedNames.any { name -> name.length >= 10 } -> -4f
+                                                                                else -> -3f
+                                                                            })
+                                                                            add(-1f)
+                                                                        }
+
+                                                                    addProperty(
+                                                                        POI_SYMBOL_TEXT_OFFSET_KEY,
+                                                                        textOffsetArray
+                                                                    )
+                                                                    addStringProperty(
+                                                                        SYMBOL_TYPE,
+                                                                        FeatureTypeEnum.POIS.name
+                                                                    )
                                                                     addStringProperty(
                                                                         POI_SYMBOL_ICON_DRAWABLE_KEY,
                                                                         poi.drawableResourceName,
                                                                     )
+                                                                    addStringProperty(
+                                                                        POI_SYMBOL_NAME_KEY,
+                                                                        poi.name
+                                                                    )
+                                                                    addNumberProperty(
+                                                                        POI_SYMBOL_PROPERTY_ID_KEY,
+                                                                        poi.id
+                                                                    )
+
+                                                                    if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
+                                                                        // start pulsing animation
+                                                                        updatePulsingCircle(
+                                                                            style,
+                                                                            geometry() as Point
+                                                                        )
+                                                                    }
                                                                 },
                                                             )
                                                         }
                                                     }
 
-                                                    val featureCollection =
+                                                    poisFeatureCollection =
                                                         FeatureCollection.fromFeatures(
                                                             features
                                                         )
@@ -739,7 +792,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     val geoJsonSource =
                                                         GeoJsonSource(
                                                             POI_GEOJSON_SOURCE,
-                                                            featureCollection
+                                                            poisFeatureCollection
                                                         )
 
                                                     val symbolLayer =
@@ -748,17 +801,28 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             POI_GEOJSON_SOURCE
                                                         )
                                                             .withProperties(
+                                                                textField(
+                                                                    get(
+                                                                        POI_SYMBOL_NAME_KEY,
+                                                                    )
+                                                                ),
+                                                                textMaxWidth(1f),
+                                                                textSize(12f),
+                                                                // font must be included in json style
+                                                                // e.g.: "glyphs": "asset://glyphs/{fontstack}/{range}.pbf"
+                                                                textFont(arrayOf("Open Sans Semibold")),
+                                                                textOffset(
+                                                                    get(
+                                                                        POI_SYMBOL_TEXT_OFFSET_KEY
+                                                                    )
+                                                                ),
                                                                 iconImage(
                                                                     get(
                                                                         POI_SYMBOL_ICON_DRAWABLE_KEY,
                                                                     ),
                                                                 ),
-                                                                iconSize(
-                                                                    POI_SYMBOL_ICON_SIZE
-                                                                ),
-                                                                iconAnchor(
-                                                                    SYMBOL_ICON_ANCHOR_BOTTOM
-                                                                ),
+                                                                iconSize(POI_SYMBOL_ICON_SIZE),
+                                                                iconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
                                                             )
 
                                                     mapStyle.apply {
@@ -791,14 +855,28 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
                             }
 
+                            // Notify ui that show all pois state has changed.
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    viewModel.poisFlow.collect { poiList ->
+                                    viewModel.selectedPoiCategories.collect { selectedCategories ->
+                                        if (selectedCategories.isNullOrEmpty()) {
+                                            viewModel.updatePoiBbox(null)
+                                        } else {
+                                            viewModel.updatePoiBbox(mapLibreMap.projection.visibleRegion.latLngBounds)
+                                        }
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.loadPoiCacheByBoundingBox.collect { poiList ->
                                         // If showPoiStateFlow is not null, meaning that the user is
                                         // viewing specific category of pois, return collect.
                                         // I am using same GeoJson source for these pois, so this will
                                         // avoid any potential collisions.
                                         if (mapSharedViewModel.showPoiStateFlow.value != null) return@collect
+
 
                                         if (poiList.isNullOrEmpty()) {
                                             mapStyle.apply {
@@ -886,7 +964,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                                         if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
                                                             // start pulsing animation
-                                                            updatePulsingCircle(geometry() as Point)
+                                                            updatePulsingCircle(
+                                                                style,
+                                                                geometry() as Point
+                                                            )
                                                         }
                                                     },
                                                 )
@@ -918,21 +999,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                         ),
                                                         textMaxWidth(1f),
                                                         textSize(12f),
-                                                       /* iconSize(
-                                                            switchCase(
-                                                                eq(
-                                                                    get(POI_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                                    true
-                                                                ),
-                                                                literal(POI_SYMBOL_SELECTED_SIZE),
-                                                                eq(
-                                                                    get(POI_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                                    false
-                                                                ),
-                                                                literal(POI_SYMBOL_DEFAULT_SIZE),
-                                                                literal(POI_SYMBOL_DEFAULT_SIZE),
-                                                            ),
-                                                        ),*/
+                                                        // font must be included in json style
+                                                        // e.g.: "glyphs": "asset://glyphs/{fontstack}/{range}.pbf"
                                                         textFont(arrayOf("Open Sans Semibold")),
                                                         textOffset(get(POI_SYMBOL_TEXT_OFFSET_KEY)),
                                                         iconImage(
@@ -961,6 +1029,259 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             // maplibre's style
                                             drawableCache.entries.forEach { entry ->
                                                 addImage(entry.key, entry.value)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Draw vessels in the given bounding box.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.vesselsFlow.collect { vessels ->
+                                        if (!viewModel.isAisActivated.value) return@collect
+                                        if (vessels.isEmpty()) return@collect
+
+                                        val drawableCache = mutableMapOf<String, Drawable>()
+                                        val features = mutableListOf<Feature>()
+
+                                        for (vessel in vessels) {
+                                            if (drawableCache[VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type] == null) {
+                                                ContextCompat.getDrawable(
+                                                    requireContext(),
+                                                    com.bytecause.core.resources.R.drawable.vessel_marker,
+                                                )?.apply {
+                                                    ContextCompat.getColor(
+                                                        requireContext(),
+                                                        MapUtil.determineVesselColorType(vessel.type),
+                                                    ).also { color ->
+                                                        setTint(color)
+                                                    }
+                                                }?.let {
+                                                    drawableCache[VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type] =
+                                                        it
+                                                }
+                                            }
+
+                                            features.add(
+                                                Feature.fromGeometry(
+                                                    Point.fromLngLat(
+                                                        vessel.longitude,
+                                                        vessel.latitude,
+                                                    ),
+                                                ).apply {
+                                                    addNumberProperty(
+                                                        VESSEL_SYMBOL_ICON_ROTATION_KEY,
+                                                        vessel.heading.takeIf { it.isNotBlank() }
+                                                            ?.toFloat()
+                                                            ?: 0f,
+                                                    )
+                                                    addStringProperty(
+                                                        VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY,
+                                                        VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type,
+                                                    )
+                                                    addNumberProperty(
+                                                        VESSEL_SYMBOL_PROPERTY_ID_KEY,
+                                                        vessel.id.toLong()
+                                                    )
+                                                    addStringProperty(
+                                                        SYMBOL_TYPE,
+                                                        FeatureTypeEnum.VESSEL.name
+                                                    )
+                                                    addBooleanProperty(
+                                                        VESSEL_SYMBOL_PROPERTY_SELECTED_KEY,
+                                                        // Check if vessel is selected
+                                                        ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Vessel)?.id == vessel.id.toLong()).takeIf { it }
+                                                            ?.also {
+                                                                // start pulsing animation
+                                                                updatePulsingCircle(
+                                                                    style,
+                                                                    geometry() as Point
+                                                                )
+                                                            },
+                                                    )
+                                                },
+                                            )
+                                        }
+
+                                        vesselsFeatureCollection =
+                                            FeatureCollection.fromFeatures(features)
+
+                                        mapStyle.getSourceAs<GeoJsonSource>(VESSEL_GEOJSON_SOURCE)
+                                            ?.setGeoJson(vesselsFeatureCollection) ?: run {
+
+                                            val geoJsonSource =
+                                                GeoJsonSource(
+                                                    VESSEL_GEOJSON_SOURCE,
+                                                    vesselsFeatureCollection,
+                                                    GeoJsonOptions()
+                                                        .withCluster(true)
+                                                        .withClusterMaxZoom(2)
+                                                )
+
+                                            val unclusteredLayer =
+                                                SymbolLayer(
+                                                    VESSEL_SYMBOL_LAYER,
+                                                    VESSEL_GEOJSON_SOURCE
+                                                ).apply {
+                                                    setProperties(
+                                                        iconRotate(
+                                                            get(
+                                                                VESSEL_SYMBOL_ICON_ROTATION_KEY
+                                                            )
+                                                        ),
+                                                        iconImage(
+                                                            get(
+                                                                VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY
+                                                            )
+                                                        ),
+                                                        iconSize(
+                                                            switchCase(
+                                                                eq(
+                                                                    get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    true
+                                                                ),
+                                                                literal(VESSEL_SYMBOL_SELECTED_SIZE),
+                                                                eq(
+                                                                    get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    false
+                                                                ),
+                                                                literal(VESSEL_SYMBOL_DEFAULT_SIZE),
+                                                                literal(VESSEL_SYMBOL_DEFAULT_SIZE),
+                                                            ),
+                                                        ),
+                                                        iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                    )
+                                                }
+
+                                            mapStyle.apply {
+                                                drawableCache.entries.forEach { entry ->
+                                                    addImage(entry.key, entry.value)
+                                                }
+
+                                                addSource(geoJsonSource)
+                                                addLayer(unclusteredLayer)
+                                            }
+                                            return@collect
+                                        }
+
+                                        mapStyle.apply {
+                                            drawableCache.entries.forEach { entry ->
+                                                addImage(entry.key, entry.value)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Draw harbours in the given bounding box.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.harboursFlow.collect { harbours ->
+                                        if (!viewModel.areHarboursVisible.value) return@collect
+                                        if (harbours.isEmpty()) return@collect
+
+                                        val features = mutableListOf<Feature>()
+
+                                        for (harbour in harbours) {
+                                            features.add(
+                                                Feature.fromGeometry(
+                                                    Point.fromLngLat(
+                                                        harbour.longitude,
+                                                        harbour.latitude,
+                                                    ),
+                                                ).apply {
+                                                    addNumberProperty(
+                                                        HARBOUR_SYMBOL_PROPERTY_ID_KEY,
+                                                        harbour.id.toLong()
+                                                    )
+                                                    addStringProperty(
+                                                        SYMBOL_TYPE,
+                                                        FeatureTypeEnum.HARBOUR.name
+                                                    )
+                                                    addBooleanProperty(
+                                                        HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
+                                                        // Check if vessel is selected
+                                                        ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Harbour)?.id == harbour.id.toLong()).takeIf { it }
+                                                            ?.also {
+                                                                // start pulsing animation
+                                                                updatePulsingCircle(
+                                                                    style,
+                                                                    geometry() as Point
+                                                                )
+                                                            },
+                                                    )
+                                                },
+                                            )
+                                        }
+
+                                        harboursFeatureCollection =
+                                            FeatureCollection.fromFeatures(features)
+
+                                        mapStyle.getSourceAs<GeoJsonSource>(HARBOUR_GEOJSON_SOURCE)
+                                            ?.setGeoJson(harboursFeatureCollection) ?: run {
+
+                                            val geoJsonSource =
+                                                GeoJsonSource(
+                                                    HARBOUR_GEOJSON_SOURCE,
+                                                    harboursFeatureCollection,
+                                                    GeoJsonOptions()
+                                                        .withCluster(true)
+                                                        .withClusterMaxZoom(2)
+                                                )
+
+                                            val unclusteredLayer =
+                                                SymbolLayer(
+                                                    HARBOUR_SYMBOL_LAYER,
+                                                    HARBOUR_GEOJSON_SOURCE
+                                                ).apply {
+                                                    setProperties(
+                                                        iconImage("harbour_icon"),
+                                                        iconSize(
+                                                            switchCase(
+                                                                eq(
+                                                                    get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    true
+                                                                ),
+                                                                literal(HARBOUR_SYMBOL_SELECTED_SIZE),
+                                                                eq(
+                                                                    get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
+                                                                    false
+                                                                ),
+                                                                literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
+                                                                literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
+                                                            ),
+                                                        ),
+                                                        iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                    )
+                                                }
+
+                                            mapStyle.apply {
+                                                ContextCompat.getDrawable(
+                                                    requireContext(),
+                                                    com.bytecause.core.resources.R.drawable.harbour_marker_icon
+                                                )?.let {
+                                                    addImage(
+                                                        "harbour_icon",
+                                                        it
+                                                    )
+                                                }
+
+                                                addSource(geoJsonSource)
+                                                addLayer(unclusteredLayer)
+                                            }
+                                            return@collect
+                                        }
+
+                                        mapStyle.apply {
+                                            ContextCompat.getDrawable(
+                                                requireContext(),
+                                                com.bytecause.core.resources.R.drawable.harbour_marker_icon
+                                            )?.let {
+                                                addImage(
+                                                    "harbour_icon",
+                                                    it
+                                                )
                                             }
                                         }
                                     }
@@ -1025,7 +1346,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                         CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY,
                                                         ((viewModel.selectedFeatureIdFlow.value as? FeatureType.CustomPoi)?.id == customPoi.poiId).takeIf { it }
                                                             ?.also {
-                                                                updatePulsingCircle(this.geometry() as Point)
+                                                                updatePulsingCircle(
+                                                                    style,
+                                                                    geometry() as Point
+                                                                )
                                                             }
                                                     )
                                                 },
@@ -1102,10 +1426,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             // Notify ui that vessel locations visibility state has changed.
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    mapSharedViewModel.vesselLocationsVisible.collect { isVisible ->
+                                    viewModel.isAisActivated.collect { isActivated ->
                                         if (!::mapLibre.isInitialized) return@collect
 
-                                        if (isVisible) {
+                                        if (isActivated) {
                                             viewModel.updateVesselBbox(mapLibre.projection.visibleRegion.latLngBounds)
                                         } else {
                                             if (mapStyle.getSourceAs<GeoJsonSource>(
@@ -1129,7 +1453,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             // Notify ui that harbour locations visibility state has changed.
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    mapSharedViewModel.harboursLocationsVisible.collect { isVisible ->
+                                    viewModel.areHarboursVisible.collect { isVisible ->
                                         if (!::mapLibre.isInitialized) return@collect
 
                                         if (isVisible) {
@@ -1199,7 +1523,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                     true
                                                                 )
 
-                                                            updatePulsingCircle(feature.geometry() as Point)
+                                                            updatePulsingCircle(
+                                                                style,
+                                                                feature.geometry() as Point
+                                                            )
 
                                                             mapStyle.getSourceAs<GeoJsonSource>(
                                                                 VESSEL_GEOJSON_SOURCE
@@ -1251,7 +1578,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                     true
                                                                 )
 
-                                                            updatePulsingCircle(feature.geometry() as Point)
+                                                            updatePulsingCircle(
+                                                                style,
+                                                                feature.geometry() as Point
+                                                            )
 
                                                             mapStyle.getSourceAs<GeoJsonSource>(
                                                                 CUSTOM_POI_GEOJSON_SOURCE
@@ -1303,7 +1633,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                     true
                                                                 )
 
-                                                            updatePulsingCircle(feature.geometry() as Point)
+                                                            updatePulsingCircle(
+                                                                style,
+                                                                feature.geometry() as Point
+                                                            )
 
                                                             mapStyle.getSourceAs<GeoJsonSource>(
                                                                 HARBOUR_GEOJSON_SOURCE
@@ -1333,7 +1666,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             ) == featureType.id
                                                         }?.let { feature ->
 
-                                                            updatePulsingCircle(feature.geometry() as Point)
+                                                            updatePulsingCircle(
+                                                                style,
+                                                                feature.geometry() as Point
+                                                            )
 
                                                             mapStyle.getSourceAs<GeoJsonSource>(
                                                                 POI_GEOJSON_SOURCE
@@ -1382,17 +1718,21 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         }
 
                         addOnCameraIdleListener {
-                            if (mapSharedViewModel.showAllPois.value) {
-                                if (mapLibreMap.cameraPosition.zoom > POIS_VISIBILITY_ZOOM_LEVEL) viewModel.updatePoiBbox(
+                            if (!viewModel.selectedPoiCategories.value.isNullOrEmpty()) {
+                                if ((viewModel.selectedPoiCategories.value?.size ?: 0) > 30) {
+                                    if (mapLibreMap.cameraPosition.zoom > POIS_VISIBILITY_ZOOM_LEVEL) viewModel.updatePoiBbox(
+                                        mapLibreMap.projection.visibleRegion.latLngBounds
+                                    )
+                                    else viewModel.updatePoiBbox(null)
+                                } else viewModel.updatePoiBbox(
                                     mapLibreMap.projection.visibleRegion.latLngBounds
                                 )
-                                else viewModel.updatePoiBbox(null)
                             }
 
-                            if (mapSharedViewModel.vesselLocationsVisible.value) viewModel.updateVesselBbox(
+                            if (viewModel.isAisActivated.value) viewModel.updateVesselBbox(
                                 mapLibreMap.projection.visibleRegion.latLngBounds
                             )
-                            if (mapSharedViewModel.harboursLocationsVisible.value) viewModel.updateHarbourBbox(
+                            if (viewModel.areHarboursVisible.value) viewModel.updateHarbourBbox(
                                 mapLibreMap.projection.visibleRegion.latLngBounds
                             )
                         }
@@ -1483,7 +1823,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 },
             )
 
-            setOnStartDrawableClickListener(
+            setOnDrawableClickListener(
                 object :
                     CustomTextInputEditText.OnDrawableClickListener {
                     override fun onStartDrawableClick(view: CustomTextInputEditText) {
@@ -1494,9 +1834,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         if (mapSharedViewModel.showPoiStateFlow.value != null) {
                             mapSharedViewModel.setPoiToShow(null)
                         }
-                        if (bottomSheetBehavior.state == STATE_EXPANDED) {
-                            bottomSheetBehavior.state =
-                                STATE_HIDDEN
+                        when {
+                            bottomSheetBehavior.state == STATE_EXPANDED -> {
+                                closeBottomSheetLayout()
+                            }
+
+                            markerBottomSheetBehavior.state == STATE_EXPANDED -> {
+                                closeMarkerBottomSheetLayout()
+                            }
                         }
                     }
                 },
@@ -1661,249 +2006,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
-        // Notify ui that show all pois state has changed.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                mapSharedViewModel.showAllPois.collect {
-                    if (!::mapLibre.isInitialized) return@collect
-
-                    if (it) {
-                        viewModel.updatePoiBbox(mapLibre.projection.visibleRegion.latLngBounds)
-                    } else {
-                        viewModel.updatePoiBbox(null)
-                    }
-                }
-            }
-        }
-
-        // Draw vessels in the given bounding box.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.vesselsFlow.collect { vessels ->
-                    if (!mapSharedViewModel.vesselLocationsVisible.value) return@collect
-                    if (vessels.isEmpty()) return@collect
-
-                    val drawableCache = mutableMapOf<String, Drawable>()
-                    val features = mutableListOf<Feature>()
-
-                    for (vessel in vessels) {
-                        if (drawableCache[VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type] == null) {
-                            ContextCompat.getDrawable(
-                                requireContext(),
-                                com.bytecause.core.resources.R.drawable.vessel_marker,
-                            )?.apply {
-                                ContextCompat.getColor(
-                                    requireContext(),
-                                    MapUtil.determineVesselColorType(vessel.type),
-                                ).also { color ->
-                                    setTint(color)
-                                }
-                            }?.let {
-                                drawableCache[VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type] =
-                                    it
-                            }
-                        }
-
-                        features.add(
-                            Feature.fromGeometry(
-                                Point.fromLngLat(
-                                    vessel.longitude,
-                                    vessel.latitude,
-                                ),
-                            ).apply {
-                                addNumberProperty(
-                                    VESSEL_SYMBOL_ICON_ROTATION_KEY,
-                                    vessel.heading.takeIf { it.isNotBlank() }?.toFloat()
-                                        ?: 0f,
-                                )
-                                addStringProperty(
-                                    VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY,
-                                    VESSEL_SYMBOL_ICON_DRAWABLE_KEY_PREFIX + vessel.type,
-                                )
-                                addNumberProperty(
-                                    VESSEL_SYMBOL_PROPERTY_ID_KEY,
-                                    vessel.id.toLong()
-                                )
-                                addStringProperty(
-                                    SYMBOL_TYPE,
-                                    FeatureTypeEnum.VESSEL.name
-                                )
-                                addBooleanProperty(
-                                    VESSEL_SYMBOL_PROPERTY_SELECTED_KEY,
-                                    // Check if vessel is selected
-                                    ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Vessel)?.id == vessel.id.toLong()).takeIf { it }
-                                        ?.also {
-                                            // start pulsing animation
-                                            updatePulsingCircle(this@apply.geometry() as Point)
-                                        },
-                                )
-                            },
-                        )
-                    }
-
-                    vesselsFeatureCollection =
-                        FeatureCollection.fromFeatures(features)
-
-                    mapStyle.getSourceAs<GeoJsonSource>(VESSEL_GEOJSON_SOURCE)
-                        ?.setGeoJson(vesselsFeatureCollection) ?: run {
-
-                        val geoJsonSource =
-                            GeoJsonSource(
-                                VESSEL_GEOJSON_SOURCE,
-                                vesselsFeatureCollection,
-                                GeoJsonOptions()
-                                    .withCluster(true)
-                                    .withClusterMaxZoom(2)
-                            )
-
-                        val unclusteredLayer =
-                            SymbolLayer(VESSEL_SYMBOL_LAYER, VESSEL_GEOJSON_SOURCE).apply {
-                                setProperties(
-                                    iconRotate(get(VESSEL_SYMBOL_ICON_ROTATION_KEY)),
-                                    iconImage(get(VESSEL_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY)),
-                                    iconSize(
-                                        switchCase(
-                                            eq(
-                                                get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                true
-                                            ),
-                                            literal(VESSEL_SYMBOL_SELECTED_SIZE),
-                                            eq(
-                                                get(VESSEL_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                false
-                                            ),
-                                            literal(VESSEL_SYMBOL_DEFAULT_SIZE),
-                                            literal(VESSEL_SYMBOL_DEFAULT_SIZE),
-                                        ),
-                                    ),
-                                    iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
-                                )
-                            }
-
-                        mapStyle.apply {
-                            drawableCache.entries.forEach { entry ->
-                                addImage(entry.key, entry.value)
-                            }
-
-                            addSource(geoJsonSource)
-                            addLayer(unclusteredLayer)
-                        }
-                        return@collect
-                    }
-
-                    mapStyle.apply {
-                        drawableCache.entries.forEach { entry ->
-                            addImage(entry.key, entry.value)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Draw harbours in the given bounding box.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.harboursFlow.collect { harbours ->
-                    if (!mapSharedViewModel.harboursLocationsVisible.value) return@collect
-                    if (harbours.isEmpty()) return@collect
-
-                    val features = mutableListOf<Feature>()
-
-                    for (harbour in harbours) {
-                        features.add(
-                            Feature.fromGeometry(
-                                Point.fromLngLat(
-                                    harbour.longitude,
-                                    harbour.latitude,
-                                ),
-                            ).apply {
-                                addNumberProperty(
-                                    HARBOUR_SYMBOL_PROPERTY_ID_KEY,
-                                    harbour.id.toLong()
-                                )
-                                addStringProperty(
-                                    SYMBOL_TYPE,
-                                    FeatureTypeEnum.HARBOUR.name
-                                )
-                                addBooleanProperty(
-                                    HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY,
-                                    // Check if vessel is selected
-                                    ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Harbour)?.id == harbour.id.toLong()).takeIf { it }
-                                        ?.also {
-                                            // start pulsing animation
-                                            updatePulsingCircle(this@apply.geometry() as Point)
-                                        },
-                                )
-                            },
-                        )
-                    }
-
-                    harboursFeatureCollection =
-                        FeatureCollection.fromFeatures(features)
-
-                    mapStyle.getSourceAs<GeoJsonSource>(HARBOUR_GEOJSON_SOURCE)
-                        ?.setGeoJson(harboursFeatureCollection) ?: run {
-
-                        val geoJsonSource =
-                            GeoJsonSource(
-                                HARBOUR_GEOJSON_SOURCE,
-                                harboursFeatureCollection,
-                                GeoJsonOptions()
-                                    .withCluster(true)
-                                    .withClusterMaxZoom(2)
-                            )
-
-                        val unclusteredLayer =
-                            SymbolLayer(HARBOUR_SYMBOL_LAYER, HARBOUR_GEOJSON_SOURCE).apply {
-                                setProperties(
-                                    iconImage("harbour_icon"),
-                                    iconSize(
-                                        switchCase(
-                                            eq(
-                                                get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                true
-                                            ),
-                                            literal(HARBOUR_SYMBOL_SELECTED_SIZE),
-                                            eq(
-                                                get(HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY),
-                                                false
-                                            ),
-                                            literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
-                                            literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
-                                        ),
-                                    ),
-                                    iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
-                                )
-                            }
-
-                        mapStyle.apply {
-                            addImage(
-                                "harbour_icon",
-                                ContextCompat.getDrawable(
-                                    requireContext(),
-                                    com.bytecause.core.resources.R.drawable.harbour_marker_icon
-                                )!!
-                            )
-
-                            addSource(geoJsonSource)
-                            addLayer(unclusteredLayer)
-                        }
-                        return@collect
-                    }
-
-                    mapStyle.apply {
-                        addImage(
-                            "harbour_icon",
-                            ContextCompat.getDrawable(
-                                requireContext(),
-                                com.bytecause.core.resources.R.drawable.harbour_marker_icon
-                            )!!
-                        )
-                    }
-                }
-            }
-        }
-
         // Changes location button state, if state == 1 mapView will be rotated based on current
         // device's direction.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -1943,23 +2045,24 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Change position of this tapped animation layer.
-    private fun updatePulsingCircle(point: Point) {
-        mapStyle.let { style ->
-            val source =
-                style.getSourceAs(PULSING_CIRCLE_GEOJSON_SOURCE) ?: kotlin.run {
-                    addPulsingCircleLayer(style)
-                    style.getSourceAs<GeoJsonSource>(PULSING_CIRCLE_GEOJSON_SOURCE)
-                }
-            source?.apply {
-                setGeoJson(point)
-                animatePulsingCircle()
-            }
+    private fun updatePulsingCircle(style: Style, point: Point) {
+        val source = style.getSourceAs(PULSING_CIRCLE_GEOJSON_SOURCE) ?: run {
+            // if source doesn't exist add new source and layer
+            addPulsingCircleLayer(style)
+            // return new source
+            style.getSourceAs<GeoJsonSource>(PULSING_CIRCLE_GEOJSON_SOURCE)
+        }
+        source?.apply {
+            setGeoJson(point)
+            animatePulsingCircle(style)
         }
     }
 
     // Renders tapped pulsing animation.
-    private fun animatePulsingCircle() {
+    private fun animatePulsingCircle(style: Style) {
         circleLayerAnimator?.cancel()
+        val circleLayer =
+            style.getLayerAs<CircleLayer>(PULSING_CIRCLE_LAYER)
 
         circleLayerAnimator = ValueAnimator.ofFloat(0f, ANIMATED_CIRCLE_RADIUS).apply {
             duration = PULSING_CIRCLE_ANIMATION_DURATION
@@ -1967,8 +2070,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             repeatMode = ValueAnimator.RESTART
             addUpdateListener { animation ->
                 val value = animation.animatedValue as Float
-                val circleLayer =
-                    mapStyle.getLayerAs<CircleLayer>(PULSING_CIRCLE_LAYER)
 
                 if (value < 14.5f) {
                     // Circle is expanding show the circle
@@ -1991,8 +2092,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     // Interferes all taps on the map and determines if a symbol is tapped.
     private fun handleSymbolClick(latLng: LatLng) {
         if (markerBottomSheetBehavior.state == STATE_EXPANDED) {
-            markerBottomSheetBehavior.state =
-                STATE_HIDDEN
+            closeMarkerBottomSheetLayout()
         }
 
         val screenPoint = mapLibre.projection.toScreenLocation(latLng)
@@ -2048,7 +2148,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 showMarkerBottomSheet(
                     MarkerInfoModel(
                         title = customPoi.poiName,
-                        image = ContextCompat.getDrawable(
+                        iconImage = ContextCompat.getDrawable(
                             requireContext(),
                             resources.getIdentifier(
                                 customPoi.drawableResourceName,
@@ -2056,7 +2156,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 requireContext().packageName
                             )
                         ),
-                        description = customPoi.description,
+                        description = customPoi.description.takeIf { it.isNotBlank() },
                         position = LatLng(customPoi.latitude, customPoi.longitude)
                     )
                 )
@@ -2067,11 +2167,29 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private fun showPoiInfo(poiId: Long) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchPoiWithInfoById(poiId).firstOrNull()?.let { poi ->
+                val title = poi.tags["name"] ?: formatTagString(poi.category)
+
                 showMarkerBottomSheet(
                     MarkerInfoModel(
-                        title = poi.tags["name"] ?: "",
-                        image = null,
-                        description = poi.tags.toList().joinToString("\n"),
+                        title = title ?: "",
+                        type = formatTagString(
+                            poi.tags["vending"]
+                                ?: poi.category
+                        ).takeIf {
+                            title != null && title != formatTagString(
+                                it
+                            )
+                        }
+                            ?.let { "($it)" },
+                        iconImage = null,
+                        propImages = extractPropImagesFromTags(poi.tags),
+                        description = excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }/*poi.tags.entries.joinToString(
+                            separator = "\n"
+                        ) { (key, value) ->
+                            "${formatTagString(key)}: ${formatTagString(value)}"
+                        }*/,
+                        contacts = extractContactsFromTags(poi.tags).takeIf { it.isNotBlank() },
+                        image = replaceHttpWithHttps(poi.tags["image"]),
                         position = LatLng(poi.latitude, poi.longitude)
                     )
                 )
@@ -2107,7 +2225,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 vesselInfoEntity.name,
                                 vesselInfoEntity.flag
                             ),
-                        image = ContextCompat.getDrawable(
+                        iconImage = ContextCompat.getDrawable(
                             requireContext(),
                             com.bytecause.core.resources.R.drawable.vessel_marker
                         )
@@ -2162,9 +2280,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             viewModel.searchHarbourById(harbourId).firstOrNull()?.let { harbour ->
                 showMarkerBottomSheet(
                     MarkerInfoModel(
-                        title = harbour.tags["name"] ?: "",
-                        image = null,
+                        title = harbour.tags["name"] ?: formatTagString(harbour.tags["leisure"])
+                        ?: "",
+                        iconImage = null,
+                        propImages = extractPropImagesFromTags(harbour.tags),
                         description = harbour.tags.toList().joinToString("\n"),
+                        image = replaceHttpWithHttps(harbour.tags["image"]),
                         position = LatLng(harbour.latitude, harbour.longitude)
                     )
                 )
@@ -2172,22 +2293,105 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private fun adjustMapViewPositionIfNeeded(point: LatLng) {
+        markerBottomSheetLayout.viewTreeObserver.addOnGlobalLayoutListener(
+            object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    markerBottomSheetLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                    val markerBottomSheetHeight = markerBottomSheetLayout.height
+                    val mapViewHeight = mapView!!.height
+
+                    val projection = mapLibre.projection
+                    val symbolScreenPoint = projection.toScreenLocation(point)
+                    val range = Range.create(mapViewHeight - markerBottomSheetHeight, mapViewHeight)
+
+                    if (range.contains(symbolScreenPoint.y.toInt())) {
+                        val estimatedCenter = mapViewHeight - markerBottomSheetHeight
+
+                        symbolScreenPoint.y += estimatedCenter / 4
+
+                        val newLatLng = projection.fromScreenLocation(symbolScreenPoint)
+
+                        mapLibre.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                newLatLng,
+                                mapLibre.cameraPosition.zoom
+                            ),
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+
     // Takes MarkerInfoModel state as an argument and renders it.
     private fun showMarkerBottomSheet(markerInfo: MarkerInfoModel) {
-        shouldInterceptBackEvent = true
+        if (markerBottomSheetBehavior.state == STATE_EXPANDED) closeMarkerBottomSheetLayout()
 
-        markerBottomSheetBehavior.state = STATE_EXPANDED
+        shouldInterceptBackEvent = true
+        openMarkerBottomSheetLayout()
+
+        adjustMapViewPositionIfNeeded(markerInfo.position)
 
         markerInfo.run {
             binding.markerBottomSheetId.apply {
-                markerBottomSheetTitle.text = title
-
-                description?.let { description ->
-                    markerBottomSheetDescriptionTextView.text = description
+                // set title
+                markerTitle.apply {
+                    text = title
                 }
 
-                markerBottomSheetImageView.setImageDrawable(image)
+                // load prop images (e.g.: Wi-Fi, wheelchair)
+                loadMarkerBottomSheetPropImages(markerInfo.propImages)
 
+                // set type
+                type?.let {
+                    markerType.apply {
+                        visibility = View.VISIBLE
+                        text = type
+                    }
+                } ?: run {
+                    markerType.visibility = View.GONE
+                }
+
+                // set description
+                description?.let { description ->
+                    descriptionLinearLayout.visibility = View.VISIBLE
+                    markerBottomSheetDescriptionTextView.text = description
+                } ?: run {
+                    descriptionLinearLayout.visibility = View.GONE
+                }
+
+                // set contact information
+                contacts?.let { contacts ->
+                    contactsLinearLayout.visibility = View.VISIBLE
+                    contactsContainer.text = contacts
+                } ?: run {
+                    contactsLinearLayout.visibility = View.GONE
+                }
+
+                // set symbol icon drawable
+                iconImage?.let { image ->
+                    markerIconLinearLayout.visibility = View.VISIBLE
+                    markerBottomSheetImageView.setImageDrawable(image)
+                } ?: run {
+                    markerIconLinearLayout.visibility = View.GONE
+                }
+
+                // load image if present
+                image?.let { url ->
+                    imageViewCardViewContainer.visibility = View.VISIBLE
+                    imageView.load(url) {
+                        crossfade(true)
+                        crossfade(300)
+                    }
+                } ?: run {
+                    imageView.setImageDrawable(null)
+                    imageViewCardViewContainer.visibility = View.GONE
+                }
+
+                // set geolocation information
                 markerBottomSheetGeopointTextView.text =
                     resources.getString(com.bytecause.core.resources.R.string.split_two_strings_formatter)
                         .format(
@@ -2227,6 +2431,38 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private fun loadMarkerBottomSheetPropImages(images: List<Int>) {
+        val container = binding.markerBottomSheetId.imageContainer.apply {
+            visibility = if (images.isNotEmpty()) View.VISIBLE else View.GONE
+        }
+        // Clear any existing views
+        container.removeAllViews()
+
+        // Iterate over the drawable resource IDs and add ImageViews
+        for (drawableId in images) {
+            val imageView = ImageView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    50,
+                    50
+                )
+                setImageResource(drawableId)
+                setColorFilter(com.bytecause.core.resources.R.color.adaptive_color)
+            }
+
+            val spacer = LinearLayout(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    20,
+                    20
+                )
+            }
+
+            container.apply {
+                addView(imageView)
+                addView(spacer)
+            }
+        }
+    }
+
     private fun loadMapStyle(
         map: MapLibreMap,
         onStyleLoaded: (Style) -> Unit
@@ -2241,7 +2477,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             symbolManager?.let {
                 // Additional check for symbol manager's layer in style
                 if (style.getLayer(it.layerId) == null) {
-                    symbolManager = SymbolManager(mapView, map, style)
+                    symbolManager = SymbolManager(mapView!!, map, style)
                 }
             }
         }
@@ -2401,10 +2637,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.state = STATE_HIDDEN
     }
 
-    private fun showBottomSheetLayout() {
-        bottomSheetBehavior.state = STATE_EXPANDED
-    }
-
     /**
      * Don't use directly!!!
      * To add marker on map, call setLatLng() function with LatLng argument inside MapSharedViewModel
@@ -2435,7 +2667,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private fun addMeasurePoint() {
         // Calculate the screen position of the center
-        val center = PointF(mapView.width / 2f, mapView.height / 2f)
+        val center = PointF(mapView!!.width / 2f, mapView!!.height / 2f)
         // Calculate the geographical position of the center
         val centerGeoPoint = mapLibre.projection.fromScreenLocation(center)
 
@@ -2450,6 +2682,18 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private fun closeBottomSheetLayout() {
         bottomSheetBehavior.state = STATE_HIDDEN
+    }
+
+    private fun showBottomSheetLayout() {
+        bottomSheetBehavior.state = STATE_EXPANDED
+    }
+
+    private fun closeMarkerBottomSheetLayout() {
+        markerBottomSheetBehavior.state = STATE_HIDDEN
+    }
+
+    private fun openMarkerBottomSheetLayout() {
+        markerBottomSheetBehavior.state = STATE_EXPANDED
     }
 
     private fun openBottomSheetLayout(
@@ -2467,7 +2711,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 )
                 setSearchBoxText(this.text.toString())
             }
-            bottomSheetBehavior.state = STATE_EXPANDED
+            showBottomSheetLayout()
         } else {
             binding.bottomSheetId.textPlaceHolder.apply {
                 this.text = text ?: getString(
@@ -2564,29 +2808,29 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     override fun onStart() {
         super.onStart()
-        mapView.onStart()
+        mapView?.onStart()
         locationComponent?.onStart()
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
-        mapView.onLowMemory()
+        mapView?.onLowMemory()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        mapView.onSaveInstanceState(outState)
+        mapView?.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        mapView.onDestroy()
+        mapView?.onDestroy()
         locationComponent?.onDestroy()
     }
 
     override fun onStop() {
         super.onStop()
-        mapView.onStop()
+        mapView?.onStop()
         locationComponent?.onStop()
     }
 
@@ -2597,7 +2841,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         markerBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
 
-        mapView.onResume()
+        mapView?.onResume()
     }
 
     override fun onPause() {
@@ -2606,9 +2850,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+        // cancel animation if not null
+        circleLayerAnimator?.cancel()
+        circleLayerAnimator = null
 
         saveMapState()
 
-        mapView.onPause()
+        mapView?.onPause()
     }
 }

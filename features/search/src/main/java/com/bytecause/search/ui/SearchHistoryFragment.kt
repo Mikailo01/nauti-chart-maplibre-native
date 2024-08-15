@@ -1,7 +1,6 @@
 package com.bytecause.search.ui
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -29,7 +28,7 @@ import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.viewmodel.SearchHistoryViewModel
 import com.bytecause.util.KeyboardUtils
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.drawable.DrawableUtil
+import com.bytecause.util.poi.PoiUtil.assignDrawableToAddressType
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -38,11 +37,8 @@ import org.maplibre.android.geometry.LatLng
 import kotlin.properties.Delegates
 
 
-/**
- * http://neethack.com/2017/04/Why-inheritance-is-bad/
- * **/
 
-// TODO("Refactor")
+// TODO("Refactor - Fragment takes too much responsibility")
 @AndroidEntryPoint
 class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
     ConfirmationDialog.ConfirmationDialogListener {
@@ -120,7 +116,7 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
                     return@setOnLongClickListener true
                 }
                 placeImage.setImageResource(
-                    DrawableUtil.assignDrawableToAddressType(item.addressType)
+                    assignDrawableToAddressType(item.addressType)
                 )
                 placeName.text =
                     if (item.displayName.startsWith(item.name)) item.displayName else item.name

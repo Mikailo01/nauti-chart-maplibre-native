@@ -1,6 +1,8 @@
 package com.bytecause.map.ui.dialog
 
+import android.animation.ValueAnimator
 import android.content.DialogInterface
+import android.graphics.PorterDuff
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -22,12 +24,14 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.CustomizeMapDialogFragmentLayoutBinding
+import com.bytecause.map.ui.model.PoiCategory
 import com.bytecause.map.ui.viewmodel.CustomizeMapViewModel
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.components.views.recyclerview.decorations.AdaptiveSpacingItemDecoration
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.bindings.RecyclerViewBindingInterface
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.poi.PoiUtil.getDrawableForPoiCategory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -46,7 +50,7 @@ class CustomizeMapDialog : DialogFragment() {
     private val viewModel: CustomizeMapViewModel by viewModels()
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<String>
+    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<PoiCategory>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,21 +63,92 @@ class CustomizeMapDialog : DialogFragment() {
         savedInstanceState: Bundle?,
     ): View {
         val bindingInterface =
-            object : RecyclerViewBindingInterface<String> {
+            object : RecyclerViewBindingInterface<PoiCategory> {
                 override fun bindData(
-                    item: String,
+                    item: PoiCategory,
                     itemView: View,
                     itemPosition: Int,
                 ) {
                     val textView: TextView = itemView.findViewById(R.id.poi_category_name_text_view)
-                    val imageView: ImageView = itemView.findViewById(R.id.poi_category_image_view)
+                    val outerImageView: ImageView =
+                        itemView.findViewById(R.id.poi_category_outer_image_view)
+                    val innerImageView: ImageView =
+                        itemView.findViewById(R.id.poi_category_inner_image_view)
 
-                    textView.text = item
-                    imageView.setOnClickListener {
-                        Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT)
-                            .show()
+                    if (item.isSelected) {
+                        val startColor = ContextCompat.getColor(
+                            requireContext(),
+                            com.bytecause.core.resources.R.color.gray
+                        )
+                        val endColor = ContextCompat.getColor(
+                            requireContext(),
+                            com.bytecause.core.resources.R.color.colorPrimary
+                        )
+
+                        // Create a ValueAnimator that animates between the start and end colors.
+                        val colorAnimation = ValueAnimator.ofArgb(startColor, endColor).apply {
+                            duration = 500
+                            addUpdateListener { animator ->
+                                val color = animator.animatedValue as Int
+                                outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                            }
+                        }
+                        colorAnimation.start()
+                    } else {
+                        val color = ContextCompat.getColor(
+                            requireContext(),
+                            com.bytecause.core.resources.R.color.gray
+                        )
+
+                        outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                    }
+
+                    val name = when {
+                        item.nameRes != null -> getString(item.nameRes)
+                        item.name != null -> item.name
+                        else -> ""
+                    }
+
+                    textView.apply {
+                        text = name
+                        isSelected = true
+                    }
+
+                    getDrawableForPoiCategory(name, requireContext())?.let {
+                        innerImageView.setImageDrawable(
+                            ContextCompat.getDrawable(
+                                requireContext(),
+                                it
+                            )
+                        )
+                    } ?: innerImageView.setImageDrawable(null)
+
+                    outerImageView.setOnClickListener {
+                        if (item.isSelected) viewModel.removeSelectedCategory(item)
+                        else viewModel.setSelectedCategory(item)
                     }
                 }
+            }
+
+        genericRecyclerViewAdapter =
+            GenericRecyclerViewAdapter(
+                emptyList(),
+                R.layout.customize_map_recycler_view_item_view,
+                bindingInterface,
+            )
+
+        recyclerView =
+            binding.poiCategoriesRecyclerView.apply {
+                layoutManager =
+                    GridLayoutManager(
+                        requireContext(),
+                        3,
+                        GridLayoutManager.HORIZONTAL,
+                        false,
+                    )
+                adapter = genericRecyclerViewAdapter
+                addItemDecoration(AdaptiveSpacingItemDecoration(80, false))
+                setHasFixedSize(true)
             }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -84,32 +159,44 @@ class CustomizeMapDialog : DialogFragment() {
                         binding.noPoisDownloadedTextView.visibility = View.VISIBLE
                         return@collect
                     }
+                    binding.chipShowAll.isChecked = distinctCategoryList.all { it.isSelected }
 
-                    genericRecyclerViewAdapter =
-                        GenericRecyclerViewAdapter(
-                            distinctCategoryList,
-                            R.layout.customize_map_recycler_view_item_view,
-                            bindingInterface,
-                        )
+                    genericRecyclerViewAdapter.updateContent(
+                        sortCategoriesBySelectionAndName(distinctCategoryList)
+                    )
+                }
+            }
+        }
 
-                    recyclerView =
-                        binding.poiCategoriesRecyclerView.apply {
-                            layoutManager =
-                                GridLayoutManager(
-                                    requireContext(),
-                                    3,
-                                    GridLayoutManager.HORIZONTAL,
-                                    false,
-                                )
-                            adapter = genericRecyclerViewAdapter
-                            addItemDecoration(AdaptiveSpacingItemDecoration(80, false))
-                            setHasFixedSize(true)
-                        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isAisActivated.collect { isActivated ->
+                    binding.chipAis.isChecked = isActivated
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.areHarboursVisible.collect { isActivated ->
+                    binding.chipHarbours.isChecked = isActivated
                 }
             }
         }
 
         return binding.root
+    }
+
+    private fun sortCategoriesBySelectionAndName(categories: List<PoiCategory>): List<PoiCategory> {
+        return categories.sortedWith(
+            compareByDescending<PoiCategory> { it.isSelected } // Sort by isSelected first (descending)
+                // Then sort by name (ascending)
+                .thenBy {
+                    if (it.nameRes != null) {
+                        getString(it.nameRes)
+                    } else it.name
+                }
+        )
     }
 
     override fun onViewCreated(
@@ -119,25 +206,31 @@ class CustomizeMapDialog : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.chipShowAll.apply {
-            isChecked = mapSharedViewModel.showAllPois.value
             setOnClickListener {
-                mapSharedViewModel.toggleShowAllPois()
+                if (isChecked) viewModel.selectAllCategories()
+                else viewModel.unselectAllCategories()
             }
         }
 
         binding.chipAis.apply {
-            isChecked = mapSharedViewModel.vesselLocationsVisible.value
-            setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) viewModel.fetchVessels()
-                else mapSharedViewModel.toggleVesselLocations()
+            setOnClickListener {
+                if (isChecked) {
+                    viewModel.toggleAisActivation()
+                    viewModel.fetchVessels()
+                } else {
+                    viewModel.toggleAisActivation()
+                }
             }
         }
 
         binding.chipHarbours.apply {
-            isChecked = mapSharedViewModel.harboursLocationsVisible.value
-            setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) viewModel.fetchHarbours()
-                else mapSharedViewModel.toggleHarboursLocations()
+            setOnClickListener {
+                if (isChecked) {
+                    viewModel.toggleHarboursVisible()
+                    viewModel.fetchHarbours()
+                } else {
+                    viewModel.toggleHarboursVisible()
+                }
             }
         }
 
@@ -182,7 +275,7 @@ class CustomizeMapDialog : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.vesselsFetchingState.collect { state ->
                     state ?: return@collect
-                    if (mapSharedViewModel.vesselLocationsVisible.value) return@collect
+                    if (!viewModel.isAisActivated.value) return@collect
 
                     if (state.error != null) {
                         findNavController().popBackStack(
@@ -202,9 +295,8 @@ class CustomizeMapDialog : DialogFragment() {
                                     ),
                                     Toast.LENGTH_SHORT,
                                 ).show()
-                                mapSharedViewModel.toggleVesselLocations()
-                                binding.chipAis.isChecked = false
                             }
+                            if (viewModel.isAisActivated.value) viewModel.toggleAisActivation()
                         }
 
                         null -> {
@@ -216,11 +308,8 @@ class CustomizeMapDialog : DialogFragment() {
                                         )
                                     findNavController().navigate(action)
                                 }
-                            } else {
-                                mapSharedViewModel.toggleVesselLocations()
-                                if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
-                                    findNavController().popBackStack(R.id.customizeMapDialog, false)
-                                }
+                            } else if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
+                                findNavController().popBackStack(R.id.customizeMapDialog, false)
                             }
                         }
 
@@ -230,10 +319,8 @@ class CustomizeMapDialog : DialogFragment() {
                                 getString(com.bytecause.core.resources.R.string.something_went_wrong),
                                 Toast.LENGTH_SHORT,
                             ).show()
-                            mapSharedViewModel.toggleVesselLocations()
-                            binding.chipAis.isChecked = false
+                            if (viewModel.isAisActivated.value) viewModel.toggleAisActivation()
                         }
-
                     }
                 }
             }
@@ -243,7 +330,7 @@ class CustomizeMapDialog : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.harboursFetchingState.collect { state ->
                     state ?: return@collect
-                    if (mapSharedViewModel.harboursLocationsVisible.value) return@collect
+                    if (!viewModel.areHarboursVisible.value) return@collect
 
                     if (state.error != null) {
                         findNavController().popBackStack(
@@ -263,8 +350,7 @@ class CustomizeMapDialog : DialogFragment() {
                                     ),
                                     Toast.LENGTH_SHORT,
                                 ).show()
-                                mapSharedViewModel.toggleHarboursLocations()
-                                binding.chipHarbours.isChecked = false
+                                if (viewModel.isAisActivated.value) viewModel.toggleHarboursVisible()
                             }
                         }
 
@@ -273,15 +359,12 @@ class CustomizeMapDialog : DialogFragment() {
                                 if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
                                     val action =
                                         CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
-                                            "Fetching harbours..."
+                                            getString(com.bytecause.core.resources.R.string.loading_harbours_text),
                                         )
                                     findNavController().navigate(action)
                                 }
-                            } else {
-                                mapSharedViewModel.toggleHarboursLocations()
-                                if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
-                                    findNavController().popBackStack(R.id.customizeMapDialog, false)
-                                }
+                            } else if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
+                                findNavController().popBackStack(R.id.customizeMapDialog, false)
                             }
                         }
 
@@ -291,8 +374,7 @@ class CustomizeMapDialog : DialogFragment() {
                                 getString(com.bytecause.core.resources.R.string.something_went_wrong),
                                 Toast.LENGTH_SHORT,
                             ).show()
-                            mapSharedViewModel.toggleHarboursLocations()
-                            binding.chipHarbours.isChecked = false
+                            if (viewModel.isAisActivated.value) viewModel.toggleHarboursVisible()
                         }
                     }
                 }
