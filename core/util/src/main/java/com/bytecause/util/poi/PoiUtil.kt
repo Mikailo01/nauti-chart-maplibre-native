@@ -35,6 +35,18 @@ object PoiUtil {
             }
     }
 
+    // types of objects that should be queried for the entire region
+    val searchTypesStringList =
+        listOf("shop", "amenity", "leisure", "tourism", "seamark:type", "public_transport")
+
+    // types of objects that should be omitted in the query for the entire region
+    val excludeAmenityObjectsFilterList = listOf(
+        "clock",
+        "fixme",
+        "smoking_area",
+        "internet_kiosk"
+    )
+
     /** extracts category from overpass element's tags **/
     fun extractCategoryFromPoiEntity(tagsMap: Map<String, String>): String? {
         return when {
@@ -274,7 +286,7 @@ object PoiUtil {
         R.string.accommodation to R.drawable.accommodation,
         R.string.finance to R.drawable.money_icon,
         R.string.bench to R.drawable.bench,
-        R.string.bar to R.drawable.bar,
+        R.string.drink to R.drawable.bar,
         R.string.camping to R.drawable.camping,
         R.string.nautical to R.drawable.anchor,
         R.string.parking to R.drawable.parking,
@@ -372,11 +384,12 @@ object PoiUtil {
             "Payment centre",
             "Payment terminal"
         ),
-        R.string.bar to listOf(
+        R.string.drink to listOf(
             "Bar",
             "Pub",
             "Biergarten",
-            "Bar, casino"
+            "Bar, casino",
+            "Juice bar"
         ),
         R.string.camping to listOf(
             "Camp site",
@@ -476,7 +489,9 @@ object PoiUtil {
             "Parking",
             "Bicycle parking",
             "Parking entrance",
-            "Parking space"
+            "Parking space",
+            "Parking exit",
+            "Parking section"
         ),
         R.string.food to listOf(
             "Restaurant",
@@ -498,7 +513,11 @@ object PoiUtil {
             "Research institute",
             "Surf school",
             "First aid school",
-            "Dancing school"
+            "Dancing school",
+            "Art school",
+            "Cooking school",
+            "Flight school",
+            "Prep school"
         ),
         R.string.library to listOf(
             "Library",
@@ -525,7 +544,9 @@ object PoiUtil {
             "Platform",
             "Stop",
             "Stop position",
-            "Station"
+            "Station",
+            "Lounge",
+            "Destination display"
         ),
         R.string.swimming to listOf(
             "Water park",
@@ -545,7 +566,11 @@ object PoiUtil {
             "Miniature golf",
             "Pitch",
             "Shooting ground",
-            "Dive centre"
+            "Dive centre",
+            "Track",
+            "Stadium",
+            "Martial arts",
+            "Sport"
         ),
         R.string.health to listOf(
             "Pharmacy",
@@ -559,7 +584,9 @@ object PoiUtil {
         R.string.shop to listOf(
             "Marketplace",
             "Shop",
-            "Studio"
+            "Studio",
+            "Psychic",
+            "Furniture rental"
         ),
         R.string.leisure to listOf(
             "Leisure",
@@ -582,7 +609,9 @@ object PoiUtil {
             "Exhibition centre",
             "Conference centre",
             "Stage",
-            "Toy library"
+            "Toy library",
+            "Amusement arcade",
+            "Common"
         ),
         R.string.cafe to listOf(
             "Internet cafe",
@@ -624,7 +653,8 @@ object PoiUtil {
             "Fountain",
             "Aquarium",
             "Museum",
-            "Clock"
+            "Clock",
+            "Memorial"
         ),
         R.string.car_services to listOf(
             "Vehicle inspection",
@@ -676,7 +706,8 @@ object PoiUtil {
             "Events venue",
             "Event venue",
             "Social centre",
-            "Wedding venue"
+            "Wedding venue",
+            "Public building"
         ),
         R.string.hunting to listOf(
             "Hunting stand",
@@ -695,7 +726,8 @@ object PoiUtil {
             "Relax room",
             "Tanning salon",
             "Sauna",
-            "Kneipp water cure"
+            "Kneipp water cure",
+            "Spa"
         ),
         R.string.government_facilities to listOf(
             "Courthouse",

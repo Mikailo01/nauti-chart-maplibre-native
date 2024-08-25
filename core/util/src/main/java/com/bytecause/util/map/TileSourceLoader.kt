@@ -24,8 +24,8 @@ object TileSourceLoader {
                 getSourceAs(
                     when (tileSource) {
                         is TileSources.Raster.Default -> tileSource.id.name
-                        is TileSources.Raster.Custom.Online -> tileSource.id
-                        is TileSources.Raster.Custom.Offline -> tileSource.id
+                        is TileSources.Raster.Custom.Online -> tileSource.name
+                        is TileSources.Raster.Custom.Offline -> tileSource.name
                         else -> return
                     },
                 )
@@ -111,7 +111,7 @@ object TileSourceLoader {
                 when (tileSource) {
                     is TileSources.Raster.Custom.Online -> {
                         RasterSource(
-                            tileSource.id,
+                            tileSource.name,
                             TileSet(
                                 TILE_JSON,
                                 tileSource.url,
@@ -122,7 +122,7 @@ object TileSourceLoader {
 
                     is TileSources.Raster.Custom.Offline -> {
                         RasterSource(
-                            tileSource.id,
+                            tileSource.name,
                             "mbtiles:///${tileSource.filePath}",
                             tileSource.tileSize
                         )
@@ -144,13 +144,13 @@ object TileSourceLoader {
                 }
 
             is TileSources.Raster.Custom.Online ->
-                RasterLayer(layerId, tileSource.id).apply {
+                RasterLayer(layerId, tileSource.name).apply {
                     minZoom = tileSource.minZoom
                     maxZoom = tileSource.maxZoom
                 }
 
             is TileSources.Raster.Custom.Offline -> {
-                RasterLayer(layerId, tileSource.id).apply {
+                RasterLayer(layerId, tileSource.name).apply {
                     minZoom = tileSource.minZoom
                     maxZoom = tileSource.maxZoom
                 }

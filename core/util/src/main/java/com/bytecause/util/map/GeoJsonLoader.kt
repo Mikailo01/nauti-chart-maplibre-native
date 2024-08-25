@@ -13,7 +13,10 @@ object GeoJsonLoader {
         geoJsonName: String,
         index: Int = -1,
     ) {
+        if (getSourceAs<GeoJsonSource>(geoJsonName) != null) return
+
         addSource(createGeoJsonSource(geoJsonName))
+        // index not specified, add geojson layer to the end of the stack
         if (index == -1) {
             addLayer(
                 createGeoJsonLayer(
@@ -21,7 +24,9 @@ object GeoJsonLoader {
                     sourceId = geoJsonName,
                 ),
             )
-        } else {
+        }
+        // index specified add geojson layer at specified index on the stack
+        else {
             addLayerAt(
                 createGeoJsonLayer(
                     lineLayerId = WORLD_BOUNDARIES_LAYER,
@@ -43,7 +48,8 @@ object GeoJsonLoader {
         removeSource(geoJsonName)
     }
 
-    private fun createGeoJsonSource(geoJsonName: String): GeoJsonSource = GeoJsonSource(geoJsonName, URI("asset://$geoJsonName"))
+    private fun createGeoJsonSource(geoJsonName: String): GeoJsonSource =
+        GeoJsonSource(geoJsonName, URI("asset://$geoJsonName"))
 
     private fun createGeoJsonLayer(
         lineLayerId: String,

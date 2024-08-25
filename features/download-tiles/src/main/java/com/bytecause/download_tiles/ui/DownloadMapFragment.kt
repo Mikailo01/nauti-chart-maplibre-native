@@ -315,7 +315,7 @@ class DownloadMapFragment : Fragment(R.layout.download_tiles_fragment_layout) {
 
     private fun setTileSource() {
         customMapView.setTileSource(
-            when (val tileSource = mapSharedViewModel.tileSource.value) {
+            when (val tileSource = mapSharedViewModel.tileSource.replayCache.lastOrNull()) {
                 is TileSources.Raster.Default -> {
                     when (tileSource.id) {
                         DefaultTileSources.OPEN_TOPO.id -> TileSourceFactory.OpenTopo

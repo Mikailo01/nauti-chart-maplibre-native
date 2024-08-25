@@ -42,8 +42,13 @@
     <string name="move_map_to_download_desired_area">Move map to download desired area.</string>
     <string name="free_space_refresh_button">Free space refresh button</string>
     <string name="map_tile_source">Map tile source</string>
+    <string name="name_cannot_be_empty">Name cannot be empty!</string>
+    <string name="name_of_this_tile_provider_already_exists">Name of this tile provider already exists.</string>
+    <string name="url_cannot_be_empty">Url cannot be empty!</string>
+    <string name="url_is_not_in_valid_format">Url is not in valid format.</string>
     <string name="min">Min</string>
     <string name="max">Max</string>
+    <string name="invalid_file_type">Invalid file type.</string>
     <string name="zoom_levels">Zoom levels:</string>
     <string name="download_size">Download size:</string>
     <string name="tiles">Tiles:</string>
@@ -97,6 +102,8 @@
     <string name="count_text_place_holder">Count: %1s</string>
     <string name="show_results_on_the_map_place_holder">Show %1s on the map</string>
     <string name="loading_elements">Loading elements…</string>
+    <string name="processing">Processing</string>
+    <string name="processed_count">(%1s)</string>
     <string name="unknown_region">Unknown region</string>
     <string name="skip">SKIP</string>
     <string name="choose_region_description">Please choose your region for which POIs should be downloaded.</string>
@@ -173,10 +180,7 @@
     <string name="rent">Rent</string>
     <string name="bench">Bench</string>
     <string name="compressed_air">Compressed air</string>
-    <string name="drinking_water">Drinking water</string>
     <string name="toilets">Toilets</string>
-    <string name="Parking">Parking</string>
-    <string name="park">Park</string>
     <string name="drink">Drink</string>
     <string name="bar">Bar</string>
     <string name="camping">Camping</string>

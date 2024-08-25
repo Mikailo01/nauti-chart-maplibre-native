@@ -26,8 +26,8 @@ import com.bytecause.pois.ui.viewmodel.DownloadPoiSelectCountryViewModel
 import com.bytecause.presentation.components.views.recyclerview.StatefulRecyclerView
 import com.bytecause.util.context.storageAvailable
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.string.StringUtil
-import com.bytecause.util.string.StringUtil.excludeObjectFiltersList
+import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
+import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -35,9 +35,7 @@ import kotlinx.coroutines.launch
 import okio.IOException
 import java.net.ConnectException
 
-fun Map<String, CountryParentItem>.getKeyByIndex(index: Int): String {
-    return keys.toList()[index]
-}
+fun Map<String, CountryParentItem>.getKeyByIndex(index: Int): String = keys.toList()[index]
 
 @AndroidEntryPoint
 class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment_layout),
@@ -184,8 +182,8 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 }
 
                 null -> {
-                    if (!uiState.isLoading) setDownloadState(false)
-                    else viewModel.showDownloadProgressBar(true)
+                    if (!uiState.loading.isLoading) setDownloadState(false)
+                    else viewModel.showDownloadProgressBar(true, uiState.loading.progress)
 
                     if (uiState.items.isEmpty()) return@observe
 
@@ -234,14 +232,14 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                     regionName = "",
                     query = OverpassQueryBuilder
                         .format(OverpassQueryBuilder.FormatTypes.JSON)
-                        .timeout(120)
+                        .timeout(240)
                         .region(viewModel.getRegionNameFromQueue())
                         .type(OverpassQueryBuilder.Type.Node)
                         .search(
-                            com.bytecause.domain.util.SearchTypes.UnionSet(StringUtil.searchTypesStringList)
+                            com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)
                                 .filterNot(
                                     emptyList(),
-                                    excludeObjectFiltersList,
+                                    excludeAmenityObjectsFilterList,
                                     emptyList(),
                                     emptyList(),
                                     emptyList(),

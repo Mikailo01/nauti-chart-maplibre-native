@@ -4,16 +4,6 @@ import org.maplibre.android.geometry.LatLng
 import kotlin.math.round
 
 object StringUtil {
-    val searchTypesStringList =
-        listOf("shop", "amenity", "leisure", "tourism", "seamark:type", "public_transport")
-
-    val excludeObjectFiltersList = listOf(
-        "clock",
-        "fixme",
-        "public_building",
-        "smoking_area",
-        "internet_kiosk"
-    )
 
     fun extractCoordinatesToGeoPointList(polygonKml: String): List<LatLng> {
         val coordinatesRegex = Regex("<coordinates>(.*?)</coordinates>")

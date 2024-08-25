@@ -104,6 +104,15 @@
                 android:textStyle="italic"
                 tools:text="Fetching position" />
 
+            <TextView
+                android:id="@+id/progress_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/adaptive_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="(0)" />
+
         </LinearLayout>
 
         <androidx.appcompat.widget.AppCompatButton

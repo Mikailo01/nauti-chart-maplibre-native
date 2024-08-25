@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.CountryModel
+import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.RegionModel
 import com.bytecause.domain.model.UiState
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
@@ -93,11 +94,11 @@ constructor(
         query: String,
     ) {
         viewModelScope.launch {
-            _regionEntityUiStateLiveData.postValue(UiState(isLoading = true))
+            _regionEntityUiStateLiveData.postValue(UiState(loading = Loading(true)))
             when (val data = getRegionsUseCase(countryId, isoCode, query).firstOrNull()) {
                 is ApiResult.Success -> {
                     _regionEntityUiStateLiveData.postValue(UiState(
-                        isLoading = false,
+                        loading = Loading(false),
                         items =
                         data.data?.sortedBy {
                             it.names["name:${Locale.getDefault().language}"]
@@ -113,7 +114,7 @@ constructor(
                         is ConnectException -> {
                             _regionEntityUiStateLiveData.postValue(
                                 UiState(
-                                    isLoading = false,
+                                    loading = Loading(false),
                                     error = ConnectException(),
                                 )
                             )
@@ -122,7 +123,7 @@ constructor(
                         is NoSuchElementException -> {
                             _regionEntityUiStateLiveData.postValue(
                                 UiState(
-                                    isLoading = false,
+                                    loading = Loading(false),
                                     error = NoSuchElementException(),
                                 )
                             )
@@ -131,7 +132,7 @@ constructor(
                         else -> {
                             _regionEntityUiStateLiveData.postValue(
                                 UiState(
-                                    isLoading = false,
+                                    loading = Loading(false),
                                     error = IOException(),
                                 )
                             )
@@ -142,7 +143,7 @@ constructor(
                 else -> {
                     _regionEntityUiStateLiveData.postValue(
                         UiState(
-                            isLoading = false,
+                            loading = Loading(false),
                             items = emptyList(),
                         )
                     )
@@ -161,41 +162,59 @@ constructor(
     ) {
         downloadJob =
             viewModelScope.launch {
-                _poiDownloadUiStateLiveData.postValue(UiState(isLoading = true))
-                when (val data = getPoiResultByRegionUseCase(regionName, query).firstOrNull()) {
-                    is ApiResult.Success -> {
-                        // save downloaded region id into preferences datastore.
-                        getRegionIdList().forEach {
-                            addDownloadedRegionId(it.toString())
-                        }.also {
-                            updateRegionIsDownloaded()
-                            resetCheckedState()
+                _poiDownloadUiStateLiveData.postValue(UiState(loading = Loading(true)))
+
+                getPoiResultByRegionUseCase(regionName, query).collect { result ->
+                    when (result) {
+                        is ApiResult.Success -> {
+                            // save downloaded region id into preferences datastore.
+                            getRegionIdList().forEach {
+                                addDownloadedRegionId(it.toString())
+                            }.also {
+                                updateRegionIsDownloaded()
+                                resetCheckedState()
+                            }
+
+                            _poiDownloadUiStateLiveData.postValue(
+                                UiState(
+                                    loading = Loading(false),
+                                    items = listOf(result.data ?: ""),
+                                )
+                            )
                         }
 
-                        _poiDownloadUiStateLiveData.postValue(
-                            UiState(
-                                isLoading = false,
-                                items = listOf(data.data ?: ""),
+                        is ApiResult.Failure -> {
+                            _poiDownloadUiStateLiveData.postValue(
+                                UiState(
+                                    loading = Loading(false),
+                                    error = result.exception,
+                                )
                             )
-                        )
-                    }
+                        }
 
-                    is ApiResult.Failure -> {
-                        _poiDownloadUiStateLiveData.postValue(
-                            UiState(
-                                isLoading = false,
-                                error = data.exception,
-                            )
-                        )
-                    }
+                        is ApiResult.Progress -> {
+                            result.progress?.let { progress ->
+                                _poiDownloadUiStateLiveData.postValue(
+                                    UiState(
+                                        loading = Loading(
+                                            isLoading = true,
+                                            progress = poiDownloadUiStateLiveData.value?.loading?.progress?.plus(
+                                                progress
+                                            ) ?: progress
+                                        )
+                                    )
+                                )
+                            }
+                        }
 
-                    else -> {
-                        _poiDownloadUiStateLiveData.postValue(
-                            UiState(
-                                isLoading = false,
-                                items = emptyList(),
+                        else -> {
+                            _poiDownloadUiStateLiveData.postValue(
+                                UiState(
+                                    loading = Loading(false),
+                                    items = emptyList(),
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -223,7 +242,7 @@ constructor(
                 CountryParentItem(
                     regionList = updatedRegionList,
                     size = it.value.size,
-                    isLoading = it.value.isLoading,
+                    isLoading = it.value.isLoading
                 )
             }
         _mapContent.value = updatedContent
@@ -260,7 +279,7 @@ constructor(
     }
 
     fun isDownloading(): Boolean {
-        return mapContent.value.any { it.value.regionList.any { region -> region.isDownloading } }
+        return mapContent.value.any { it.value.regionList.any { region -> region.loading.isLoading } }
     }
 
     private fun updateMapElement(
@@ -279,7 +298,7 @@ constructor(
         mapContent.value[mapContent.value.getKeyByIndex(position)]?.let { field ->
             updateMapElement(
                 mapContent.value.getKeyByIndex(position),
-                field.copy(isLoading = true),
+                field.copy(isLoading = true)
             )
         }
     }
@@ -304,7 +323,7 @@ constructor(
                     RegionChildItem(
                         regionEntity = regionChildItem.regionEntity,
                         isChecked = !regionChildItem.isChecked,
-                        isDownloading = false,
+                        loading = Loading(false),
                         isCheckBoxEnabled = true,
                         isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size,
@@ -313,7 +332,7 @@ constructor(
                     RegionChildItem(
                         regionEntity = regionChildItem.regionEntity,
                         isChecked = regionChildItem.isChecked,
-                        isDownloading = false,
+                        loading = Loading(isLoading = false),
                         isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
                         isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size,
@@ -343,7 +362,7 @@ constructor(
                             RegionChildItem(
                                 regionEntity = regionChildItem.regionEntity,
                                 isChecked = regionChildItem.isChecked,
-                                isDownloading = false,
+                                loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = true,
                                 isDownloaded = true,
                                 size = regionChildItem.size,
@@ -352,7 +371,7 @@ constructor(
                             RegionChildItem(
                                 regionEntity = regionChildItem.regionEntity,
                                 isChecked = regionChildItem.isChecked,
-                                isDownloading = false,
+                                loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
                                 isDownloaded = regionChildItem.isDownloaded,
                                 size = regionChildItem.size,
@@ -429,7 +448,7 @@ constructor(
                             RegionChildItem(
                                 regionEntity = region,
                                 isChecked = false,
-                                isDownloading = false,
+                                loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = getDownloadQueueMapSize() < MAX_REGIONS_TO_DOWNLOAD,
                                 isDownloaded = searchForDownloadedRegions(region.id),
                                 size = regionSize[key] ?: "",
@@ -454,7 +473,7 @@ constructor(
             countryName?.lowercase(),
         )
 
-    fun showDownloadProgressBar(showLoading: Boolean) {
+    fun showDownloadProgressBar(showLoading: Boolean, progress: Int? = null) {
         mapContent.value.forEach { mutableEntry ->
             val regionChildItemList =
                 mutableEntry.value.regionList.map {
@@ -462,7 +481,7 @@ constructor(
                         RegionChildItem(
                             regionEntity = it.regionEntity,
                             isChecked = true,
-                            isDownloading = showLoading,
+                            loading = Loading(isLoading = showLoading, progress = progress),
                             isCheckBoxEnabled = it.isCheckBoxEnabled,
                             isDownloaded = it.isDownloaded,
                             size = it.size,
@@ -471,7 +490,7 @@ constructor(
                         RegionChildItem(
                             regionEntity = it.regionEntity,
                             isChecked = false,
-                            isDownloading = false,
+                            loading = Loading(isLoading = false),
                             isCheckBoxEnabled = it.isCheckBoxEnabled,
                             isDownloaded = it.isDownloaded,
                             size = it.size,

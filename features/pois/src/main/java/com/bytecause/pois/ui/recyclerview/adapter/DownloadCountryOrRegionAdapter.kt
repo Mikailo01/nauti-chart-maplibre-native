@@ -1,6 +1,5 @@
 package com.bytecause.pois.ui.recyclerview.adapter
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -163,6 +162,7 @@ class RegionChildAdapter(
         val downloadProgressBar: ProgressBar =
             itemView.findViewById(R.id.download_child_progress_bar)
         val regionNameTextView: TextView = itemView.findViewById(R.id.region_name_text_view)
+        val progressTextView: TextView = itemView.findViewById(R.id.progress_text_view)
         val elementSize: TextView = itemView.findViewById(R.id.element_size)
     }
 
@@ -205,10 +205,19 @@ class RegionChildAdapter(
             }
         }
 
-        when (regionElement.isDownloading) {
+        when (regionElement.loading.isLoading) {
             true -> {
                 holder.checkBox.visibility = View.GONE
                 holder.downloadProgressBar.visibility = View.VISIBLE
+
+                regionElement.loading.progress?.let { progress ->
+                    holder.progressTextView.apply {
+                        text =
+                            holder.itemView.context.getString(com.bytecause.core.resources.R.string.processed_count)
+                                .format(progress)
+                        visibility = View.VISIBLE
+                    }
+                }
             }
 
             false -> {
@@ -220,6 +229,7 @@ class RegionChildAdapter(
                     holder.downloadProgressBar.visibility = View.GONE
                     holder.checkBox.visibility =
                         if (regionElement.isDownloaded) View.INVISIBLE else View.VISIBLE
+                    holder.progressTextView.visibility = View.GONE
                 }
             }
         }

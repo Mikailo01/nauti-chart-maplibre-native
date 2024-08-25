@@ -16,8 +16,8 @@ interface PoiCacheDao {
     @Query("DELETE FROM poi_cache")
     suspend fun clearCache()
 
-    @Query("SELECT * FROM poi_cache")
-    fun loadCache(): Flow<List<PoiCacheEntity>>
+    @Query("SELECT * FROM poi_cache WHERE category IN (:category)")
+    fun loadTest(category: List<String>): Flow<List<PoiCacheEntity>>
 
     @Query("SELECT DISTINCT category FROM poi_cache")
     fun getAllDistinctCategories(): Flow<List<String>>

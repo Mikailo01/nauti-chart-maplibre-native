@@ -21,6 +21,7 @@ class AndroidFeatureWithComposeConventionPlugin : Plugin<Project> {
             dependencies {
                 // add dependencies for all features
                 implementation(libs.findLibrary("androidx-navigation-fragmentKtx").get())
+                implementation(libs.findLibrary("androidx-compose-lifecycle").get())
             }
         }
     }

@@ -85,23 +85,45 @@ constructor(
 
     val vesselsFlow: Flow<List<VesselModel>> =
         combine(
-            getVesselsUseCase(),
+            isAisActivated,
             vesselsBbox.receiveAsFlow()
-        ) { vessels, bbox ->
-            vessels.data?.let {
+        ) { isActivated, bbox ->
+
+            if (isActivated) {
+                getVesselsUseCase().firstOrNull()?.let { result ->
+                    val vessels = result.data
+
+                    vessels?.let {
+                        filterVisible(bbox, it)
+                    }
+
+                } ?: emptyList()
+            } else emptyList()
+            /*vessels.data?.let {
                 filterVisible(bbox, it)
-            } ?: emptyList()
-        }
+            } ?: emptyList()*/
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val harboursFlow: Flow<List<HarboursUiModel>> =
         combine(
-            getHarboursUseCase(),
+            areHarboursVisible,
             harboursBbox.receiveAsFlow()
-        ) { harbours, bbox ->
-            harbours.data?.let { harboursList ->
-                filterVisible(bbox, harboursList.map { it.asHarbourUiModel() })
-            } ?: emptyList()
-        }
+        ) { harboursVisible, bbox ->
+
+            if (harboursVisible) {
+                getHarboursUseCase().firstOrNull()?.let { result ->
+                    val harbours = result.data
+
+                    harbours?.let {
+                        filterVisible(bbox, it.map { it.asHarbourUiModel() })
+                    }
+                } ?: emptyList()
+            } else emptyList()
+
+            /* harbours.data?.let { harboursList ->
+                 filterVisible(bbox, harboursList.map { it.asHarbourUiModel() })
+             } ?: emptyList()*/
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun setSelectedFeatureId(featureType: com.bytecause.map.ui.FeatureType) {
         _selectedFeatureIdFlow.update { featureType }
@@ -264,7 +286,7 @@ constructor(
                             }.firstOrNull()?.run {
                                 (type as? CustomTileProviderType.Raster.Online)?.run {
                                     TileSources.Raster.Custom.Online(
-                                        id = name,
+                                        name = name,
                                         url = url,
                                         tileSize = tileSize,
                                         minZoom = minZoom.toFloat(),
@@ -273,7 +295,7 @@ constructor(
                                 } ?: run {
                                     (type as? CustomTileProviderType.Raster.Offline)?.run {
                                         TileSources.Raster.Custom.Offline(
-                                            id = name,
+                                            name = name,
                                             minZoom = minZoom.toFloat(),
                                             maxZoom = maxZoom.toFloat(),
                                             tileSize = tileSize,

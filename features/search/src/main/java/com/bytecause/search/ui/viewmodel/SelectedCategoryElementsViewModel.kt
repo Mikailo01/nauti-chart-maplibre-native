@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.ElementTagModel
+import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
@@ -33,6 +34,7 @@ constructor(
             "opening_hours",
             "wheelchair",
             "amenity",
+            "leisure",
             "outdoor_seating",
             "indoor_seating",
             "smoking",
@@ -138,33 +140,41 @@ constructor(
 
     fun getPoiResult(entity: PoiQueryModel) {
         viewModelScope.launch {
-            _uiSearchCategoryState.value = com.bytecause.domain.model.UiState(isLoading = true)
-            when (val result = getPoiResultByRadiusUseCase(entity).firstOrNull()) {
-                is ApiResult.Success -> {
-                    _uiSearchCategoryState.emit(
-                        com.bytecause.domain.model.UiState(
-                            isLoading = false,
-                            items =
-                            PoiUtil.generalizeTagKeys(
-                                result.data?.map {
-                                    OverpassNodeModel(
-                                        "",
-                                        it.placeId,
-                                        it.latitude,
-                                        it.longitude,
-                                        it.tags,
-                                    )
-                                } ?: emptyList(),
-                            ),
-                        ),
-                    )
-                }
+            _uiSearchCategoryState.value =
+                com.bytecause.domain.model.UiState(loading = Loading(true))
 
-                is ApiResult.Failure -> {
-                    _uiSearchCategoryState.emit(com.bytecause.domain.model.UiState(error = result.exception))
-                }
+            getPoiResultByRadiusUseCase(entity).collect { result ->
+                when (result) {
+                    is ApiResult.Success -> {
+                        val itemsWithUnifiedTags = PoiUtil.generalizeTagKeys(
+                            result.data?.map {
+                                OverpassNodeModel(
+                                    "",
+                                    it.placeId,
+                                    it.latitude,
+                                    it.longitude,
+                                    it.tags,
+                                )
+                            } ?: emptyList()
+                        )
 
-                null -> { // Do nothing }
+                        _uiSearchCategoryState.emit(
+                            uiSearchCategoryState.value?.copy(
+                                loading = Loading(isLoading = false),
+                                items = uiSearchCategoryState.value?.items?.plus(
+                                    itemsWithUnifiedTags
+                                ) ?: itemsWithUnifiedTags
+                            )
+                        )
+                    }
+
+                    is ApiResult.Failure -> {
+                        _uiSearchCategoryState.emit(com.bytecause.domain.model.UiState(error = result.exception))
+                    }
+
+                    is ApiResult.Progress -> {
+                        TODO()
+                    }
                 }
             }
         }

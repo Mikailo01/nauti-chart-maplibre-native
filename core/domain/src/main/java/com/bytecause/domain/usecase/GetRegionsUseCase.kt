@@ -79,12 +79,12 @@ class GetRegionsUseCase(
                 emit(ApiResult.Success(data = it))
                 return@flow
             } ?: run {
-            overpassRepository.makeQuery<OverpassRelationModel>(query).let { result ->
+            overpassRepository.makeQuery<OverpassRelationModel>(query).firstOrNull()!!.let { result ->
                 when {
-                    result.exception == null && !result.data.isNullOrEmpty() -> {
+                    result.exception == null && !result.data?.toList().isNullOrEmpty() -> {
                         filteredList =
                             filterRegionObjects(
-                                result.data,
+                                result.data?.toList() ?: emptyList(),
                                 countryId,
                                 isoCode,
                             ).takeIf { it.isNotEmpty() } ?: run {
@@ -98,12 +98,12 @@ class GetRegionsUseCase(
                                             .type(OverpassQueryBuilder.Type.Relation)
                                             .adminLevel(6)
                                             .build()
-                                    )
+                                    ).firstOrNull()!!
 
                                 when {
-                                    newResult.exception == null && !newResult.data.isNullOrEmpty() -> {
+                                    newResult.exception == null && !newResult.data?.toList().isNullOrEmpty() -> {
                                         filterRegionObjects(
-                                            newResult.data,
+                                            newResult.data?.toList() ?: emptyList(),
                                             countryId,
                                             isoCode,
                                         )

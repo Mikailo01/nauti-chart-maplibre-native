@@ -1,9 +1,14 @@
 package com.bytecause.domain.model
 
-import java.lang.Exception
 
-
-sealed class ApiResult<T>(val data: T? = null, val exception: Exception? = null) {
-    class Success<T>(data: T?) : ApiResult<T>(data)
-    class Failure<T>(exception: Exception, data: T? = null) : ApiResult<T>(data, exception)
+sealed class ApiResult<T>(
+    val data: T? = null,
+    val progress: Int? = null,
+    val exception: Throwable? = null
+) {
+    class Success<T>(data: T?) : ApiResult<T>(data = data)
+    class Progress<T>(progress: Int, exception: Throwable? = null, data: T? = null) :
+        ApiResult<T>(data = data, progress = progress, exception = exception)
+    class Failure<T>(exception: Throwable, data: T? = null) :
+        ApiResult<T>(data = data, exception = exception)
 }

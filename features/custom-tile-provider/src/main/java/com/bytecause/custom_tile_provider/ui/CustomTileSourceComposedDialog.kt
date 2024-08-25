@@ -1,6 +1,5 @@
 package com.bytecause.custom_tile_provider.ui
 
-import android.content.ContextWrapper
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -24,12 +23,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RangeSliderState
@@ -37,33 +34,36 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.bytecause.core.resources.R
+import com.bytecause.custom_tile_provider.ui.events.CustomTileSourceEffect
+import com.bytecause.custom_tile_provider.ui.events.CustomTileSourceEvent
+import com.bytecause.custom_tile_provider.ui.state.CustomTileSourceState
+import com.bytecause.custom_tile_provider.ui.state.TileNameError
 import com.bytecause.custom_tile_provider.ui.viewmodel.CustomTileSourceDialogViewModel
 import com.bytecause.custom_tile_provider.util.AnalyzeCustomOnlineTileProvider.extractTileUrlAttrs
 import com.bytecause.domain.model.CustomTileProvider
@@ -71,24 +71,24 @@ import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.nautichart.features.custom_tile_provider.databinding.CustomTileSourceComposedDialogBinding
 import com.bytecause.presentation.components.compose.CustomOutlinedButton
 import com.bytecause.presentation.components.compose.CustomRangeSlider
-import com.bytecause.presentation.components.compose.CustomTileSourceTextFields
 import com.bytecause.presentation.components.compose.Divider
-import com.bytecause.presentation.components.compose.IndeterminateCircularIndicator
 import com.bytecause.presentation.components.compose.TileSizeChips
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.components.compose.ZoomLevels
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.file.FileUtil.checkFilenameExists
 import com.bytecause.util.file.FileUtil.copyFileToFolder
+import com.bytecause.util.file.FileUtil.offlineTilesDir
 import com.bytecause.util.file.FileUtil.queryName
 import com.bytecause.util.map.MbTileType
 import com.bytecause.util.map.MbTilesLoader
+import com.spr.jetpack_loading.components.indicators.BallPulseRiseIndicator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
-
 private const val MIN_ZOOM = 0f
-private const val MAX_ZOOM = 26f
+private const val MAX_ZOOM = 24f
 
 @AndroidEntryPoint
 class CustomTileSourceComposedDialog : DialogFragment() {
@@ -146,32 +146,11 @@ fun CustomTileSourceComposedDialogScreen(
     viewModel: CustomTileSourceDialogViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
     val pagerState = rememberPagerState(pageCount = { 2 })
 
-    var sourceName by rememberSaveable {
-        mutableStateOf("")
-    }
-    var urlValue by rememberSaveable {
-        mutableStateOf("")
-    }
-    var tileSize by rememberSaveable {
-        mutableIntStateOf(-1)
-    }
-
-    var isLoading by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    val snackBarHostState = remember {
-        SnackbarHostState()
-    }
-
-    var isUrlValid by rememberSaveable {
-        mutableStateOf(true)
-    }
-
     val context = LocalContext.current
-    val activity = (LocalContext.current as ContextWrapper).baseContext
     val coroutineScope = rememberCoroutineScope()
 
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
@@ -202,170 +181,222 @@ fun CustomTileSourceComposedDialogScreen(
 
         if (queryName(context.contentResolver, uri)?.endsWith(".mbtiles") == false) {
             coroutineScope.launch {
-                snackBarHostState.showSnackbar("Invalid file type.")
+                state.snackbarHostState.showSnackbar(context.getString(R.string.invalid_file_type))
             }
         } else {
             fileUri = uri.toString()
         }
     }
 
-    CustomTileSourceComposedDialogContent(
-        sourceName = sourceName,
-        urlValue = urlValue,
-        tileSize = tileSize,
-        pagerState = pagerState,
-        isLoading = isLoading,
-        snackBarHostState = snackBarHostState,
-        bottomSheetScaffoldState = bottomSheetScaffoldState,
-        rangeSliderState = rangeSliderState,
-        isUrlValid = isUrlValid,
-        onTabClick = {
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(it)
-            }
-        },
-        onSourceNameValueChange = { sourceName = it.trimIndent() },
-        onUrlValueChange = { urlValue = it.trimIndent() },
-        onToggleRangeSliderVisibility = {
-            coroutineScope.launch {
-                if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                    bottomSheetScaffoldState.bottomSheetState.hide()
-                } else bottomSheetScaffoldState.bottomSheetState.show()
-            }
-        },
-        onTileSizeValueChange = { tileSize = it },
-        onLaunchFileManager = {
-            launcher.launch("application/octet-stream")
-        },
-        onDoneButtonClick = {
-            when (pagerState.currentPage) {
-                0 -> {
-                    if (sourceName.isBlank() || urlValue.isBlank() || tileSize == -1) return@CustomTileSourceComposedDialogContent
+    LaunchedEffect(key1 = Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is CustomTileSourceEffect.TabClick -> {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(effect.value)
+                    }
+                }
 
-                    extractTileUrlAttrs(
-                        // Url shouldn't contain any whitespaces
-                        urlValue.takeIf { !it.contains(" ") } ?: run {
-                            urlValue = urlValue.trimIndent()
-                            urlValue
-                        }
-                    )?.let { tileUrlInfo ->
-                        // TODO("Add support for online vector tile provider.")
-                        coroutineScope.launch {
-                            val rasterImage =
-                                coroutineScope.async { viewModel.getTileImage(tileUrlInfo.url) }
+                CustomTileSourceEffect.DoneButtonClick -> {
+                    when (pagerState.currentPage) {
+                        0 -> {
+                            if (state.sourceName.isBlank() || state.urlValue.isBlank() || state.tileSize == -1) {
 
-                            viewModel.saveOnlineRasterTileProvider(
-                                CustomTileProvider(
-                                    CustomTileProviderType.Raster.Online(
-                                        name = sourceName,
-                                        url = tileUrlInfo.url,
-                                        tileFileFormat = tileUrlInfo.tileFileFormat,
-                                        minZoom = rangeSliderState.activeRangeStart.toInt(),
-                                        maxZoom = rangeSliderState.activeRangeEnd.toInt(),
-                                        tileSize = tileSize,
-                                        image = rasterImage.await()
+                                if (state.sourceName.isBlank()) {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnSourceNameError(
+                                            TileNameError.Empty
+                                        )
+                                    )
+                                }
+
+                                if (state.urlValue.isBlank()) {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnUrlValidationChange(
+                                            false
+                                        )
+                                    )
+                                }
+
+                                if (state.tileSize == -1) {
+                                    viewModel.uiEventHandler(CustomTileSourceEvent.OnTileSizeNotSelected)
+                                }
+
+                                return@collect
+                            }
+
+                            extractTileUrlAttrs(
+                                // Url shouldn't contain any whitespaces
+                                state.urlValue.takeIf { !it.contains(" ") } ?: run {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnUrlValueChange(
+                                            state.urlValue.trimIndent()
+                                        )
+                                    )
+                                    state.urlValue
+                                }
+                            )?.let { tileUrlInfo ->
+                                // TODO("Add support for online vector tile provider.")
+                                coroutineScope.launch {
+                                    val rasterImage =
+                                        coroutineScope.async { viewModel.getTileImage(tileUrlInfo.url) }
+
+                                    viewModel.saveOnlineRasterTileProvider(
+                                        CustomTileProvider(
+                                            CustomTileProviderType.Raster.Online(
+                                                name = state.sourceName,
+                                                url = tileUrlInfo.url,
+                                                tileFileFormat = tileUrlInfo.tileFileFormat,
+                                                minZoom = rangeSliderState.activeRangeStart.toInt(),
+                                                maxZoom = rangeSliderState.activeRangeEnd.toInt(),
+                                                tileSize = state.tileSize,
+                                                image = rasterImage.await()
+                                            )
+                                        )
+                                    )
+
+                                    onNavigateBack()
+                                }
+                            } ?: run {
+                                viewModel.uiEventHandler(
+                                    CustomTileSourceEvent.OnUrlValidationChange(
+                                        false
                                     )
                                 )
-                            )
-
-                            onNavigateBack()
+                            }
                         }
-                    } ?: run {
-                        isUrlValid = false
-                    }
-                }
 
-                1 -> {
-                    if (tileSize == -1 || sourceName.isBlank()) return@CustomTileSourceComposedDialogContent
+                        1 -> {
+                            if (state.tileSize == -1 || state.sourceName.isBlank()) {
+                                if (state.sourceName.isBlank()) {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnSourceNameError(TileNameError.Empty)
+                                    )
+                                }
 
-                    coroutineScope.launch {
-                        isLoading = true
+                                if (state.tileSize == -1) {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnTileSizeNotSelected
+                                    )
+                                }
 
-                        fileUri?.let { uriString ->
-                            copyFileToFolder(
-                                contentResolver = context.contentResolver,
-                                fileUri = Uri.parse(uriString),
-                                destinationFolder = activity.obbDir,
-                                fileName = queryName(
-                                    context.contentResolver,
-                                    Uri.parse(uriString)
-                                ) ?: "custom_tiles"
-                            ).let {
-                                isLoading = false
+                                return@collect
+                            }
 
-                                if (it != null) {
-                                    val format = MbTilesLoader.getFormat(it)
-                                    val minMaxZoom = MbTilesLoader.getMinMaxZoom(it)
+                            coroutineScope.launch {
+                                if (checkFilenameExists(
+                                        state.sourceName,
+                                        context.offlineTilesDir()
+                                    )
+                                ) {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnSourceNameError(
+                                            TileNameError.Exists
+                                        )
+                                    )
+                                } else {
+                                    viewModel.uiEventHandler(
+                                        CustomTileSourceEvent.OnLoadingValueChange(
+                                            true
+                                        )
+                                    )
 
-                                    when (format) {
-                                        MbTileType.Vector -> {
-                                            viewModel.saveOfflineVectorTileProvider(
-                                                CustomTileProvider(
-                                                    CustomTileProviderType.Vector.Offline(
-                                                        name = sourceName,
-                                                        minZoom = minMaxZoom.first,
-                                                        maxZoom = minMaxZoom.second,
-                                                        filePath = it.absolutePath
-                                                    )
+                                    fileUri?.let { uriString ->
+                                        copyFileToFolder(
+                                            contentResolver = context.contentResolver,
+                                            fileUri = Uri.parse(uriString),
+                                            destinationFolder = context.offlineTilesDir(),
+                                            fileName = state.sourceName
+                                        ).let {
+                                            viewModel.uiEventHandler(
+                                                CustomTileSourceEvent.OnLoadingValueChange(
+                                                    true
                                                 )
                                             )
-                                        }
 
-                                        MbTileType.Raster -> {
-                                            viewModel.saveOfflineRasterTileProvider(
-                                                CustomTileProvider(
-                                                    CustomTileProviderType.Raster.Offline(
-                                                        name = sourceName,
-                                                        minZoom = minMaxZoom.first,
-                                                        maxZoom = minMaxZoom.second,
-                                                        tileSize = tileSize.toInt(),
-                                                        filePath = it.absolutePath
-                                                    )
-                                                )
-                                            )
+                                            if (it != null) {
+                                                val format = MbTilesLoader.getFormat(it)
+                                                val minMaxZoom = MbTilesLoader.getMinMaxZoom(it)
+
+                                                when (format) {
+                                                    MbTileType.Vector -> {
+                                                        viewModel.saveOfflineVectorTileProvider(
+                                                            CustomTileProvider(
+                                                                CustomTileProviderType.Vector.Offline(
+                                                                    name = state.sourceName,
+                                                                    minZoom = minMaxZoom.first,
+                                                                    maxZoom = minMaxZoom.second,
+                                                                    filePath = it.absolutePath
+                                                                )
+                                                            )
+                                                        )
+                                                    }
+
+                                                    MbTileType.Raster -> {
+                                                        viewModel.saveOfflineRasterTileProvider(
+                                                            CustomTileProvider(
+                                                                CustomTileProviderType.Raster.Offline(
+                                                                    name = state.sourceName,
+                                                                    minZoom = minMaxZoom.first,
+                                                                    maxZoom = minMaxZoom.second,
+                                                                    tileSize = state.tileSize,
+                                                                    filePath = it.absolutePath
+                                                                )
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            onNavigateBack()
                                         }
+                                    } ?: run {
+                                        // TODO("Handle uri null")
                                     }
                                 }
-                                onNavigateBack()
                             }
-                        } ?: run {
-                            // TODO("Handle uri null")
                         }
                     }
                 }
+
+                CustomTileSourceEffect.LaunchFileManager -> launcher.launch("application/octet-stream")
+                CustomTileSourceEffect.NavigateBack -> onNavigateBack()
+                CustomTileSourceEffect.ToggleRangeSliderVisibility -> {
+                    coroutineScope.launch {
+                        if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
+                            bottomSheetScaffoldState.bottomSheetState.hide()
+                        } else bottomSheetScaffoldState.bottomSheetState.show()
+                    }
+                }
+
+                CustomTileSourceEffect.TileSizeNotSelected -> state.snackbarHostState.showSnackbar("Tile size not selected.")
             }
-        },
-        onNavigateBack = { onNavigateBack() }
+        }
+    }
+
+    CustomTileSourceComposedDialogContent(
+        state = state,
+        pagerState = pagerState,
+        bottomSheetScaffoldState = bottomSheetScaffoldState,
+        rangeSliderState = rangeSliderState,
+        onEvent = viewModel::uiEventHandler
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CustomTileSourceComposedDialogContent(
-    sourceName: String,
-    urlValue: String,
-    tileSize: Int,
+    state: CustomTileSourceState,
     pagerState: PagerState,
-    isLoading: Boolean,
-    snackBarHostState: SnackbarHostState,
     bottomSheetScaffoldState: BottomSheetScaffoldState,
     rangeSliderState: RangeSliderState,
     modifier: Modifier = Modifier,
-    isUrlValid: Boolean,
-    onTabClick: (Int) -> Unit,
-    onSourceNameValueChange: (String) -> Unit,
-    onUrlValueChange: (String) -> Unit,
-    onToggleRangeSliderVisibility: () -> Unit,
-    onTileSizeValueChange: (Int) -> Unit,
-    onLaunchFileManager: () -> Unit,
-    onDoneButtonClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onEvent: (CustomTileSourceEvent) -> Unit
 ) {
     Scaffold(topBar = {
         TopAppBar(
             titleRes = R.string.custom_tile_source,
             navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-            onNavigationIconClick = { onNavigateBack() }
+            onNavigationIconClick = { onEvent(CustomTileSourceEvent.OnNavigateBack) }
         )
     }
     ) { paddingValues ->
@@ -387,7 +418,7 @@ fun CustomTileSourceComposedDialogContent(
                         )
                     },
                     onClick = {
-                        onTabClick(0)
+                        onEvent(CustomTileSourceEvent.OnTabClick(0))
                     }
                 )
 
@@ -403,7 +434,7 @@ fun CustomTileSourceComposedDialogContent(
                         )
                     },
                     onClick = {
-                        onTabClick(1)
+                        onEvent(CustomTileSourceEvent.OnTabClick(1))
                     }
                 )
             }
@@ -417,49 +448,37 @@ fun CustomTileSourceComposedDialogContent(
                     when (page) {
                         0 -> {
                             OnlineTileSourceContent(
-                                sourceName = sourceName,
-                                urlValue = urlValue,
+                                state = state,
                                 minZoom = rangeSliderState.activeRangeStart.toInt(),
                                 maxZoom = rangeSliderState.activeRangeEnd.toInt(),
-                                tileSize = tileSize,
-                                isUrlValid = isUrlValid,
                                 rangeSliderState = rangeSliderState,
                                 bottomSheetScaffoldState = bottomSheetScaffoldState,
-                                onSourceNameValueChange = { onSourceNameValueChange(it) },
-                                onUrlValueChange = { onUrlValueChange(it) },
-                                onToggleRangeSliderVisibility = { onToggleRangeSliderVisibility() },
-                                onTileSizeValueChange = { onTileSizeValueChange(it) },
-                                onDoneButtonClick = { onDoneButtonClick() }
+                                onEvent = onEvent
                             )
                         }
 
                         1 -> {
                             OfflineTileSourceContent(
-                                sourceName = sourceName,
-                                tileSize = tileSize,
-                                onSourceNameValueChange = { onSourceNameValueChange(it) },
-                                onTileSizeValueChange = { onTileSizeValueChange(it) },
-                                onLaunchFileManager = { onLaunchFileManager() },
-                                onDoneButtonClick = { onDoneButtonClick() }
+                                state = state,
+                                onEvent = onEvent
                             )
                         }
                     }
 
                     SnackbarHost(
-                        hostState = snackBarHostState,
+                        hostState = state.snackbarHostState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
                     )
 
-                    IndeterminateCircularIndicator(
-                        isShowed = isLoading,
-                        size = 48.dp,
-                        modifier = Modifier.align(
-                            Alignment.Center
-                        )
-                    ) {
-                        Text(text = "Loading...")
+                    if (state.isLoading) {
+                        Box(modifier = Modifier.align(Alignment.Center)) {
+                            BallPulseRiseIndicator(
+                                color = colorResource(id = R.color.adaptive_color),
+                                ballDiameter = 48f
+                            )
+                        }
                     }
                 }
             }
@@ -470,19 +489,12 @@ fun CustomTileSourceComposedDialogContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnlineTileSourceContent(
-    sourceName: String,
-    urlValue: String,
+    state: CustomTileSourceState,
     minZoom: Int,
     maxZoom: Int,
-    tileSize: Int,
-    isUrlValid: Boolean,
     rangeSliderState: RangeSliderState,
     bottomSheetScaffoldState: BottomSheetScaffoldState,
-    onSourceNameValueChange: (String) -> Unit,
-    onUrlValueChange: (String) -> Unit,
-    onToggleRangeSliderVisibility: () -> Unit,
-    onTileSizeValueChange: (Int) -> Unit,
-    onDoneButtonClick: () -> Unit
+    onEvent: (CustomTileSourceEvent) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -492,14 +504,47 @@ fun OnlineTileSourceContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            CustomTileSourceTextFields(
-                sourceName = sourceName,
-                urlValue = urlValue,
-                isUrlValid = isUrlValid,
-                onSourceNameValueChange = { onSourceNameValueChange(it) },
-                onUrlValueChange = { onUrlValueChange(it) }
+            TextField(
+                value = state.sourceName,
+                onValueChange = { onEvent(CustomTileSourceEvent.OnSourceNameChange(it)) },
+                label = {
+                    Text(
+                        text = stringResource(id = R.string.name)
+                    )
+                },
+                isError = state.sourceNameError != null,
+                supportingText = {
+                    if (state.sourceNameError != null) {
+                        when (state.sourceNameError) {
+                            TileNameError.Empty -> Text(text = stringResource(id = R.string.name_cannot_be_empty))
+                            TileNameError.Exists -> Text(text = stringResource(id = R.string.name_of_this_tile_provider_already_exists))
+                        }
+                    }
+                }
             )
+            TextField(
+                value = state.urlValue,
+                onValueChange = { onEvent(CustomTileSourceEvent.OnUrlValueChange(it)) },
+                isError = !state.isUrlValid,
+                label = {
+                    Text(
+                        text = "Url"
+                    )
+                },
+                supportingText = {
+                    if (!state.isUrlValid) {
+                        when {
+                            state.urlValue.isBlank() -> {
+                                Text(text = stringResource(id = R.string.url_cannot_be_empty))
+                            }
 
+                            else -> {
+                                Text(text = stringResource(id = R.string.url_is_not_in_valid_format))
+                            }
+                        }
+                    }
+                }
+            )
             Divider(
                 thickness = 1,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
@@ -509,7 +554,7 @@ fun OnlineTileSourceContent(
                 minZoom = minZoom,
                 maxZoom = maxZoom,
                 onClick = {
-                    onToggleRangeSliderVisibility()
+                    onEvent(CustomTileSourceEvent.OnToggleRangeSliderVisibility)
                 }
             )
 
@@ -518,8 +563,8 @@ fun OnlineTileSourceContent(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
             )
 
-            TileSizeChips(tileSize = tileSize) {
-                onTileSizeValueChange(it)
+            TileSizeChips(tileSize = state.tileSize) {
+                onEvent(CustomTileSourceEvent.OnTileSizeValueChange(it))
             }
 
             Divider(
@@ -533,7 +578,7 @@ fun OnlineTileSourceContent(
             ) {
                 CustomOutlinedButton(
                     text = stringResource(id = R.string.done),
-                    onClick = { onDoneButtonClick() }
+                    onClick = { onEvent(CustomTileSourceEvent.OnDoneButtonClick) }
                 )
             }
         }
@@ -555,14 +600,9 @@ fun OnlineTileSourceContent(
 
 @Composable
 fun OfflineTileSourceContent(
-    sourceName: String,
-    tileSize: Int,
-    onSourceNameValueChange: (String) -> Unit,
-    onTileSizeValueChange: (Int) -> Unit,
-    onLaunchFileManager: () -> Unit,
-    onDoneButtonClick: () -> Unit
+    state: CustomTileSourceState,
+    onEvent: (CustomTileSourceEvent) -> Unit
 ) {
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -570,12 +610,21 @@ fun OfflineTileSourceContent(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         TextField(
-            value = sourceName,
-            onValueChange = { onSourceNameValueChange(it) },
+            value = state.sourceName,
+            onValueChange = { onEvent(CustomTileSourceEvent.OnSourceNameChange(it)) },
             label = {
                 Text(
                     text = stringResource(id = R.string.name)
                 )
+            },
+            isError = state.sourceNameError != null,
+            supportingText = {
+                if (state.sourceNameError != null) {
+                    when (state.sourceNameError) {
+                        TileNameError.Empty -> Text(text = stringResource(id = R.string.name_cannot_be_empty))
+                        TileNameError.Exists -> Text(text = stringResource(id = R.string.name_of_this_tile_provider_already_exists))
+                    }
+                }
             }
         )
 
@@ -584,8 +633,8 @@ fun OfflineTileSourceContent(
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
         )
 
-        TileSizeChips(tileSize = tileSize) {
-            onTileSizeValueChange(it)
+        TileSizeChips(tileSize = state.tileSize) {
+            onEvent(CustomTileSourceEvent.OnTileSizeValueChange(it))
         }
 
         Divider(
@@ -593,7 +642,10 @@ fun OfflineTileSourceContent(
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
         )
 
-        Button(onClick = { onLaunchFileManager() }, enabled = tileSize != -1) {
+        Button(
+            onClick = { onEvent(CustomTileSourceEvent.OnLaunchFileManager) },
+            enabled = state.tileSize != -1
+        ) {
             Text(text = stringResource(id = R.string.choose_mbtile))
         }
 
@@ -608,7 +660,7 @@ fun OfflineTileSourceContent(
         ) {
             CustomOutlinedButton(
                 text = stringResource(id = R.string.done),
-                onClick = { onDoneButtonClick() }
+                onClick = { onEvent(CustomTileSourceEvent.OnDoneButtonClick) }
             )
         }
     }
@@ -619,27 +671,13 @@ fun OfflineTileSourceContent(
 @Preview
 fun CustomTileSourceComposedDialogContentPreview() {
     CustomTileSourceComposedDialogContent(
-        sourceName = "",
-        urlValue = "",
-        tileSize = -1,
-        isLoading = false,
+        state = CustomTileSourceState(),
         pagerState = rememberPagerState(pageCount = { 2 }),
-        snackBarHostState = remember {
-            SnackbarHostState()
-        },
         bottomSheetScaffoldState = rememberBottomSheetScaffoldState(),
         rangeSliderState = remember {
             RangeSliderState()
         },
-        isUrlValid = true,
-        onTabClick = {},
-        onSourceNameValueChange = {},
-        onUrlValueChange = {},
-        onToggleRangeSliderVisibility = {},
-        onTileSizeValueChange = {},
-        onLaunchFileManager = {},
-        onDoneButtonClick = {},
-        onNavigateBack = {}
+        onEvent = {}
     )
 }
 
@@ -648,21 +686,14 @@ fun CustomTileSourceComposedDialogContentPreview() {
 @Preview(showBackground = true)
 fun OnlineTileSourceContentPreview() {
     OnlineTileSourceContent(
-        sourceName = "",
-        urlValue = "",
-        tileSize = -1,
-        onSourceNameValueChange = {},
-        onUrlValueChange = {},
-        onToggleRangeSliderVisibility = {},
+        state = CustomTileSourceState(),
         minZoom = 0,
         maxZoom = 24,
-        isUrlValid = true,
         rangeSliderState = remember {
             RangeSliderState()
         },
-        bottomSheetScaffoldState = rememberBottomSheetScaffoldState(),
-        onTileSizeValueChange = {},
-        onDoneButtonClick = {}
+        onEvent = {},
+        bottomSheetScaffoldState = rememberBottomSheetScaffoldState()
     )
 }
 
@@ -670,12 +701,8 @@ fun OnlineTileSourceContentPreview() {
 @Preview(showBackground = true)
 fun OfflineTileSourceContentPreview() {
     OfflineTileSourceContent(
-        sourceName = "",
-        tileSize = -1,
-        onSourceNameValueChange = {},
-        onTileSizeValueChange = {},
-        onLaunchFileManager = {},
-        onDoneButtonClick = {}
+        state = CustomTileSourceState(),
+        onEvent = {}
     )
 }
 

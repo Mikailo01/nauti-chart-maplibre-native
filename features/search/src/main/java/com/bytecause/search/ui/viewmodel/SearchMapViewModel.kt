@@ -3,7 +3,9 @@ package com.bytecause.search.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
+import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.SearchedPlace
+import com.bytecause.domain.model.UiState
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.search.data.local.appsearch.SearchManager
@@ -47,12 +49,12 @@ constructor(
     // search place in cache database or make api call
     fun searchPlaces(query: String) {
         viewModelScope.launch {
-            _uiSearchState.value = com.bytecause.domain.model.UiState(isLoading = true)
+            _uiSearchState.value = UiState(loading = Loading(true))
             isLoading = true
             val searchCache = searchCachedResult(query)
             if (searchCache.isEmpty()) {
                 when (val data =
-                    searchMapRepositoryImpl.searchPlaces(query).firstOrNull() ?: return@launch) {
+                    searchMapRepositoryImpl.searchPlaces(query).firstOrNull()) {
                     is ApiResult.Success -> {
                         val polylineAlgorithms =
                             com.bytecause.util.algorithms.PolylineAlgorithms()
@@ -102,29 +104,31 @@ constructor(
                         }?.let { mappedEntity ->
                             cacheResult(mappedEntity)
                             _uiSearchState.emit(
-                                com.bytecause.domain.model.UiState(
-                                    isLoading = false,
+                                UiState(
+                                    loading = Loading(false),
                                     items = data.data ?: emptyList(),
                                 ),
                             )
                         }
 
                         _uiSearchState.emit(
-                            com.bytecause.domain.model.UiState(
-                                isLoading = false,
+                            UiState(
+                                loading = Loading(false),
                                 items = data.data ?: emptyList(),
                             ),
                         )
                     }
 
                     is ApiResult.Failure -> {
-                        _uiSearchState.emit(com.bytecause.domain.model.UiState(error = data.exception))
+                        _uiSearchState.emit(UiState(error = data.exception))
                     }
+
+                    else -> _uiSearchState.emit(UiState(loading = Loading(false)))
                 }
             } else {
                 _uiSearchState.emit(
-                    com.bytecause.domain.model.UiState(
-                        isLoading = false,
+                    UiState(
+                        loading = Loading(false),
                         items =
                         searchCache.map {
                             SearchedPlace(
@@ -139,7 +143,6 @@ constructor(
                     ),
                 )
             }
-            _uiSearchState.value = _uiSearchState.value?.copy(isLoading = false)
             isLoading = false
         }
     }

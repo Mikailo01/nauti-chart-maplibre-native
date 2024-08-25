@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.Flow
 
 interface CustomOfflineVectorTileSourceRepository {
     suspend fun saveOfflineVectorTileSourceProvider(tileProvider: CustomTileProvider)
-    suspend fun deleteOfflineVectorTileSourceProvider(index: Int)
+    /**
+     * @return Name of deleted provider
+     * **/
+    fun deleteOfflineVectorTileSourceProvider(index: Int): Flow<String?>
     fun getOfflineVectorTileSourceProviders(): Flow<List<CustomTileProvider>>
 }

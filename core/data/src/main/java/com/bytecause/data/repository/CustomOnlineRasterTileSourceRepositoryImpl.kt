@@ -19,6 +19,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -59,13 +61,25 @@ class CustomOnlineRasterTileSourceRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteOnlineRasterTileSourceProvider(index: Int) {
-        withContext(coroutineDispatcher) {
-            context.customOnlineTileSourceDataStore.updateData {
-                it.toBuilder().removeOnlineRasterTileSource(index).build()
+    override fun deleteOnlineRasterTileSourceProvider(index: Int): Flow<String?> = flow {
+        val currentData = context.customOnlineTileSourceDataStore.data.firstOrNull()
+        val deletedItemName = currentData?.onlineRasterTileSourceList?.getOrNull(index)?.name
+
+        context.customOnlineTileSourceDataStore.updateData {
+            it.toBuilder().removeOnlineRasterTileSource(index).build()
+        }
+
+        emit(deletedItemName)
+    }
+        .flowOn(coroutineDispatcher)
+        .catch { exception ->
+            exception.printStackTrace()
+            if (exception is IOException) {
+                emit(null)
+            } else {
+                throw exception
             }
         }
-    }
 
     override fun getOnlineRasterTileSourceProviders(): Flow<List<CustomTileProvider>> =
         context.customOnlineTileSourceDataStore.data.map {
@@ -85,13 +99,8 @@ class CustomOnlineRasterTileSourceRepositoryImpl @Inject constructor(
         }
             .flowOn(coroutineDispatcher)
             .catch { exception ->
-                // dataStore.data throws an IOException when an error is encountered when reading data
+                exception.printStackTrace()
                 if (exception is IOException) {
-                    Log.e(
-                        TAG(this),
-                        "Error reading custom online tile source provider.",
-                        exception
-                    )
                     emit(listOf(CustomTileProvider(CustomTileProviderType.Raster.Online())))
                 } else {
                     throw exception

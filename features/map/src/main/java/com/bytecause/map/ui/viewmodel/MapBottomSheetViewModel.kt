@@ -13,12 +13,14 @@ import com.bytecause.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.map.ui.bottomsheet.LayerTypes
 import com.bytecause.map.ui.bottomsheet.MapBottomSheetResources
 import com.bytecause.map.ui.model.LayersChildItem
+import com.bytecause.util.file.FileUtil.deleteFileFromFolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -51,46 +53,58 @@ constructor(
     val customTileSources: Flow<Map<TileSourceTypes, List<CustomTileProvider>>> =
         customTileSourcesUseCase()
 
-    fun deleteCustomProvider(parentPosition: Int, childPosition: Int) {
-        viewModelScope.launch {
+    fun deleteCustomProvider(
+        parentPosition: Int,
+        childPosition: Int
+    ): Flow<Pair<LayerTypes, String?>?> = flow {
+        val deletedItemName: Pair<LayerTypes, String?>? =
             when (contentMapStateFlow.value.toList()[parentPosition].second[childPosition].layerType) {
                 LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE -> {
-                    customOnlineRasterTileSourceRepository.deleteOnlineRasterTileSourceProvider(
+                    LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE to customOnlineRasterTileSourceRepository.deleteOnlineRasterTileSourceProvider(
                         childPosition
                     )
+                        .firstOrNull()
                 }
 
                 LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE -> {
-                    customOfflineRasterTileSourceRepository.deleteOfflineRasterTileSourceProvider(
+                    LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE to customOfflineRasterTileSourceRepository.deleteOfflineRasterTileSourceProvider(
                         childPosition
                     )
+                        .firstOrNull()
                 }
 
                 LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE -> {
-                    customOfflineVectorTileSourceRepository.deleteOfflineVectorTileSourceProvider(
+                    LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE to customOfflineVectorTileSourceRepository.deleteOfflineVectorTileSourceProvider(
                         childPosition
                     )
+                        .firstOrNull()
                 }
 
-                else -> {
-                    // Do nothing
-                }
+                else -> null
             }
 
-            _contentMapStateFlow.value =
-                _contentMapStateFlow.value.toMutableMap().apply {
-                    val mapKey = this.keys.elementAt(parentPosition)
+        // Update the content map state flow
+        _contentMapStateFlow.value = _contentMapStateFlow.value.toMutableMap().apply {
+            val mapKey = this.keys.elementAt(parentPosition)
 
-                    val updatedList = this[mapKey]?.toMutableList()?.apply {
-                        removeAt(childPosition)
-                    }
+            val updatedList = this[mapKey]?.toMutableList()?.apply {
+                removeAt(childPosition)
+            }
 
-                    if (updatedList.isNullOrEmpty()) {
-                        this.remove(mapKey)
-                    } else {
-                        this[mapKey] = updatedList
-                    }
-                }
+            if (updatedList.isNullOrEmpty()) {
+                this.remove(mapKey)
+            } else {
+                this[mapKey] = updatedList
+            }
+        }
+
+        // Emit the name of the deleted item
+        emit(deletedItemName)
+    }
+
+    fun deleteOfflineTiles(destinationFolder: String, fileName: String) {
+        viewModelScope.launch {
+            deleteFileFromFolder(destinationFolder, fileName)
         }
     }
 
@@ -104,7 +118,10 @@ constructor(
                         (provider.type as? CustomTileProviderType.Raster.Online)?.run {
                             LayersChildItem(
                                 layerType = LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE,
-                                resource = MapBottomSheetResources.Custom(name = name, image = image),
+                                resource = MapBottomSheetResources.Custom(
+                                    name = name,
+                                    image = image
+                                ),
                             )
                         } ?: (provider.type as? CustomTileProviderType.Raster.Offline)?.run {
                             LayersChildItem(

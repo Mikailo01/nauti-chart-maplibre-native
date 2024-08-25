@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.Flow
 interface CustomOnlineRasterTileSourceRepository {
 
     suspend fun saveOnlineRasterTileSourceProvider(tileProvider: CustomTileProvider)
-    suspend fun deleteOnlineRasterTileSourceProvider(index: Int)
+    /**
+     * @return Name of deleted provider
+     * **/
+    fun deleteOnlineRasterTileSourceProvider(index: Int): Flow<String?>
     fun getOnlineRasterTileSourceProviders(): Flow<List<CustomTileProvider>>
 }

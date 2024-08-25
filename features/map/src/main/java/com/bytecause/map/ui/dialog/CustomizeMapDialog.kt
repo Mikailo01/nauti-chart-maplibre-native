@@ -26,6 +26,7 @@ import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.CustomizeMapDialogFragmentLayoutBinding
 import com.bytecause.map.ui.model.PoiCategory
 import com.bytecause.map.ui.viewmodel.CustomizeMapViewModel
+import com.bytecause.map.ui.viewmodel.LoadingDialogSharedViewModel
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.components.views.recyclerview.decorations.AdaptiveSpacingItemDecoration
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
@@ -37,8 +38,10 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.ConnectException
 
+
 private const val SCROLL_VIEW_ALPHA = 200
 private const val TOOLBAR_ALPHA = 168
+private const val ITEM_SELECTED_ANIMATION_DURATION = 500L
 
 @AndroidEntryPoint
 class CustomizeMapDialog : DialogFragment() {
@@ -48,6 +51,7 @@ class CustomizeMapDialog : DialogFragment() {
 
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
     private val viewModel: CustomizeMapViewModel by viewModels()
+    private val loadingDialogSharedViewModel: LoadingDialogSharedViewModel by activityViewModels()
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<PoiCategory>
@@ -75,57 +79,86 @@ class CustomizeMapDialog : DialogFragment() {
                     val innerImageView: ImageView =
                         itemView.findViewById(R.id.poi_category_inner_image_view)
 
-                    if (item.isSelected) {
-                        val startColor = ContextCompat.getColor(
-                            requireContext(),
-                            com.bytecause.core.resources.R.color.gray
-                        )
-                        val endColor = ContextCompat.getColor(
-                            requireContext(),
-                            com.bytecause.core.resources.R.color.colorPrimary
-                        )
+                    fun applyColorAnimation(isSelected: Boolean) {
+                        if (isSelected) {
+                            val startColor = ContextCompat.getColor(
+                                requireContext(),
+                                com.bytecause.core.resources.R.color.gray
+                            )
+                            val endColor = ContextCompat.getColor(
+                                requireContext(),
+                                com.bytecause.core.resources.R.color.colorPrimary
+                            )
 
-                        // Create a ValueAnimator that animates between the start and end colors.
-                        val colorAnimation = ValueAnimator.ofArgb(startColor, endColor).apply {
-                            duration = 500
-                            addUpdateListener { animator ->
-                                val color = animator.animatedValue as Int
-                                outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                            // Create a ValueAnimator that animates between the start and end colors.
+                            val colorAnimation = ValueAnimator.ofArgb(startColor, endColor).apply {
+                                duration = ITEM_SELECTED_ANIMATION_DURATION
+                                addUpdateListener { animator ->
+                                    val color = animator.animatedValue as Int
+                                    outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                                }
+                            }
+                            colorAnimation.start()
+                        } else {
+                            val color = ContextCompat.getColor(
+                                requireContext(),
+                                com.bytecause.core.resources.R.color.gray
+                            )
+
+                            outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                        }
+                    }
+
+                    when (item) {
+                        is PoiCategory.PoiCategoryWithName -> {
+
+                            applyColorAnimation(item.isSelected)
+
+                            textView.apply {
+                                text = item.name
+                                isSelected = true
+                            }
+
+                            getDrawableForPoiCategory(item.name, requireContext())?.let {
+                                innerImageView.setImageDrawable(
+                                    ContextCompat.getDrawable(
+                                        requireContext(),
+                                        it
+                                    )
+                                )
+                            } ?: innerImageView.setImageDrawable(null)
+
+                            outerImageView.setOnClickListener {
+                                if (item.isSelected) viewModel.removeSelectedCategory(item)
+                                else viewModel.setSelectedCategory(item)
                             }
                         }
-                        colorAnimation.start()
-                    } else {
-                        val color = ContextCompat.getColor(
-                            requireContext(),
-                            com.bytecause.core.resources.R.color.gray
-                        )
 
-                        outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
-                    }
+                        is PoiCategory.PoiCategoryWithNameRes -> {
 
-                    val name = when {
-                        item.nameRes != null -> getString(item.nameRes)
-                        item.name != null -> item.name
-                        else -> ""
-                    }
+                            applyColorAnimation(item.isSelected)
 
-                    textView.apply {
-                        text = name
-                        isSelected = true
-                    }
+                            val name = getString(item.nameRes)
 
-                    getDrawableForPoiCategory(name, requireContext())?.let {
-                        innerImageView.setImageDrawable(
-                            ContextCompat.getDrawable(
-                                requireContext(),
-                                it
-                            )
-                        )
-                    } ?: innerImageView.setImageDrawable(null)
+                            textView.apply {
+                                text = name
+                                isSelected = true
+                            }
 
-                    outerImageView.setOnClickListener {
-                        if (item.isSelected) viewModel.removeSelectedCategory(item)
-                        else viewModel.setSelectedCategory(item)
+                            getDrawableForPoiCategory(name, requireContext())?.let {
+                                innerImageView.setImageDrawable(
+                                    ContextCompat.getDrawable(
+                                        requireContext(),
+                                        it
+                                    )
+                                )
+                            } ?: innerImageView.setImageDrawable(null)
+
+                            outerImageView.setOnClickListener {
+                                if (item.isSelected) viewModel.removeSelectedCategory(item)
+                                else viewModel.setSelectedCategory(item)
+                            }
+                        }
                     }
                 }
             }
@@ -159,7 +192,17 @@ class CustomizeMapDialog : DialogFragment() {
                         binding.noPoisDownloadedTextView.visibility = View.VISIBLE
                         return@collect
                     }
-                    binding.chipShowAll.isChecked = distinctCategoryList.all { it.isSelected }
+                    binding.chipShowAll.isChecked = distinctCategoryList.all { poiCategory ->
+                        when (poiCategory) {
+                            is PoiCategory.PoiCategoryWithNameRes -> {
+                                poiCategory.isSelected
+                            }
+
+                            is PoiCategory.PoiCategoryWithName -> {
+                                poiCategory.isSelected
+                            }
+                        }
+                    }
 
                     genericRecyclerViewAdapter.updateContent(
                         sortCategoriesBySelectionAndName(distinctCategoryList)
@@ -189,12 +232,29 @@ class CustomizeMapDialog : DialogFragment() {
 
     private fun sortCategoriesBySelectionAndName(categories: List<PoiCategory>): List<PoiCategory> {
         return categories.sortedWith(
-            compareByDescending<PoiCategory> { it.isSelected } // Sort by isSelected first (descending)
+            // Sort by isSelected first (descending)
+            compareByDescending<PoiCategory> { poiCategory ->
+                when (poiCategory) {
+                    is PoiCategory.PoiCategoryWithName -> {
+                        poiCategory.isSelected
+                    }
+
+                    is PoiCategory.PoiCategoryWithNameRes -> {
+                        poiCategory.isSelected
+                    }
+                }
+            }
                 // Then sort by name (ascending)
-                .thenBy {
-                    if (it.nameRes != null) {
-                        getString(it.nameRes)
-                    } else it.name
+                .thenBy { poiCategory ->
+                    when (poiCategory) {
+                        is PoiCategory.PoiCategoryWithName -> {
+                            poiCategory.name
+                        }
+
+                        is PoiCategory.PoiCategoryWithNameRes -> {
+                            getString(poiCategory.nameRes)
+                        }
+                    }
                 }
         )
     }
@@ -275,7 +335,7 @@ class CustomizeMapDialog : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.vesselsFetchingState.collect { state ->
                     state ?: return@collect
-                    if (!viewModel.isAisActivated.value) return@collect
+                    if (!binding.chipAis.isChecked) return@collect
 
                     if (state.error != null) {
                         findNavController().popBackStack(
@@ -300,7 +360,7 @@ class CustomizeMapDialog : DialogFragment() {
                         }
 
                         null -> {
-                            if (state.isLoading) {
+                            if (state.loading.isLoading) {
                                 if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
                                     val action =
                                         CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
@@ -330,7 +390,7 @@ class CustomizeMapDialog : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.harboursFetchingState.collect { state ->
                     state ?: return@collect
-                    if (!viewModel.areHarboursVisible.value) return@collect
+                    if (!binding.chipHarbours.isChecked) return@collect
 
                     if (state.error != null) {
                         findNavController().popBackStack(
@@ -355,13 +415,19 @@ class CustomizeMapDialog : DialogFragment() {
                         }
 
                         null -> {
-                            if (state.isLoading) {
+                            if (state.loading.isLoading) {
+                                // show loading dialog
                                 if (findNavController().currentDestination?.id == R.id.customizeMapDialog) {
                                     val action =
                                         CustomizeMapDialogDirections.actionCustomizeMapDialogToLoadingDialogFragment(
                                             getString(com.bytecause.core.resources.R.string.loading_harbours_text),
                                         )
                                     findNavController().navigate(action)
+                                }
+
+                                // update progress in loading dialog fragment
+                                state.loading.progress?.let { progress ->
+                                    loadingDialogSharedViewModel.updateProgress(progress)
                                 }
                             } else if (findNavController().currentDestination?.id == R.id.loadingDialogFragment) {
                                 findNavController().popBackStack(R.id.customizeMapDialog, false)
@@ -381,6 +447,7 @@ class CustomizeMapDialog : DialogFragment() {
             }
         }
     }
+
 
     override fun onStart() {
         super.onStart()

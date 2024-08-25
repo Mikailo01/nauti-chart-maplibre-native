@@ -22,15 +22,15 @@ class GetPoiResultByRegionUseCase(
     operator fun invoke(
         regionName: String,
         query: String,
-    ): Flow<ApiResult<String>> = flow {
-        overpassRepository.makeQuery<OverpassNodeModel>(query).let { result ->
+    ): Flow<ApiResult<String>> = flow<ApiResult<String>> {
+        overpassRepository.makeQuery<OverpassNodeModel>(query).collect { result ->
             if (result.exception == null && result.data != null) {
-                // val region = PoiUtil().extractRegionFromQuery(query)
-                result.data.map {
 
+                // val region = PoiUtil().extractRegionFromQuery(query)
+                val entityList = result.data.map {
                     val category = extractCategoryFromPoiEntity(it.tags)
-                            .takeIf { category -> !category.isNullOrEmpty() }
-                            .let { tagValue -> formatTagString(tagValue) } ?: ""
+                        .takeIf { category -> !category.isNullOrEmpty() }
+                        .let { tagValue -> formatTagString(tagValue) } ?: ""
 
                     PoiCacheModel(
                         placeId = it.id,
@@ -41,16 +41,16 @@ class GetPoiResultByRegionUseCase(
                         longitude = it.lon,
                         tags = it.tags,
                     )
-                }.let { entity ->
-                    poiCacheRepository.cacheResult(entity)
-                    emit(ApiResult.Success(data = regionName))
-                    return@flow
                 }
+
+                poiCacheRepository.cacheResult(entityList)
+                emit(ApiResult.Progress(progress = entityList.size))
             } else if (result.exception != null) {
                 emit(ApiResult.Failure(exception = result.exception))
-                return@flow
             }
         }
+
+        emit(ApiResult.Success(data = regionName))
     }
         .flowOn(coroutineDispatcher)
 }

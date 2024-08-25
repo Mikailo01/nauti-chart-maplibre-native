@@ -1,6 +1,7 @@
 package com.bytecause.map.ui.bottomsheet
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
@@ -24,6 +25,8 @@ import com.bytecause.map.ui.viewmodel.MapBottomSheetViewModel
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.file.FileUtil.deleteFileFromFolder
+import com.bytecause.util.file.FileUtil.offlineTilesDir
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -101,7 +104,7 @@ class MapBottomSheetFragment :
             )
             layersChildItemView.setOnClickListener {
                 val tileSource =
-                    (mapSharedViewModel.tileSource.value as? TileSources.Raster.Default)
+                    (mapSharedViewModel.tileSource.replayCache.lastOrNull() as? TileSources.Raster.Default)
 
                 if (tileSource == DefaultTileSources.MAPNIK) {
                     return@setOnClickListener
@@ -124,7 +127,7 @@ class MapBottomSheetFragment :
             )
             layersChildItemView.setOnClickListener {
                 val tileSource =
-                    (mapSharedViewModel.tileSource.value as? TileSources.Raster.Default)
+                    (mapSharedViewModel.tileSource.replayCache.lastOrNull() as? TileSources.Raster.Default)
 
                 if (tileSource == DefaultTileSources.SATELLITE) {
                     return@setOnClickListener
@@ -147,7 +150,7 @@ class MapBottomSheetFragment :
             )
             layersChildItemView.setOnClickListener {
                 val tileSource =
-                    (mapSharedViewModel.tileSource.value as? TileSources.Raster.Default)
+                    (mapSharedViewModel.tileSource.replayCache.lastOrNull() as? TileSources.Raster.Default)
 
                 if (tileSource == DefaultTileSources.OPEN_TOPO) {
                     return@setOnClickListener
@@ -197,7 +200,7 @@ class MapBottomSheetFragment :
                                 (customRasterTileProvider.type as CustomTileProviderType.Raster.Online).run {
                                     val customProvider =
                                         TileSources.Raster.Custom.Online(
-                                            id = name,
+                                            name = name,
                                             url = url,
                                             tileSize = tileSize,
                                             minZoom = minZoom.toFloat(),
@@ -205,9 +208,9 @@ class MapBottomSheetFragment :
                                         )
 
                                     customProvider.let {
-                                        if (mapSharedViewModel.tileSource.value == it) return@launch
+                                        if (mapSharedViewModel.tileSource.replayCache.lastOrNull() == it) return@launch
                                         mapSharedViewModel.setTile(it)
-                                        viewModel.cacheSelectedTileSource(it.id)
+                                        viewModel.cacheSelectedTileSource(it.name)
                                     }
                                 }
                             }
@@ -225,7 +228,7 @@ class MapBottomSheetFragment :
 
                                     val customProvider =
                                         TileSources.Raster.Custom.Offline(
-                                            id = name,
+                                            name = name,
                                             tileSize = tileSize,
                                             minZoom = minZoom.toFloat(),
                                             maxZoom = maxZoom.toFloat(),
@@ -233,9 +236,9 @@ class MapBottomSheetFragment :
                                         )
 
                                     customProvider.let {
-                                        if (mapSharedViewModel.tileSource.value == it) return@launch
+                                        if (mapSharedViewModel.tileSource.replayCache.lastOrNull() == it) return@launch
                                         mapSharedViewModel.setTile(it)
-                                        viewModel.cacheSelectedTileSource(it.id)
+                                        viewModel.cacheSelectedTileSource(it.name)
                                     }
                                 }
                             }
@@ -253,16 +256,16 @@ class MapBottomSheetFragment :
                                     (customVectorTileProvider.type as CustomTileProviderType.Vector.Offline).run {
                                         val customProvider =
                                             TileSources.Vector.Custom.Offline(
-                                                id = name,
+                                                name = name,
                                                 minZoom = minZoom.toFloat(),
                                                 maxZoom = maxZoom.toFloat(),
                                                 filePath = filePath
                                             )
 
                                         customProvider.let {
-                                            if (mapSharedViewModel.tileSource.value == it) return@launch
+                                            if (mapSharedViewModel.tileSource.replayCache.lastOrNull() == it) return@launch
                                             mapSharedViewModel.setTile(it)
-                                            viewModel.cacheSelectedTileSource(it.id)
+                                            viewModel.cacheSelectedTileSource(it.name)
                                         }
                                     }
                                 }
@@ -322,8 +325,40 @@ class MapBottomSheetFragment :
         (additionalData as? ArgsObjectTypeArray.IntTypeArray).let { position ->
             position ?: return
 
-            viewModel.deleteCustomProvider(position.value[0], position.value[1])
-            mapSharedViewModel.setTile(DefaultTileSources.MAPNIK)
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.deleteCustomProvider(position.value[0], position.value[1]).firstOrNull()
+                    ?.let { deletedProvider ->
+
+                        // if deleted provider is offline provider, delete offline mbtiles
+                        if (deletedProvider.first in listOf(
+                                LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE,
+                                LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE
+                            )
+                        ) {
+                            deletedProvider.second?.let { providerName ->
+                                viewModel.deleteOfflineTiles(
+                                    requireContext().offlineTilesDir(),
+                                    providerName
+                                )
+                            }
+                        }
+
+                        Log.d("idk", mapSharedViewModel.tileSource.replayCache.lastOrNull().toString())
+
+                        mapSharedViewModel.tileSource.replayCache.lastOrNull()?.let { tilesource ->
+                            Log.d("idk", tilesource.toString())
+                            if (
+                                (tilesource as? TileSources.Raster.Custom.Offline)?.name == deletedProvider.second ||
+                                (tilesource as? TileSources.Raster.Custom.Online)?.name == deletedProvider.second ||
+                                (tilesource as? TileSources.Vector.Custom.Offline)?.name == deletedProvider.second
+                            ) {
+                                // set default tile provider if the currently selected has been deleted
+                                mapSharedViewModel.setTile(DefaultTileSources.MAPNIK)
+                            }
+                        }
+                    }
+            }
+
         }
     }
 }

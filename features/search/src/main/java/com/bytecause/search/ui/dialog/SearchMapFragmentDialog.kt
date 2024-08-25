@@ -293,7 +293,7 @@ class SearchMapFragmentDialog : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
                 viewModel.uiSearchState.collect {
                     it ?: return@collect
-                    if (it.isLoading) {
+                    if (it.loading.isLoading) {
                         binding.searchMapBox.searchMapEditText.setDrawables(right = progressDrawable)
                         (progressDrawable as? Animatable)?.start()
                     } else {

@@ -1,7 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="@color/dialog_background" />
-    <corners android:radius="24dp" />
-</shape>
+<!-- res/drawable/shape_with_colored_corners.xml -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/dialog_background" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <!-- Colored border layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="3dp"
+                android:color="@color/gray" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+</layer-list>

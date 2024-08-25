@@ -3,6 +3,7 @@ package com.bytecause.nautichart.overpassquerybuilder
 import com.bytecause.domain.model.LatLngModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.domain.util.SearchTypes
+import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import com.bytecause.util.string.StringUtil
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -139,7 +140,7 @@ class QueryBuilderTest {
             .timeout(60)
             .region(listOf("Jihomoravský kraj"))
             .type(OverpassQueryBuilder.Type.Node)
-            .search(SearchTypes.UnionSet(StringUtil.searchTypesStringList))
+            .search(SearchTypes.UnionSet(searchTypesStringList))
             .build()
 
         assertEquals(
@@ -187,7 +188,7 @@ class QueryBuilderTest {
             .region(listOf("Jihovýchod"))
             .type(OverpassQueryBuilder.Type.Node)
             .search(
-                SearchTypes.UnionSet(StringUtil.searchTypesStringList)
+                SearchTypes.UnionSet(searchTypesStringList)
                     .filterNot(
                         emptyList(),
                         listOf(

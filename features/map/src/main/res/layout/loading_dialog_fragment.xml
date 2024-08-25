@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
+    android:layout_gravity="center"
+    android:gravity="center"
     android:orientation="vertical"
     android:padding="26dp"
     android:background="@drawable/rounded_dialog" >
@@ -17,9 +18,19 @@
             android:id="@+id/loading_dialog_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
+            android:layout_marginVertical="10dp"
+            android:textColor="@color/adaptive_color"
+            tools:text="@string/loading_vessels_text" />
+
+        <TextView
+            android:id="@+id/progress_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="@color/adaptive_color"
             android:gravity="center"
             android:layout_marginBottom="10dp"
-            tools:text="@string/loading_vessels_text" />
+            android:visibility="gone"
+            tools:text="(0)" />
 
 </LinearLayout>

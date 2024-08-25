@@ -46,7 +46,7 @@ sealed interface TileSources {
         sealed class Custom : Raster() {
 
             data class Online(
-                val id: String,
+                val name: String,
                 val url: String,
                 val tileSize: Int = 256,
                 val minZoom: Float = 0F,
@@ -54,7 +54,7 @@ sealed interface TileSources {
             ) : Custom()
 
             data class Offline(
-                val id: String,
+                val name: String,
                 val tileSize: Int = 256,
                 val minZoom: Float = 0F,
                 val maxZoom: Float = 18F,
@@ -68,7 +68,7 @@ sealed interface TileSources {
         sealed class Custom : Vector() {
 
             data class Offline(
-                val id: String,
+                val name: String,
                 val minZoom: Float = 0F,
                 val maxZoom: Float = 18F,
                 val filePath: String = ""

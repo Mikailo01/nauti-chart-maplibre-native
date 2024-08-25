@@ -7,6 +7,7 @@ import com.bytecause.domain.tilesources.TileSources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +20,8 @@ class MapSharedViewModel : ViewModel() {
     private val _permissionGranted = MutableStateFlow<Boolean?>(null)
     val permissionGranted: StateFlow<Boolean?> get() = _permissionGranted.asStateFlow()
 
-    private val _tileSource = MutableStateFlow<TileSources?>(null)
-    val tileSource: StateFlow<TileSources?> = _tileSource.asStateFlow()
+    private val _tileSource = MutableSharedFlow<TileSources?>(1)
+    val tileSource: SharedFlow<TileSources?> = _tileSource.asSharedFlow()
 
     private val _placeToFindStateFlow = MutableStateFlow<SearchPlaceCacheEntity?>(null)
     val placeToFindStateFlow get() = _placeToFindStateFlow.asStateFlow()
@@ -73,7 +74,9 @@ class MapSharedViewModel : ViewModel() {
     }
 
     fun setTile(src: TileSources) {
-        _tileSource.update { src }
+        viewModelScope.launch {
+            _tileSource.emit(src)
+        }
     }
 
     fun saveCameraPosition(position: CameraPosition) {

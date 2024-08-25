@@ -22,6 +22,9 @@ dependencies {
 
     implementation(libs.simplestorage.storage)
 
+    // loading animations
+    implementation(libs.compose.loadingAnimations)
+
     // Protobuf
     implementation(libs.google.protobuf.javalite)
 }

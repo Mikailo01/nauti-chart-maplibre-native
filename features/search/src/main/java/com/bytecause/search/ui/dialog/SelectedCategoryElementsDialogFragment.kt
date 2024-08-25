@@ -35,6 +35,7 @@ import com.bytecause.search.ui.viewmodel.SearchElementsSharedViewModel
 import com.bytecause.search.ui.viewmodel.SelectedCategoryElementsViewModel
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.mappers.asLatLngModel
+import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import com.bytecause.util.poi.PoiUtil.unifyPoiCategoryForSearch
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -110,7 +111,7 @@ class SelectedCategoryElementsDialogFragment :
                         ),
                     )
                     placeName.text =
-                        viewModel.getItemName(item, args.poiCategory.name.asString(requireContext()))
+                        viewModel.getItemName(item, getString(args.poiCategory.name))
                             ?.replaceFirstChar { it.uppercase() }
                     distance.text =
                         if (mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull() != null) {
@@ -171,7 +172,7 @@ class SelectedCategoryElementsDialogFragment :
         binding.showResultsOnTheMapRelativeLayout.setOnClickListener {
             mapSharedViewModel.setPoiToShow(
                 viewModel.elementList.value
-                    .groupBy { args.poiCategory.name.asString(requireContext()) }
+                    .groupBy { getString(args.poiCategory.name) }
                     .mapValues { entry -> entry.value.map { it.id } },
             )
 
@@ -186,7 +187,7 @@ class SelectedCategoryElementsDialogFragment :
                 adapter = genericRecyclerViewAdapter
             }
 
-        binding.categoryNameTextView.text = args.poiCategory.name.asString(requireContext())
+        binding.categoryNameTextView.text = getString(args.poiCategory.name)
 
         binding.backButton.setOnClickListener {
             // Set filter StateFlow to null to reset it's state.
@@ -275,7 +276,7 @@ class SelectedCategoryElementsDialogFragment :
                         }
 
                         null -> {
-                            if (state.isLoading) {
+                            if (state.loading.isLoading) {
                                 binding.progressLayout.visibility = View.VISIBLE
                             } else {
                                 binding.progressLayout.visibility = View.GONE
@@ -305,7 +306,7 @@ class SelectedCategoryElementsDialogFragment :
                                         }
                                     }
                             } ?: run {
-                                if (state.isLoading) return@run
+                                if (state.loading.isLoading) return@run
                                 binding.categoryElementsRecyclerView.visibility = View.GONE
                                 toggleExtendSearchRadiusLayout()
                             }
@@ -374,7 +375,7 @@ class SelectedCategoryElementsDialogFragment :
             binding.showResultsOnTheMapRelativeLayout.visibility = View.VISIBLE
             binding.showResultsOnTheMapTextView.text =
                 getString(com.bytecause.core.resources.R.string.show_results_on_the_map_place_holder).format(
-                    args.poiCategory.name.asString(requireContext()),
+                    getString(args.poiCategory.name),
                 )
         }
     }
@@ -383,7 +384,9 @@ class SelectedCategoryElementsDialogFragment :
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
             viewModel.getPoiResult(
                 PoiQueryModel(
-                    category = unifyPoiCategoryForSearch(args.poiCategory.name.asString(requireContext())),
+                    category = getCategoriesUnderUnifiedCategory(args.poiCategory.name) ?: listOf(
+                        getString(args.poiCategory.name)
+                    ),
                     radius = viewModel.radius,
                     position = latLng.asLatLngModel(),
                     query = OverpassQueryBuilder
@@ -395,7 +398,7 @@ class SelectedCategoryElementsDialogFragment :
                             args.poiCategory.search
                         )
                         .area(viewModel.radius, latLng.asLatLngModel())
-                        .build(),
+                        .build().also { Log.d("idk", it) },
                     appliedFilters = sharedViewModel.filteredTagsStateFlow.value,
                 ),
             )

@@ -271,6 +271,7 @@
 # keep everything in this package from being renamed only
 -keepnames class com.bytecause.domain.model.** { *; }
 
+-keep class androidx.compose.** { *; }
 
 
 

@@ -1,7 +1,6 @@
 package com.bytecause.data.repository
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.dataStore
@@ -17,6 +16,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -50,13 +51,25 @@ class CustomOfflineVectorTileSourceRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteOfflineVectorTileSourceProvider(index: Int) {
-        withContext(coroutineDispatcher) {
-            context.customOfflineVectorTileSourceDataStore.updateData {
-                it.toBuilder().removeOfflineVectorTileSource(index).build()
+    override fun deleteOfflineVectorTileSourceProvider(index: Int): Flow<String?> = flow {
+        val currentData = context.customOfflineVectorTileSourceDataStore.data.firstOrNull()
+        val deletedItemName = currentData?.offlineVectorTileSourceList?.getOrNull(index)?.name
+
+        context.customOfflineVectorTileSourceDataStore.updateData {
+            it.toBuilder().removeOfflineVectorTileSource(index).build()
+        }
+
+        emit(deletedItemName)
+    }
+        .flowOn(coroutineDispatcher)
+        .catch { exception ->
+            if (exception is IOException) {
+                exception.printStackTrace()
+                emit(null)
+            } else {
+                throw exception
             }
         }
-    }
 
     override fun getOfflineVectorTileSourceProviders(): Flow<List<CustomTileProvider>> =
         context.customOfflineVectorTileSourceDataStore.data.map {
@@ -73,13 +86,8 @@ class CustomOfflineVectorTileSourceRepositoryImpl @Inject constructor(
         }
             .flowOn(coroutineDispatcher)
             .catch { exception ->
-                // dataStore.data throws an IOException when an error is encountered when reading data
+                exception.printStackTrace()
                 if (exception is IOException) {
-                    Log.e(
-                        "CustomOfflineTileSource",
-                        "Error reading custom offline tile source provider.",
-                        exception
-                    )
                     emit(listOf(CustomTileProvider(CustomTileProviderType.Vector.Offline())))
                 } else {
                     throw exception

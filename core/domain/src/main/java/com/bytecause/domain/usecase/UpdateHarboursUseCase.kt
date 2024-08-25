@@ -21,7 +21,7 @@ class UpdateHarboursUseCase(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
-    operator fun invoke(): Flow<ApiResult<Unit>> = flow {
+    operator fun invoke(): Flow<ApiResult<Unit>> = flow<ApiResult<Unit>> {
         val isEmpty = harboursDatabaseRepository.isHarboursDatabaseEmpty().firstOrNull() ?: true
 
         if (isEmpty) {
@@ -40,27 +40,30 @@ class UpdateHarboursUseCase(
                 )
                 .build()
 
-            overpassRepository.makeQuery<OverpassNodeModel>(query).also { result ->
+            overpassRepository.makeQuery<OverpassNodeModel>(query).collect { result ->
                 when {
                     result.exception != null -> {
                         emit(ApiResult.Failure(exception = result.exception))
-                        return@flow
+                        return@collect
                     }
 
-                    !result.data.isNullOrEmpty() -> {
-                        result.data.map {
+                    !result.data?.toList().isNullOrEmpty() -> {
+                        val harbours = result.data?.map {
                             HarboursModel(
                                 latitude = it.lat,
                                 longitude = it.lon,
                                 tags = it.tags
                             )
-                        }.let {
-                            harboursDatabaseRepository.insertAllHarbours(it)
-                            emit(ApiResult.Success(Unit))
-                        }
+                        } ?: emptyList()
+
+                        harboursDatabaseRepository.insertAllHarbours(harbours)
+                        emit(ApiResult.Progress(progress = harbours.size))
                     }
                 }
             }
+
+            // harbours saved, emit success
+            emit(ApiResult.Success(Unit))
         } else {
             // harbours present, emit success
             emit(ApiResult.Success(Unit))

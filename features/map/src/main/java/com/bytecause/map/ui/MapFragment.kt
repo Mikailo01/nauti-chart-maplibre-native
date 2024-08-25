@@ -9,6 +9,7 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -109,8 +110,12 @@ import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
 import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_DRAGGING
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HALF_EXPANDED
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_SETTLING
 import com.google.gson.JsonArray
 import com.mapbox.android.gestures.MoveGestureDetector
 import dagger.hilt.android.AndroidEntryPoint
@@ -204,8 +209,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private var circleLayerAnimator: Animator? = null
 
-    private var isLocationPermissionGranted = false
-
     private lateinit var bottomSheetLayout: LinearLayout
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
     private lateinit var bottomSheetCallback: BottomSheetCallback
@@ -226,6 +229,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         onBackPressedCallback.isEnabled = newValue
     }
 
+    private var isLocationPermissionGranted: Boolean by Delegates.observable(false) { _, _, granted ->
+        if (granted) {
+            if (::mapStyle.isInitialized) activateLocationComponent(mapStyle)
+        }
+    }
+
     private val activityResultLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission(),
@@ -233,7 +242,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             // Handle Permission granted/rejected
             if (isGranted) {
                 isLocationPermissionGranted = true
-                activateLocationComponent(mapStyle)
             } else {
                 findNavController().navigate(R.id.action_mapFragment_to_locationDialogFragment)
             }
@@ -242,17 +250,16 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private val onBackPressedCallback =
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // showing dialog and then closing the application..
                 when {
                     measureBottomSheetBehavior.state == STATE_EXPANDED -> {
                         leaveMeasureDistanceMode()
                     }
 
-                    bottomSheetBehavior.state == STATE_EXPANDED -> {
+                    bottomSheetBehavior.state == STATE_EXPANDED || bottomSheetBehavior.state == STATE_COLLAPSED -> {
                         closeBottomSheetLayout()
                     }
 
-                    markerBottomSheetBehavior.state == STATE_EXPANDED -> {
+                    markerBottomSheetBehavior.state == STATE_EXPANDED || markerBottomSheetBehavior.state == STATE_COLLAPSED -> {
                         closeMarkerBottomSheetLayout()
                     }
 
@@ -432,6 +439,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
 
         mapView = binding.mapView
+
         mapView?.getMapAsync { mapLibreMap ->
             mapLibre = mapLibreMap
 
@@ -460,12 +468,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                              style.addLayer(lineLayer)*/
 
-                            (tileSource as? TileSources.Raster)?.let {
-                                TileSourceLoader.loadRasterTileSource(
-                                    style,
-                                    tileSource = tileSource
-                                )
-                            }
+                            mapSharedViewModel.setTile(tileSource)
 
                             activateLocationComponent(style)
 
@@ -1964,7 +1967,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
         if (!isLocationPermissionGranted) {
             viewLifecycleOwner.lifecycleScope.launch {
-                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                     mapSharedViewModel.permissionGranted.collect { granted ->
                         granted ?: return@collect
 

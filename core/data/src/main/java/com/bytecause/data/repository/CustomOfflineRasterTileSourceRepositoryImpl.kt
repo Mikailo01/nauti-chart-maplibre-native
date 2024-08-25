@@ -12,14 +12,18 @@ import com.bytecause.domain.model.CustomTileProvider
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.nautichart.CustomOfflineRasterTileSource
 import com.bytecause.nautichart.CustomOfflineRasterTileSourceList
+import com.bytecause.util.file.FileUtil.offlineTilesDir
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 private val Context.customOfflineRasterTileSourceDataStore: DataStore<CustomOfflineRasterTileSourceList> by dataStore(
@@ -47,44 +51,61 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
                         }
                     ).build()
                 }
+            }
         }
     }
-}
 
-override suspend fun deleteOfflineRasterTileSourceProvider(index: Int) {
-    withContext(coroutineDispatcher) {
+    override fun deleteOfflineRasterTileSourceProvider(index: Int): Flow<String?> = flow {
+        val currentData = context.customOfflineRasterTileSourceDataStore.data.firstOrNull()
+        val deletedItemName = currentData?.offlineRasterTileSourceList?.getOrNull(index)?.name
+
         context.customOfflineRasterTileSourceDataStore.updateData {
             it.toBuilder().removeOfflineRasterTileSource(index).build()
         }
-    }
-}
 
-override fun getOfflineRasterTileSourceProviders(): Flow<List<CustomTileProvider>> =
-    context.customOfflineRasterTileSourceDataStore.data.map {
-        it.offlineRasterTileSourceOrBuilderList.map { tileSource ->
-            CustomTileProvider(
-                CustomTileProviderType.Raster.Offline(
-                    name = tileSource.name,
-                    minZoom = tileSource.minZoom,
-                    maxZoom = tileSource.maxZoom,
-                    tileSize = tileSource.tileSize,
-                    filePath = tileSource.filePath
-                )
-            )
-        }
+        emit(deletedItemName)
     }
         .flowOn(coroutineDispatcher)
         .catch { exception ->
-            // dataStore.data throws an IOException when an error is encountered when reading data
+            exception.printStackTrace()
             if (exception is IOException) {
-                Log.e(
-                    "CustomOfflineTileSource",
-                    "Error reading custom offline tile source provider.",
-                    exception
-                )
-                emit(listOf(CustomTileProvider(CustomTileProviderType.Raster.Offline())))
+                emit(null)
             } else {
                 throw exception
             }
         }
+
+    override fun getOfflineRasterTileSourceProviders(): Flow<List<CustomTileProvider>> =
+        context.customOfflineRasterTileSourceDataStore.data.map {
+            it.offlineRasterTileSourceOrBuilderList.mapIndexedNotNull { index, tileSource ->
+                if (tilesExist(tileSource.name)) {
+                    CustomTileProvider(
+                        CustomTileProviderType.Raster.Offline(
+                            name = tileSource.name,
+                            minZoom = tileSource.minZoom,
+                            maxZoom = tileSource.maxZoom,
+                            tileSize = tileSource.tileSize,
+                            filePath = tileSource.filePath
+                        )
+                    )
+                } else {
+                    deleteOfflineRasterTileSourceProvider(index)
+                    null
+                }
+            }
+        }
+            .flowOn(coroutineDispatcher)
+            .catch { exception ->
+                exception.printStackTrace()
+                if (exception is IOException) {
+                    emit(listOf(CustomTileProvider(CustomTileProviderType.Raster.Offline())))
+                } else {
+                    throw exception
+                }
+            }
+
+    private fun tilesExist(tilesName: String): Boolean {
+        val file = File(context.offlineTilesDir())
+        return file.listFiles()?.any { it.name == tilesName } == true
+    }
 }

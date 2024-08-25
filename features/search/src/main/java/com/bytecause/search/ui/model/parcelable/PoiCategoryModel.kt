@@ -9,6 +9,6 @@ import kotlinx.parcelize.RawValue
 @Parcelize
 data class PoiCategoryModel(
     val drawableId: Int,
-    val name: @RawValue UiText,
+    val name: Int,
     val search: @RawValue SearchTypes
 ): Parcelable

@@ -41,7 +41,7 @@ class TileSourceTypes : DialogFragment() {
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        when (val tileSource = mapSharedViewModel.tileSource.value) {
+        when (val tileSource = mapSharedViewModel.tileSource.replayCache.lastOrNull()) {
             is TileSources.Raster.Default -> {
                 when (tileSource) {
                     DefaultTileSources.MAPNIK -> binding.defaultTileSource.isChecked = true

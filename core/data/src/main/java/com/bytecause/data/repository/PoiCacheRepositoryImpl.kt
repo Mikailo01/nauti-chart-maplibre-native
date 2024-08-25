@@ -22,9 +22,10 @@ class PoiCacheRepositoryImpl @Inject constructor(
     @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : PoiCacheRepository {
 
-    override fun loadCachedResults(): Flow<List<PoiCacheModel>> = poiCacheDao.loadCache()
-        .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
-        .flowOn(coroutineDispatcher)
+    override fun loadResultsByCategory(category: List<String>): Flow<List<PoiCacheModel>> =
+        poiCacheDao.loadTest(category)
+            .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
+            .flowOn(coroutineDispatcher)
 
     override fun isCacheEmpty(): Flow<Boolean> = poiCacheDao.isCacheEmpty()
         .flowOn(coroutineDispatcher)

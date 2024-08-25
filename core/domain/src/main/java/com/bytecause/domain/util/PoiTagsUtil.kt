@@ -10,6 +10,10 @@ object PoiTagsUtil {
         return s.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
 
+    fun unformatTagString(s: String): String {
+        return s.replace(" ", "_").replaceFirstChar { it.lowercase() }
+    }
+
     /** extracts category from overpass element's tags **/
     fun extractCategoryFromPoiEntity(tagsMap: Map<String, String>): String? {
         return when {
@@ -29,6 +33,7 @@ object PoiTagsUtil {
             tagsMap.containsKey("highway") -> tagsMap["highway"]
             tagsMap.containsKey("public_transport") -> tagsMap["public_transport"]
             tagsMap.containsKey("shop") -> "shop"
+            tagsMap.containsKey("sport") -> tagsMap["sport"]
             tagsMap.containsKey("leisure") -> tagsMap["leisure"].takeIf { it != "yes" } ?: "leisure"
             tagsMap.containsKey("tourism") -> tagsMap["tourism"].takeIf { it != "yes" } ?: "tourism"
             tagsMap.containsKey("seamark:type") -> tagsMap["seamark:type"]
@@ -39,7 +44,8 @@ object PoiTagsUtil {
     fun excludeDescriptionKeysFromTags(tagsMap: Map<String, String>): String {
         val keys = listOf("addr:", "ref:", "check_date", "name", "url", "amenity", "wikidata",
             "wikipedia", "created_by", "wheelchair", "tourism", "email", "website", "phone", "source",
-            "internet_access", "fax", "image", "smoking", "contact", "mobile", "survey", "toilets", "leisure"
+            "internet_access", "fax", "image", "smoking", "contact", "mobile", "survey", "toilets", "leisure",
+            "gnis"
         )
         val stringList: MutableList<String> = mutableListOf()
 

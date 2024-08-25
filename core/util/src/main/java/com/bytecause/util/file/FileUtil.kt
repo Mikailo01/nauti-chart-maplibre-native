@@ -1,6 +1,7 @@
 package com.bytecause.util.file
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
@@ -12,10 +13,13 @@ import java.io.InputStream
 import java.io.OutputStream
 
 object FileUtil {
+
+    fun Context.offlineTilesDir(): String = this.obbDir.absolutePath
+
     suspend fun copyFileToFolder(
         contentResolver: ContentResolver,
         fileUri: Uri,
-        destinationFolder: File,
+        destinationFolder: String,
         fileName: String
     ): File? = withContext(Dispatchers.IO) {
         try {
@@ -49,6 +53,24 @@ object FileUtil {
             null
         }
     }
+
+    suspend fun deleteFileFromFolder(
+        destinationFolder: String,
+        fileName: String
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val targetFolder = File(destinationFolder, fileName)
+            targetFolder.delete()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun checkFilenameExists(fileName: String, destinationFolder: String): Boolean =
+        withContext(Dispatchers.IO) {
+            File(destinationFolder, fileName).exists()
+        }
 
     fun queryName(resolver: ContentResolver, uri: Uri): String? {
         val returnCursor =

@@ -8,8 +8,8 @@ class OverpassRestApiBuilder {
 
     // Create an OkHttpClient builder
     private val httpClientBuilder = OkHttpClient.Builder().apply {
-        readTimeout(120, TimeUnit.SECONDS)
-        writeTimeout(120, TimeUnit.SECONDS)
+        readTimeout(240, TimeUnit.SECONDS)
+        writeTimeout(240, TimeUnit.SECONDS)
     }
 
     // Create the OkHttpClient

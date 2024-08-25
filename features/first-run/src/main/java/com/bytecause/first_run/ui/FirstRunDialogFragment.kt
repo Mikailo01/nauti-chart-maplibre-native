@@ -55,7 +55,7 @@ class FirstRunDialogFragment : DialogFragment() {
         if (requireContext().isLocationPermissionGranted()
             && mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull() == null
         ) {
-            showProgressBar(isVisible = true, isDownloading = false)
+            showRegionLoading()
         }
 
         // If location permission is granted show progress bar.
@@ -64,17 +64,14 @@ class FirstRunDialogFragment : DialogFragment() {
                 mapSharedViewModel.permissionGranted.collect {
                     if (it == null || !it) return@collect
 
-                    showProgressBar(isVisible = true, isDownloading = false)
+                    showRegionLoading()
                 }
             }
         }
 
-
         this.isCancelable = false
         return binding.root
     }
-
-    //private val geocodeListener = GeocodeListener {  }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -101,15 +98,13 @@ class FirstRunDialogFragment : DialogFragment() {
                     ).show()
 
                     // Starts download job.
-                    /*viewModel.getPoiResult(
-                        binding.regionNameTextView.text.toString()
-                    )*/
+                    viewModel.getPoiResult()
                 }
 
                 getString(R.string.cancel) -> {
                     viewModel.cancelDownloadJob()
                     viewModel.resetUiState()
-                    showProgressBar(isVisible = false, isDownloading = false)
+                    hideLoading()
                     toggleDownloadButtonState()
                 }
             }
@@ -126,20 +121,26 @@ class FirstRunDialogFragment : DialogFragment() {
                 mapSharedViewModel.lastKnownPosition.take(1).collect { geoPoint ->
                     geoPoint ?: return@collect
 
+                    showRegionLoading()
+
                     val geocoder = Geocoder(requireContext(), Locale.getDefault())
-                    geocoder.getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)?.let {
-                        withContext(Dispatchers.Main) {
-                            binding.regionNameTextView.apply {
-                                Log.d(TAG(), it.first().adminArea)
-                                it.first().adminArea.also {
-                                    viewModel.setRegion(it)
-                                    text = it
-                                    alpha = 1f
+
+                    withContext(Dispatchers.IO) {
+                        geocoder.getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
+                            ?.let {
+                                withContext(Dispatchers.Main) {
+                                    binding.regionNameTextView.apply {
+                                        Log.d(TAG(), it.first().adminArea)
+                                        it.first().adminArea.also {
+                                            viewModel.setRegion(it)
+                                            text = it
+                                            alpha = 1f
+                                        }
+                                    }
+                                    hideLoading()
+                                    toggleDownloadButtonState()
                                 }
                             }
-                            showProgressBar(isVisible = false, isDownloading = false)
-                            toggleDownloadButtonState()
-                        }
                     }
                 }
             }
@@ -152,7 +153,7 @@ class FirstRunDialogFragment : DialogFragment() {
 
                     when (val exception = uiState.error) {
                         is IOException -> {
-                            showProgressBar(isVisible = false, isDownloading = false)
+                            hideLoading()
                             toggleDownloadButtonState()
                             Toast.makeText(
                                 requireContext(),
@@ -165,11 +166,16 @@ class FirstRunDialogFragment : DialogFragment() {
                         }
 
                         null -> {
-                            if (uiState.isLoading) {
-                                showProgressBar(isVisible = true, isDownloading = true)
+                            if (uiState.loading.isLoading) {
+                                showDownloadLoading()
                                 toggleDownloadButtonState()
+                                uiState.loading.progress?.let {
+                                    binding.loadingTextView.text = getString(R.string.processing)
+                                    binding.progressTextView.text =
+                                        getString(R.string.processed_count).format(it)
+                                }
                             } else {
-                                showProgressBar(isVisible = false, isDownloading = false)
+                                hideLoading()
                                 toggleDownloadButtonState()
                                 viewModel.saveFirstRunFlag(false)
                                 Toast.makeText(
@@ -182,7 +188,7 @@ class FirstRunDialogFragment : DialogFragment() {
                         }
 
                         else -> {
-                            showProgressBar(isVisible = false, isDownloading = false)
+                            hideLoading()
                             toggleDownloadButtonState()
                             Toast.makeText(
                                 requireContext(),
@@ -210,15 +216,20 @@ class FirstRunDialogFragment : DialogFragment() {
         }
     }
 
-    private fun showProgressBar(isVisible: Boolean, isDownloading: Boolean) {
-        //if (binding.regionNameTextView.text.isNotEmpty()) return
-        binding.loadingTextView.apply {
-            text = if (isDownloading) getString(R.string.downloading)
-            else getString(R.string.fetching_location)
-        }
+    private fun showRegionLoading() {
+        binding.loadingTextView.text = getString(R.string.fetching_location)
+        binding.fetchingLocationProgressBarLinearLayout.visibility = View.VISIBLE
+    }
 
-        binding.fetchingLocationProgressBarLinearLayout.visibility =
-            if (isVisible) View.VISIBLE else View.GONE
+    private fun hideLoading() {
+        binding.loadingTextView.text = null
+        binding.progressTextView.text = null
+        binding.fetchingLocationProgressBarLinearLayout.visibility = View.GONE
+    }
+
+    private fun showDownloadLoading() {
+        binding.loadingTextView.text = getString(R.string.downloading)
+        binding.fetchingLocationProgressBarLinearLayout.visibility = View.VISIBLE
     }
 
     override fun onStart() {

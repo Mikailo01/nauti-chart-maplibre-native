@@ -38,6 +38,9 @@ dependencies {
     // Gson
     implementation(libs.gson)
 
+    // Moshi
+    implementation(libs.moshi)
+
     // MapLibre SDK
     implementation(libs.maplibre)
 

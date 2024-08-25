@@ -131,6 +131,8 @@ class LayerChildAdapter(
             )
         }
 
+        child.resource
+
         holder.textView.apply {
             // Invokes Marquee animation for overflowed texts
             isSelected = true
