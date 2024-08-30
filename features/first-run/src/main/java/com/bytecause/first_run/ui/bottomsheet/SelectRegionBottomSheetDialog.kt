@@ -54,7 +54,7 @@ class SelectRegionBottomSheetDialog :
             }
         }
 
-        binding.grantLocationPermissionLinearLayout.setOnClickListener {
+        binding.grantLocationPermissionTextView.setOnClickListener {
             if (!lastClick.lastClick(500)) return@setOnClickListener
             if (requireContext().isLocationPermissionGranted()) {
                 findNavController().popBackStack()
@@ -63,7 +63,7 @@ class SelectRegionBottomSheetDialog :
             }
         }
 
-        binding.pickRegionLinearLayout.setOnClickListener {
+        binding.pickRegionTextView.setOnClickListener {
             if (!lastClick.lastClick(500)) return@setOnClickListener
             viewModel.saveFirstRunFlag(false)
 

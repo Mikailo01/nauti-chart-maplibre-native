@@ -13,7 +13,7 @@ message CustomOnlineRasterTileSource {
   int32 minZoom = 4;
   int32 maxZoom = 5;
   int32 tileSize = 6;
-  bytes image = 7;
+  string imageUrl = 7;
 }
 
 message CustomOnlineRasterTileSourceList {

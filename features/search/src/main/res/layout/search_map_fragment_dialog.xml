@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bottom_sheet_color"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
    <include layout="@layout/search_map_box"
@@ -10,8 +10,7 @@
        android:layout_gravity="center"
        android:layout_width="match_parent"
        android:layout_height="wrap_content"
-       android:layout_marginTop="10dp"
-       android:layout_marginBottom="10dp"/>
+       android:layout_marginVertical="10dp" />
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
@@ -20,13 +19,15 @@
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/search_map_tab_layout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:background="@color/md_theme_surface"/>
 
     <include
         android:id="@+id/search_view_pager"
         layout="@layout/fragment_viewpager2" />
 
     <ScrollView
+        android:id="@+id/search_map_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 

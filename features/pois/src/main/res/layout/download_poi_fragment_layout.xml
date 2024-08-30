@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
     <include
@@ -22,6 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
         android:visibility="gone"
+        app:cardBackgroundColor="@color/md_theme_secondaryContainer"
         tools:visibility="visible">
 
         <LinearLayout
@@ -43,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:paddingBottom="15dp"
                 android:text="@string/fetching_regions"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSecondaryContainer"
                 android:textSize="16sp"
                 android:textStyle="italic" />
 
@@ -61,7 +64,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
             android:layout_marginStart="5dp"
-            android:textColor="@color/adaptive_color"
+            android:textColor="@color/md_theme_onSurface"
             android:textSize="15sp"
             android:textStyle="bold"
             tools:text="Continents" />
@@ -69,20 +72,21 @@
         <com.bytecause.presentation.components.views.recyclerview.StatefulRecyclerView
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_below="@id/header_text_view" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/download_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignBottom="@id/recycler_view"
+            android:layout_alignParentBottom="true"
             android:layout_gravity="center"
             android:layout_marginHorizontal="70dp"
             android:layout_marginBottom="10dp"
             android:background="@drawable/custom_dialog_button"
             android:padding="10dp"
             android:text="@string/download"
+            android:textColor="@color/md_theme_onSecondaryContainer"
             android:visibility="gone"
             tools:visibility="visible" />
 

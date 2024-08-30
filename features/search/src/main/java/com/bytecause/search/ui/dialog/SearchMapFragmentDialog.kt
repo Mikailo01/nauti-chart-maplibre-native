@@ -168,17 +168,17 @@ class SearchMapFragmentDialog : DialogFragment() {
 
         val clearTextDrawable =
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_close_24)?.apply {
-                setTint(ContextCompat.getColor(requireContext(), R.color.adaptive_color))
+                setTint(ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer))
             }
         val progressDrawable = requireContext().getProgressBarDrawable().apply {
-            setTint(ContextCompat.getColor(requireContext(), R.color.adaptive_color))
+            setTint(ContextCompat.getColor(requireContext(), R.color.black))
         }
 
         binding.searchMapBox.searchMapEditText.apply {
 
             // Set navigate back arrow in custom edit text view.
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_arrow_back_24)?.apply {
-                setTint(ContextCompat.getColor(requireContext(), R.color.adaptive_color))
+                setTint(ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer))
                 setDrawables(this, null)
             }
 
@@ -190,7 +190,7 @@ class SearchMapFragmentDialog : DialogFragment() {
             )
             compoundDrawablePadding = 30
 
-            ContextCompat.getColor(requireContext(), R.color.adaptive_color).let {
+            ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer).let {
                 setHintTextColor(it)
                 setTextColor(it)
             }
@@ -260,7 +260,7 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
 
         binding.searchMapBox.searchMapLayout.boxBackgroundColor =
-            ContextCompat.getColor(requireContext(), R.color.dialog_background)
+            ContextCompat.getColor(requireContext(), R.color.md_theme_primaryContainer)
 
         TabLayoutMediator(tabLayout, viewPager2) { tab, position ->
             when (position) {
@@ -418,7 +418,7 @@ class SearchMapFragmentDialog : DialogFragment() {
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    R.color.dialog_background
+                    R.color.md_theme_primaryContainer
                 )
             )
         )

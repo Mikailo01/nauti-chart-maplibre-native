@@ -1,5 +1,6 @@
 plugins {
-    alias(libs.plugins.nautichart.android.feature)
+    alias(libs.plugins.nautichart.android.feature.compose)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -12,4 +13,16 @@ android {
 dependencies {
     implementation(projects.core.util)
     implementation(projects.core.presentation)
+    implementation(projects.core.resources)
+    implementation(projects.core.data)
+    implementation(projects.core.domain)
+
+    // Recyclerview
+    implementation(libs.androidx.recyclerView)
+
+    // AppCompat
+    implementation(libs.androidx.appCompat)
+
+    // Material
+    implementation(libs.google.material)
 }

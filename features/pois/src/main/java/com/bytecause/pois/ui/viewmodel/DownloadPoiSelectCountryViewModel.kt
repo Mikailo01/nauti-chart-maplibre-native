@@ -14,7 +14,7 @@ import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
-import com.bytecause.pois.data.repository.abstractions.DownloadedRegionsRepository
+import com.bytecause.data.repository.abstractions.DownloadedRegionsRepository
 import com.bytecause.pois.ui.getKeyByIndex
 import com.bytecause.pois.ui.model.CountryParentItem
 import com.bytecause.pois.ui.model.RegionChildItem
@@ -34,7 +34,8 @@ import java.net.ConnectException
 import java.util.Locale
 import javax.inject.Inject
 
-private const val MAX_REGIONS_TO_DOWNLOAD = 2
+// set to 1 to avoid big query results from the API
+private const val MAX_REGIONS_TO_DOWNLOAD = 1
 
 @HiltViewModel
 class DownloadPoiSelectCountryViewModel
@@ -152,8 +153,10 @@ constructor(
         }
     }
 
-    private suspend fun addDownloadedRegionId(regionId: String) {
-        datastoreRepository.addDownloadedRegion(regionId)
+    private fun addDownloadedRegionId(regionId: String) {
+        viewModelScope.launch {
+            datastoreRepository.addDownloadedRegion(regionId)
+        }
     }
 
     fun getPois(

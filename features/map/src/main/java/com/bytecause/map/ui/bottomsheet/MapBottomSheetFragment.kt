@@ -25,7 +25,6 @@ import com.bytecause.map.ui.viewmodel.MapBottomSheetViewModel
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.file.FileUtil.deleteFileFromFolder
 import com.bytecause.util.file.FileUtil.offlineTilesDir
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -42,28 +41,7 @@ enum class LayerTypes {
 }
 
 sealed interface MapBottomSheetResources {
-    data class Custom(val name: String, val image: ByteArray? = null) : MapBottomSheetResources {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Custom
-
-            if (name != other.name) return false
-            if (image != null) {
-                if (other.image == null) return false
-                if (!image.contentEquals(other.image)) return false
-            } else if (other.image != null) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = name.hashCode()
-            result = 31 * result + (image?.contentHashCode() ?: 0)
-            return result
-        }
-    }
+    data class Custom(val name: String, val imageUrl: String? = null) : MapBottomSheetResources
 }
 
 // TODO("Image rendering slows down opening of this fragment.")

@@ -120,7 +120,7 @@ constructor(
                                 layerType = LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE,
                                 resource = MapBottomSheetResources.Custom(
                                     name = name,
-                                    image = image
+                                    imageUrl = imageUrl
                                 ),
                             )
                         } ?: (provider.type as? CustomTileProviderType.Raster.Offline)?.run {

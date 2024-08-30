@@ -24,8 +24,8 @@ fun TopAppBar(
     @StringRes titleRes: Int,
     modifier: Modifier = Modifier,
     colors: TopAppBarColors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        containerColor = MaterialTheme.colorScheme.primary,
+        titleContentColor = MaterialTheme.colorScheme.onPrimary
     ),
     navigationIcon: ImageVector? = null,
     actionIcon: @Composable () -> Unit = {},

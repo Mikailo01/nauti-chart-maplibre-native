@@ -11,7 +11,8 @@ import com.bytecause.pois.data.repository.CountryDataExtractSizeRepositoryImpl
 import com.bytecause.pois.data.repository.DownloadedRegionsRepositoryImpl
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
-import com.bytecause.pois.data.repository.abstractions.DownloadedRegionsRepository
+import com.bytecause.data.repository.abstractions.DownloadedRegionsRepository
+import com.bytecause.domain.abstractions.RegionRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -53,4 +54,13 @@ object RepositoryModule {
     @Provides
     fun providesRegionDataExtractRemoteDataSource(): RegionDataExtractRemoteDataSource =
         RegionDataExtractRemoteDataSource()
+
+    @Singleton
+    @Provides
+    fun providesRegionRepository(@ApplicationContext context: Context): RegionRepository =
+        com.bytecause.pois.data.repository.RegionRepositoryImpl(
+            DatabaseModule.provideRegionDao(
+                DatabaseModule.provideDatabase(context)
+            )
+        )
 }

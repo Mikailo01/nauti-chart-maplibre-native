@@ -1,6 +1,5 @@
 package com.bytecause.map.ui.recyclerview.adapter
 
-import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -118,9 +117,8 @@ class LayerChildAdapter(
 
         val resources = child.resource as? MapBottomSheetResources.Custom
 
-        if (resources?.image != null) {
-            val bmp = BitmapFactory.decodeByteArray(resources.image, 0, resources.image.size)
-            holder.imageView.load(bmp)
+        if (resources?.imageUrl != null) {
+            holder.imageView.load(resources.imageUrl)
         } else {
             // Asynchronous image loading
             holder.imageView.load(

@@ -132,7 +132,7 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    R.color.dialog_background
+                    R.color.md_theme_primaryContainer
                 )
             )
         )

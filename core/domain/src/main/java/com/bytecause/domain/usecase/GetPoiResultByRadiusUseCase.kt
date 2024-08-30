@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 class GetPoiResultByRadiusUseCase(
     private val poiCacheRepository: PoiCacheRepository,
@@ -40,7 +41,7 @@ class GetPoiResultByRadiusUseCase(
     }
 
     operator fun invoke(entity: PoiQueryModel): Flow<ApiResult<List<PoiCacheModel>>> {
-        return flow {
+        return flow<ApiResult<List<PoiCacheModel>>> {
             poiCacheRepository.loadResultsByCategory(entity.category).firstOrNull()
                 ?.let { poiEntityList ->
                     val cachedPoiList = poiEntityList.filter { poiElement ->
@@ -113,15 +114,10 @@ class GetPoiResultByRadiusUseCase(
                                         }
                                     }
                                 }
-
-                            // after all values are cached, make recursive call and return cached values
-                            // from database
-                            invoke(entity).firstOrNull()?.let { flow ->
-                                emit(flow)
-                            }
                         }
                     }
                 }
         }
+            .flowOn(coroutineDispatcher)
     }
 }

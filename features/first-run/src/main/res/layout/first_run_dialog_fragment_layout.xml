@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@color/md_theme_surface"
     android:padding="15dp">
 
     <LinearLayout
@@ -23,7 +24,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/welcome"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -38,7 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/choose_region_description"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textStyle="italic" />
 
         </LinearLayout>
@@ -53,7 +54,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/earth_24"
-                app:tint="@color/adaptive_color" />
+                app:tint="@color/md_theme_onSurface" />
 
             <TextView
                 android:id="@+id/region_name_text_view"
@@ -63,7 +64,7 @@
                 android:layout_weight="1"
                 android:alpha="0.6"
                 android:text="@string/unknown_region"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textStyle="italic" />
 
             <ImageView
@@ -74,7 +75,7 @@
                 android:contentDescription="TODO"
                 android:focusable="true"
                 android:src="@drawable/alternate_map_marked"
-                app:tint="@color/adaptive_color" />
+                app:tint="@color/md_theme_onSurface" />
 
         </LinearLayout>
 
@@ -93,13 +94,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:indeterminate="true"
-                android:progressTint="@color/colorPrimary" />
+                android:progressTint="@color/md_theme_primary" />
 
             <TextView
                 android:id="@+id/loading_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textSize="12sp"
                 android:textStyle="italic"
                 tools:text="Fetching position" />
@@ -108,7 +109,7 @@
                 android:id="@+id/progress_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="(0)" />
@@ -121,10 +122,9 @@
             android:layout_height="45dp"
             android:layout_marginTop="20dp"
             android:background="@drawable/custom_dialog_button"
-            android:paddingStart="50dp"
-            android:paddingEnd="50dp"
+            android:paddingHorizontal="50dp"
             android:text="@string/download"
-            android:textColor="@color/adaptive_color"
+            android:textColor="@color/md_theme_onSecondaryContainer"
             android:textSize="15sp"
             android:visibility="gone"
             tools:visibility="visible" />
@@ -140,7 +140,7 @@
         android:clickable="true"
         android:focusable="true"
         android:text="@string/skip"
-        android:textColor="@color/colorPrimary"
+        android:textColor="@color/md_theme_onSurface"
         android:textSize="14sp"
         android:textStyle="bold" />
 

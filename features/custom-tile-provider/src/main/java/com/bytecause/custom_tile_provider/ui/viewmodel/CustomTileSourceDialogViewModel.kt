@@ -1,9 +1,7 @@
 package com.bytecause.custom_tile_provider.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.custom_tile_provider.data.repository.abstractions.GetTileImageRepository
 import com.bytecause.custom_tile_provider.ui.events.CustomTileSourceEffect
 import com.bytecause.custom_tile_provider.ui.events.CustomTileSourceEvent
 import com.bytecause.custom_tile_provider.ui.state.CustomTileSourceState
@@ -12,7 +10,6 @@ import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.domain.model.CustomTileProvider
-import com.bytecause.domain.model.CustomTileProviderType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -29,7 +26,6 @@ class CustomTileSourceDialogViewModel @Inject constructor(
     private val customOfflineRasterTileSourceRepository: CustomOfflineRasterTileSourceRepository,
     private val customOnlineRasterTileSourceRepository: CustomOnlineRasterTileSourceRepository,
     private val customOfflineVectorTileSourceRepository: CustomOfflineVectorTileSourceRepository,
-    private val getTileImageRepository: GetTileImageRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CustomTileSourceState())
@@ -107,6 +103,7 @@ class CustomTileSourceDialogViewModel @Inject constructor(
     }
 
     fun saveOnlineRasterTileProvider(tileProvider: CustomTileProvider) {
+        uiState.value.sourceNameError
         viewModelScope.launch {
             customOnlineRasterTileSourceRepository.saveOnlineRasterTileSourceProvider(tileProvider)
         }
@@ -117,6 +114,4 @@ class CustomTileSourceDialogViewModel @Inject constructor(
             customOfflineVectorTileSourceRepository.saveOfflineVectorTileSourceProvider(tileProvider)
         }
     }
-
-    suspend fun getTileImage(url: String): ByteArray? = getTileImageRepository.getImage(url)
 }

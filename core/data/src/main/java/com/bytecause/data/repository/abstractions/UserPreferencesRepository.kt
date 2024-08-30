@@ -18,7 +18,7 @@ interface UserPreferencesRepository {
     fun getCachedStyle(): Flow<String?>
 
     suspend fun saveSelectedPoiCategories(set: Set<String>)
-    fun getSelectedPoiCategories(): Flow<Set<String>?>
+    fun getSelectedPoiCategories(): Flow<Set<String>>
 
     suspend fun saveIsAisActivated(boolean: Boolean)
     fun getIsAisActivated(): Flow<Boolean>

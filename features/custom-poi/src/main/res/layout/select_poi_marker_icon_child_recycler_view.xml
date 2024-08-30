@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
     <TextView
@@ -10,9 +11,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="5dp"
-        android:layout_marginBottom="5dp"
-        android:textColor="@color/adaptive_color"
+        android:layout_marginVertical="5dp"
+        android:textColor="@color/md_theme_onSurface"
         android:textSize="18sp"
         tools:text="Recently used" />
 

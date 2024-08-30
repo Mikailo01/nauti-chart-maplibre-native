@@ -35,7 +35,6 @@ dependencies {
     implementation(projects.features.pois)
     implementation(projects.features.search)
     implementation(projects.features.customPoi)
-    implementation(projects.features.downloadTiles)
     implementation(projects.features.firstRun)
     implementation(projects.features.customTileProvider)
     implementation(projects.features.map)

@@ -13,16 +13,14 @@ import com.bytecause.data.repository.CustomOnlineRasterTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomPoiRepositoryImpl
 import com.bytecause.data.repository.OverpassRepositoryImpl
 import com.bytecause.data.repository.PoiCacheRepositoryImpl
-import com.bytecause.data.repository.RegionRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
-import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
-import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
+import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.OverpassRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
-import com.bytecause.domain.abstractions.RegionRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -73,14 +71,5 @@ object RepositoryModule {
     fun providesUserPreferencesRepository(@ApplicationContext context: Context): UserPreferencesRepository =
         UserPreferencesRepositoryImpl(
             context.userDataStore
-        )
-
-    @Singleton
-    @Provides
-    fun providesRegionRepository(@ApplicationContext context: Context): RegionRepository =
-        RegionRepositoryImpl(
-            DatabaseModule.provideRegionDao(
-                DatabaseModule.provideDatabase(context)
-            )
         )
 }

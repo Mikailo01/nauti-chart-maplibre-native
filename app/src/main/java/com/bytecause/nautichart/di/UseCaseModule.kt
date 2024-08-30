@@ -3,7 +3,7 @@ package com.bytecause.nautichart.di
 import android.content.Context
 import com.bytecause.data.repository.OverpassRepositoryImpl
 import com.bytecause.data.repository.PoiCacheRepositoryImpl
-import com.bytecause.data.repository.RegionRepositoryImpl
+import com.bytecause.pois.data.repository.RegionRepositoryImpl
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository

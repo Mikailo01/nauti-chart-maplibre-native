@@ -19,7 +19,7 @@
         android:bottom="3dp">
         <shape android:shape="rectangle">
             <!-- Customize the border color of the button -->
-            <solid android:color="@color/dialog_background" />
+            <solid android:color="@color/md_theme_secondaryContainer" />
 
             <!-- Customize the corner radius to match the background shape -->
             <corners android:radius="25dp" />

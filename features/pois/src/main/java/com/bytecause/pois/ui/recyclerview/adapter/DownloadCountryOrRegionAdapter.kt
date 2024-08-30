@@ -184,7 +184,7 @@ class RegionChildAdapter(
             holder.imageView.apply {
                 val color = ContextCompat.getColor(
                     context,
-                    com.bytecause.core.resources.R.color.colorPrimary
+                    com.bytecause.core.resources.R.color.md_theme_primary
                 )
                 setColorFilter(color)
             }

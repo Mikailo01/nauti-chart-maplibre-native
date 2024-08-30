@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:gravity="center"
-        android:textColor="@color/adaptive_color"
+        android:textColor="@color/md_theme_onSecondaryContainer"
         android:textSize="11sp"
         tools:drawableTop="@drawable/baseline_favorite_24"
         tools:text="@string/favorite" />

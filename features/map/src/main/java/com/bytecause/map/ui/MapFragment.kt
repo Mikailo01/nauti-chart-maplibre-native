@@ -9,7 +9,6 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Looper
-import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -35,9 +34,9 @@ import androidx.navigation.fragment.findNavController
 import coil.load
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
-import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
 import com.bytecause.domain.util.PoiTagsUtil.extractContactsFromTags
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
+import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
@@ -111,11 +110,8 @@ import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
-import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_DRAGGING
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HALF_EXPANDED
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
-import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_SETTLING
 import com.google.gson.JsonArray
 import com.mapbox.android.gestures.MoveGestureDetector
 import dagger.hilt.android.AndroidEntryPoint
@@ -2176,7 +2172,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     MarkerInfoModel(
                         title = title ?: "",
                         type = formatTagString(
-                            poi.tags["vending"]
+                            getPoiType(poi.tags)
                                 ?: poi.category
                         ).takeIf {
                             title != null && title != formatTagString(
@@ -2186,11 +2182,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             ?.let { "($it)" },
                         iconImage = null,
                         propImages = extractPropImagesFromTags(poi.tags),
-                        description = excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }/*poi.tags.entries.joinToString(
+                        description = /*excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }*/poi.tags.entries.joinToString(
                             separator = "\n"
                         ) { (key, value) ->
                             "${formatTagString(key)}: ${formatTagString(value)}"
-                        }*/,
+                        },
                         contacts = extractContactsFromTags(poi.tags).takeIf { it.isNotBlank() },
                         image = replaceHttpWithHttps(poi.tags["image"]),
                         position = LatLng(poi.latitude, poi.longitude)
@@ -2449,7 +2445,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     50
                 )
                 setImageResource(drawableId)
-                setColorFilter(com.bytecause.core.resources.R.color.adaptive_color)
+                setColorFilter(com.bytecause.core.resources.R.color.md_theme_onPrimaryContainer)
             }
 
             val spacer = LinearLayout(requireContext()).apply {

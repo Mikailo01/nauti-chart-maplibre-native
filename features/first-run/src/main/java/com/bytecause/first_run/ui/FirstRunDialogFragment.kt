@@ -243,7 +243,7 @@ class FirstRunDialogFragment : DialogFragment() {
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    R.color.dialog_background
+                    R.color.md_theme_surface
                 )
             )
         )

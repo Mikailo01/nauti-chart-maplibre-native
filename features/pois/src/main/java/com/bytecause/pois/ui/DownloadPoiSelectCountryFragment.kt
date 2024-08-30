@@ -1,6 +1,5 @@
 package com.bytecause.pois.ui
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -265,7 +264,12 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
             binding.downloadButton.apply {
                 binding.downloadButton.apply {
                     text = getString(com.bytecause.core.resources.R.string.cancel)
-                    setTextColor(Color.RED)
+                    setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            com.bytecause.core.resources.R.color.md_theme_error
+                        )
+                    )
                 }
             }
             recyclerViewParentAdapter.setIsDownloading(true)
@@ -275,7 +279,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 setTextColor(
                     ContextCompat.getColor(
                         requireContext(),
-                        com.bytecause.core.resources.R.color.adaptive_color
+                        com.bytecause.core.resources.R.color.md_theme_onSecondaryContainer
                     )
                 )
             }

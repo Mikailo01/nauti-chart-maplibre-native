@@ -5,7 +5,7 @@
     android:id="@+id/toolbar_app_bar_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/dialog_background">
+    android:background="@color/md_theme_primaryContainer">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:layout_width="match_parent"
@@ -19,14 +19,14 @@
             android:scaleX="1.4"
             android:scaleY="1.4"
             android:src="@drawable/arrow_back"
-            app:tint="@color/adaptive_color" />
+            app:tint="@color/md_theme_onPrimaryContainer" />
 
         <TextView
             android:id="@+id/dest_name_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="50dp"
-            android:textColor="@color/adaptive_color"
+            android:textColor="@color/md_theme_onPrimaryContainer"
             android:textSize="18sp"
             android:textStyle="bold"
             tools:text="Dest name" />
@@ -37,6 +37,6 @@
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        app:dividerColor="@color/adaptive_color" />
+        app:dividerColor="@color/md_theme_onPrimaryContainer" />
 
 </com.google.android.material.appbar.AppBarLayout>

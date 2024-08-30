@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
         android:text="@string/precise_location_disabled"
-        android:textColor="@color/dialog_color"
+        android:textColor="@color/md_theme_onPrimaryContainer"
         android:textStyle="bold"
         android:layout_gravity="center_horizontal"
         android:textSize="20sp"/>
@@ -22,9 +22,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:layout_marginStart="25dp"
-        android:layout_marginEnd="25dp"
-        android:textColor="@color/dialog_color"
+        android:layout_marginHorizontal="25dp"
+        android:textColor="@color/md_theme_onPrimaryContainer"
         android:gravity="center_horizontal"
         android:text="@string/precise_location_disabled_message" />
 
@@ -42,7 +41,7 @@
         android:text="@string/close"
         android:background="@drawable/custom_dialog_button"
         android:padding="6dp"
-        android:textColor="@color/dialog_color"
+        android:textColor="@color/md_theme_onSecondaryContainer"
         android:layout_gravity="start"
         android:layout_marginEnd="45dp"/>
 
@@ -51,7 +50,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/grant"
-        android:textColor="@color/dialog_color"
+        android:textColor="@color/md_theme_onSecondaryContainer"
         android:background="@drawable/custom_dialog_button"
         android:layout_gravity="end"
         android:layout_marginStart="45dp"/>

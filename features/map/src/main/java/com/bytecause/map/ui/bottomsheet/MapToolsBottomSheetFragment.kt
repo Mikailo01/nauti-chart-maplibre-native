@@ -8,7 +8,6 @@ import androidx.navigation.fragment.findNavController
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.MapToolsBottomSheetFragmentBinding
 import com.bytecause.map.util.navigateToCustomTileProviderNavigation
-import com.bytecause.map.util.navigateToDownloadTilesNavigation
 import com.bytecause.util.common.LastClick
 import com.bytecause.util.delegates.viewBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -29,11 +28,6 @@ class MapToolsBottomSheetFragment :
                 state = BottomSheetBehavior.STATE_EXPANDED
                 maxWidth = ViewGroup.LayoutParams.MATCH_PARENT
             }
-        }
-
-        binding.downloadMapImageButton.setOnClickListener {
-            if (!lastClick.lastClick(1000)) return@setOnClickListener
-            findNavController().navigateToDownloadTilesNavigation()
         }
 
         binding.customTileSourceImagebutton.setOnClickListener {

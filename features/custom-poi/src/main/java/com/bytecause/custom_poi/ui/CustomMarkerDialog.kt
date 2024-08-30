@@ -330,6 +330,7 @@ class CustomMarkerDialog :
             }
 
         binding.toolbar.apply {
+            this.toolbarAppBarLayout
             navBack.setOnClickListener { findNavController().popBackStack() }
             destNameTextView.text = getString(com.bytecause.core.resources.R.string.add_marker)
         }
@@ -581,7 +582,7 @@ class CustomMarkerDialog :
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    com.bytecause.core.resources.R.color.dialog_background,
+                    com.bytecause.core.resources.R.color.md_theme_primaryContainer,
                 ),
             ),
         )

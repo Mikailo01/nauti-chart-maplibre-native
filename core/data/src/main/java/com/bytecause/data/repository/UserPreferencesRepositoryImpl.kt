@@ -99,7 +99,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             throw exception
         }
 
-    override fun getSelectedPoiCategories(): Flow<Set<String>?> {
+    override fun getSelectedPoiCategories(): Flow<Set<String>> {
         return userDataStorePreferences.data
             .map { preferences ->
                 preferences[SELECTED_POI_CATEGORIES_KEY] ?: emptySet()

@@ -23,7 +23,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            app:tint="@color/adaptive_color"/>
+            app:tint="@color/md_theme_onSurface"/>
     </FrameLayout>
 
     <TextView
@@ -35,7 +35,7 @@
         android:maxWidth="90dp"
         android:textSize="14sp"
         android:ellipsize="marquee"
-        android:textColor="@color/adaptive_color"
+        android:textColor="@color/md_theme_onSurface"
         android:singleLine="true"
         android:gravity="center"
         android:marqueeRepeatLimit ="marquee_forever"

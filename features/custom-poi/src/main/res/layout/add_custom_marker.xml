@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/bottom_sheet_color"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
-    <include layout="@layout/toolbar"
-        android:id="@+id/toolbar" />
+    <include
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar" />
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="20dp"
-                app:cardBackgroundColor="@color/card_view_color">
+                app:cardBackgroundColor="@color/md_theme_secondaryContainer">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -45,9 +45,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
-                        android:textStyle="bold"
-                        android:textColor="@color/adaptive_color"
-                        android:textSize="18sp" />
+                        android:textColor="@color/md_theme_onPrimaryContainer"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <com.google.android.material.divider.MaterialDivider
                         android:layout_width="wrap_content"
@@ -65,9 +65,10 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:hint="@string/name"
-                            android:inputType="text"
                             android:imeOptions="actionDone"
-                            android:maxLines="1" />
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textColor="@color/md_theme_onPrimaryContainer" />
 
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -75,10 +76,10 @@
                         android:id="@+id/marker_description_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="gone"
                         android:layout_marginBottom="5dp"
+                        android:visibility="gone"
                         app:startIconDrawable="@drawable/baseline_description_24"
-                        app:startIconTint="@color/adaptive_color"
+                        app:startIconTint="@color/md_theme_onPrimaryContainer"
                         tools:visibility="visible">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -86,9 +87,10 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:hint="@string/description"
-                            android:inputType="text"
                             android:imeOptions="actionDone"
-                            android:maxLines="1" />
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textColor="@color/md_theme_onPrimaryContainer" />
 
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -108,7 +110,7 @@
                             android:scaleX="0.9"
                             android:scaleY="0.9"
                             android:src="@drawable/baseline_description_24"
-                            app:tint="@color/adaptive_color" />
+                            app:tint="@color/md_theme_onPrimaryContainer" />
 
                         <TextView
                             android:id="@+id/add_description_textview"
@@ -116,8 +118,9 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:text="@string/add_description"
-                            android:textColor="@color/adaptive_color"
-                            android:textSize="14sp" />
+                            android:textColor="@color/md_theme_onPrimaryContainer"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -128,6 +131,7 @@
                 android:layout_marginStart="30dp"
                 android:layout_marginTop="15dp"
                 android:text="@string/category"
+                android:textColor="@color/md_theme_onPrimaryContainer"
                 android:textSize="12sp" />
 
             <com.google.android.material.card.MaterialCardView
@@ -135,15 +139,15 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="@color/card_view_color">
+                app:cardBackgroundColor="@color/md_theme_secondaryContainer">
 
                 <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
                     android:id="@+id/category_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:clipToPadding="false"
                     android:paddingHorizontal="15dp"
-                    android:paddingTop="15dp"
-                    android:clipToPadding="false" />
+                    android:paddingTop="15dp" />
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -153,36 +157,36 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="@color/card_view_color">
+                app:cardBackgroundColor="@color/md_theme_secondaryContainer">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
-                <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
-                    android:id="@+id/poi_list_recycler_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:paddingHorizontal="15dp"
-                    android:paddingTop="5dp"
-                    android:clipToPadding="false"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintHeight_max="@dimen/max_recycler_view_height"
-                    app:layout_constraintHeight_default="wrap" />
+                    <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
+                        android:id="@+id/poi_list_recycler_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:clipToPadding="false"
+                        android:paddingHorizontal="15dp"
+                        android:paddingTop="5dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintHeight_default="wrap"
+                        app:layout_constraintHeight_max="@dimen/max_recycler_view_height"
+                        app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/empty_list_text_view"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp"
-                    android:layout_gravity="center"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    android:visibility="gone"
-                    android:text="@string/empty_list" />
+                    <TextView
+                        android:id="@+id/empty_list_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:padding="20dp"
+                        android:text="@string/empty_list"
+                        android:visibility="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -198,6 +202,7 @@
                     android:id="@+id/save_button"
                     android:layout_width="130dp"
                     android:layout_height="wrap_content"
+                    android:textColor="@color/md_theme_onSecondaryContainer"
                     android:background="@drawable/custom_dialog_button"
                     android:text="@string/save" />
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/bottom_sheet_rounded_corners"
     android:padding="20dp">
 
     <LinearLayout
@@ -10,55 +10,34 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/grant_location_permission_linear_layout"
+        <TextView
+            android:id="@+id/grant_location_permission_text_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="true"
+            android:drawableLeft="@drawable/gps_icon"
+            android:drawablePadding="15dp"
+            android:drawableTint="@color/md_theme_onPrimaryContainer"
             android:focusable="true"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:text="@string/grant_location_permission_to_determine_your_region"
+            android:textColor="@color/md_theme_onPrimaryContainer"
+            android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:tint="@color/adaptive_color"
-                android:src="@drawable/gps_icon" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
-                android:text="Grant location permission to determine your region"
-                android:textColor="@color/adaptive_color"
-                android:textStyle="bold" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/pick_region_linear_layout"
+        <TextView
+            android:id="@+id/pick_region_text_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:clickable="true"
+            android:drawableLeft="@drawable/map_marker"
+            android:drawablePadding="15dp"
+            android:drawableTint="@color/md_theme_onPrimaryContainer"
             android:focusable="true"
-            android:gravity="center_vertical">
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/map_marker"
-                app:tint="@color/adaptive_color" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
-                android:text="Pick your desired region"
-                android:textColor="@color/adaptive_color"
-                android:textStyle="bold" />
-
-        </LinearLayout>
-
+            android:gravity="center_vertical"
+            android:text="@string/pick_your_desired_region"
+            android:textColor="@color/md_theme_onPrimaryContainer"
+            android:textStyle="bold" />
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

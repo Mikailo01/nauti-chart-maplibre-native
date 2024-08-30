@@ -6,18 +6,11 @@
     app:startDestination="@id/map_navigation">
 
     <include app:graph="@navigation/custom_poi_navigation" />
-    <include app:graph="@navigation/download_tiles_navigation" />
     <include app:graph="@navigation/settings_navigation" />
     <include app:graph="@navigation/first_run_navigation" />
     <include app:graph="@navigation/pois_navigation" />
     <include app:graph="@navigation/search_navigation" />
     <include app:graph="@navigation/map_navigation" />
-
-    <fragment
-        android:id="@+id/customTileSourceComposedDialog"
-        android:name="com.bytecause.custom_tile_provider.ui.CustomTileSourceComposedDialog"
-        android:label="CustomTileSourceComposedDialog">
-        <deepLink app:uri="custom-tile-provider://home" />
-    </fragment>
+    <include app:graph="@navigation/custom_tile_provider_navigation" />
 
 </navigation>

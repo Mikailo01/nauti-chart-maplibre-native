@@ -36,12 +36,13 @@ class MapShareBottomSheetDialog : BottomSheetDialogFragment(R.layout.share_botto
 
         val geoPoint = LatLng(args.geoPoint[0].toDouble(), args.geoPoint[1].toDouble())
 
-        binding.sendTextview.setOnClickListener {
+        binding.sendLinearLayout.setOnClickListener {
             // Implicit intent
-            val geoInfo = getString(com.bytecause.core.resources.R.string.implicit_geo_info_arg).format(
-                MapUtil.latitudeToDMS(geoPoint.latitude),
-                MapUtil.longitudeToDMS(geoPoint.longitude)
-            )
+            val geoInfo =
+                getString(com.bytecause.core.resources.R.string.implicit_geo_info_arg).format(
+                    MapUtil.latitudeToDMS(geoPoint.latitude),
+                    MapUtil.longitudeToDMS(geoPoint.longitude)
+                )
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, geoInfo)
@@ -54,7 +55,7 @@ class MapShareBottomSheetDialog : BottomSheetDialogFragment(R.layout.share_botto
             )
         }
 
-        binding.copyCoordinatesTextview.setOnClickListener {
+        binding.copyLinearLayout.setOnClickListener {
             val myClipboard: ClipboardManager =
                 activity?.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val myClip: ClipData = ClipData.newPlainText(
@@ -63,10 +64,14 @@ class MapShareBottomSheetDialog : BottomSheetDialogFragment(R.layout.share_botto
             )
             myClipboard.setPrimaryClip(myClip)
 
-            Toast.makeText(context, getString(com.bytecause.core.resources.R.string.copied), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                getString(com.bytecause.core.resources.R.string.copied),
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
-        binding.thirdPartyAppTextview.setOnClickListener {
+        binding.thirdPartyLinearLayout.setOnClickListener {
             // Implicit intent
             val geoLocation = Uri.parse("geo:" + geoPoint.latitude + ", " + geoPoint.longitude)
             val intent = Intent(Intent.ACTION_VIEW, geoLocation)

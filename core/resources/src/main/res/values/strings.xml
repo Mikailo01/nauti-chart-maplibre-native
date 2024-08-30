@@ -146,6 +146,10 @@
     <string name="nautical_poi">Nautical POI</string>
     <string name="category">Category</string>
     <string name="missing_field">Missing field!</string>
+    <string name="cache_management">Cache Management</string>
+    <string name="pick_your_desired_region">Pick your desired region</string>
+    <string name="grant_location_permission_to_determine_your_region">Grant location permission to determine your region</string>
+    <string name="clear_filters">Clear filters</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>
@@ -230,6 +234,7 @@
     <string name="charging_station">Charging station</string>
     <string name="fuel_station">Fuel station</string>
     <string name="shower">Shower</string>
+    <string name="other">Other</string>
 
     <string-array name="searchHistoryKeys">
         <item>Today</item>

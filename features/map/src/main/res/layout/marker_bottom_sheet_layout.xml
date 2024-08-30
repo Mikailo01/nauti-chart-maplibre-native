@@ -12,7 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/bottom_sheet_rounded_corners"
-        android:backgroundTint="@color/bottom_sheet_color"
         android:clickable="true"
         android:focusable="true"
         android:orientation="vertical"
@@ -22,7 +21,8 @@
             android:layout_width="match_parent"
             android:layout_height="2dp"
             android:layout_marginHorizontal="150dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            app:dividerColor="@color/md_theme_onSurface"/>
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/marker_bottom_sheet_scroll_view"
@@ -55,7 +55,7 @@
                         android:scrollHorizontally="true"
                         android:singleLine="true"
                         android:text=""
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         tools:text="Marker">
@@ -73,7 +73,7 @@
                         android:layout_marginStart="5dp"
                         android:ellipsize="end"
                         android:singleLine="true"
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textSize="14sp"
                         android:textStyle="italic|bold"
                         android:visibility="gone" />
@@ -118,7 +118,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/description"
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -127,7 +127,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="15dp"
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textStyle="italic"
                         android:visibility="visible"
                         tools:text="Description" />
@@ -146,7 +146,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/contacts"
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -154,7 +154,7 @@
                         android:id="@+id/contacts_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/adaptive_color"
+                        android:textColor="@color/md_theme_onSurface"
                         android:textSize="13sp"
                         android:textStyle="italic" />
                 </LinearLayout>
@@ -185,14 +185,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="15dp"
-                    android:textColor="@color/adaptive_color" />
+                    android:textColor="@color/md_theme_onSurface" />
 
                 <TextView
                     android:id="@+id/marker_bottom_sheet_distance_text_view"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="15dp"
-                    android:textColor="@color/adaptive_color"
+                    android:textColor="@color/md_theme_onSurface"
                     tools:text="150 m" />
 
                 <TextView
@@ -200,7 +200,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="15dp"
-                    android:textColor="@color/adaptive_color" />
+                    android:textColor="@color/md_theme_onSurface" />
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

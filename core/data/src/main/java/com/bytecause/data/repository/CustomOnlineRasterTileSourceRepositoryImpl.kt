@@ -1,7 +1,6 @@
 package com.bytecause.data.repository
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.dataStore
@@ -12,8 +11,6 @@ import com.bytecause.domain.model.CustomTileProvider
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.nautichart.CustomOnlineRasterTileSource
 import com.bytecause.nautichart.CustomOnlineRasterTileSourceList
-import com.bytecause.util.extensions.TAG
-import com.google.protobuf.ByteString
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -49,11 +46,7 @@ class CustomOnlineRasterTileSourceRepositoryImpl @Inject constructor(
                                 .setMinZoom(minZoom)
                                 .setMaxZoom(maxZoom)
                                 .setTileSize(tileSize)
-                                .setImage(
-                                    if (image == null) ByteString.EMPTY else ByteString.copyFrom(
-                                        image
-                                    )
-                                )
+                                .setImageUrl(imageUrl)
                         }
                     ).build()
                 }
@@ -92,7 +85,7 @@ class CustomOnlineRasterTileSourceRepositoryImpl @Inject constructor(
                         minZoom = tileSource.minZoom,
                         maxZoom = tileSource.maxZoom,
                         tileSize = tileSource.tileSize,
-                        image = tileSource.image.toByteArray()
+                        imageUrl = tileSource.imageUrl
                     )
                 )
             }

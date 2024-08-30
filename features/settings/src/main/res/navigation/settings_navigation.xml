@@ -9,5 +9,14 @@
         android:id="@+id/settingsFragment"
         android:name="com.bytecause.settings.ui.SettingsFragment"
         android:label="@string/settings"
-        tools:layout="@layout/settings_fragment"/>
+        tools:layout="@layout/settings_fragment_layout">
+        <action
+            android:id="@+id/action_settingsFragment_to_cacheManagementFragment"
+            app:destination="@id/cacheManagementFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/cacheManagementFragment"
+        android:name="com.bytecause.settings.ui.CacheManagementFragment"
+        android:label="CacheManagementFragment"
+        tools:layout="@layout/cache_management_layout"/>
 </navigation>

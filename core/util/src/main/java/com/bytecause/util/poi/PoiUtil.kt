@@ -332,7 +332,8 @@ object PoiUtil {
         R.string.information to R.drawable.information,
         R.string.ice_cream to R.drawable.ice_cream,
         R.string.vending_machine to R.drawable.vending_machine,
-        R.string.farm to R.drawable.farm
+        R.string.farm to R.drawable.farm,
+        R.string.other to R.drawable.question_mark_24
     )
 
     fun getDrawableForPoiCategory(categoryName: String, context: Context): Int? {
@@ -340,11 +341,13 @@ object PoiUtil {
         return stringResId?.let { poiCategoryDrawableMap[it] }
     }
 
-    private val unifyCategoryMap = mapOf(
+    private var unifyCategoryMap = mapOf(
         R.string.art to listOf(
             "Arts centre",
             "Artwork",
-            "Gallery"
+            "Gallery",
+            "Art",
+            "Art gallery"
         ),
         R.string.animals to listOf(
             "Animal boarding",
@@ -389,7 +392,8 @@ object PoiUtil {
             "Pub",
             "Biergarten",
             "Bar, casino",
-            "Juice bar"
+            "Juice bar",
+            "Wine bar"
         ),
         R.string.camping to listOf(
             "Camp site",
@@ -497,7 +501,8 @@ object PoiUtil {
             "Restaurant",
             "Fast food",
             "Food court",
-            "Bbq"
+            "Bbq",
+            "Canteen"
         ),
         R.string.study to listOf(
             "School",
@@ -546,31 +551,31 @@ object PoiUtil {
             "Stop position",
             "Station",
             "Lounge",
-            "Destination display"
+            "Destination display",
+            "Tram stop & bus stop",
+            "Subway entrance"
         ),
         R.string.swimming to listOf(
             "Water park",
             "Bathing place",
             "Public bath",
-            "Swimming pool"
+            "Swimming pool",
+            "Swimming",
+            "Swimming area"
         ),
         R.string.sport to listOf(
-            "Dojo",
-            "Fitness centre",
-            "Sports centre",
-            "Sports hall",
-            "Trampoline park",
+            "Sport",
             "Fitness station",
-            "Ice rink",
+            "Sports centre",
+            "Fitness centre",
+            "Pitch",
             "Golf course",
             "Miniature golf",
-            "Pitch",
-            "Shooting ground",
-            "Dive centre",
-            "Track",
-            "Stadium",
-            "Martial arts",
-            "Sport"
+            "Trampoline park",
+            "Ice rink",
+            "Dojo",
+            "Sports hall",
+            "Badminton"
         ),
         R.string.health to listOf(
             "Pharmacy",
@@ -579,7 +584,8 @@ object PoiUtil {
             "Clinic",
             "Doctors",
             "First aid",
-            "Hospital"
+            "Hospital",
+            "Health"
         ),
         R.string.shop to listOf(
             "Marketplace",
@@ -611,7 +617,9 @@ object PoiUtil {
             "Stage",
             "Toy library",
             "Amusement arcade",
-            "Common"
+            "Common",
+            "Hookah lounge",
+            "Quest"
         ),
         R.string.cafe to listOf(
             "Internet cafe",
@@ -619,14 +627,16 @@ object PoiUtil {
         ),
         R.string.gambling to listOf(
             "Casino",
-            "Bar, casino"
+            "Bar, casino",
+            "Gambling"
         ),
         R.string.waste to listOf(
             "Waste disposal",
             "Waste basket",
             "Recycling",
             "Waste transfer station",
-            "Sanitary dump station"
+            "Sanitary dump station",
+            "Waste container"
         ),
         R.string.water to listOf(
             "Water point",
@@ -664,7 +674,9 @@ object PoiUtil {
             "Vehicle ramp",
             "Compressed air",
             "Car sharing",
-            "Driver training"
+            "Driver training",
+            "Car pooling",
+            "Caravan rental"
         ),
         R.string.bicycle_services to listOf(
             "Bicycle wash",
@@ -674,14 +686,16 @@ object PoiUtil {
         ),
         R.string.boat_services to listOf(
             "Boat rental",
-            "Boat sharing"
+            "Boat sharing",
+            "Boat storage"
         ),
         R.string.private_transport to listOf(
             "Taxi"
         ),
         R.string.storage to listOf(
             "Left luggage",
-            "Locker"
+            "Locker",
+            "Luggage locker"
         ),
         R.string.nature to listOf(
             "Nature",
@@ -714,7 +728,8 @@ object PoiUtil {
             "Hunting lodge"
         ),
         R.string.live_music to listOf(
-            "Music venue"
+            "Music venue",
+            "Concert hall"
         ),
         R.string.care to listOf(
             "Nursing home",
@@ -783,14 +798,36 @@ object PoiUtil {
         ),
         R.string.farm to listOf(
             "Farm"
-        )
+        ),
+        R.string.cinema to listOf(
+            "Cinema"
+        ),
+        R.string.charging_station to listOf(
+            "Charging station"
+        ),
+        R.string.theatre to listOf(
+            "Theatre"
+        ),
+        R.string.nightclub to listOf(
+            "Nightclub"
+        ),
+        R.string.bench to listOf(
+            "Bench"
+        ),
+        R.string.other to emptyList()
     )
 
-    fun getUnifiedPoiCategory(categoryName: String): Int? {
+    fun getUnifiedPoiCategory(categoryName: String): Int {
         for ((key, value) in unifyCategoryMap) {
             if (value.contains(categoryName)) return key
         }
-        return null
+        unifyCategoryMap = unifyCategoryMap.toMutableMap().apply {
+            replace(
+                R.string.other,
+                unifyCategoryMap[R.string.other]?.plus(categoryName) ?: listOf(categoryName)
+            )
+        }
+        return R.string.other
     }
 
     fun getCategoriesUnderUnifiedCategory(@StringRes categoryName: Int): List<String>? =

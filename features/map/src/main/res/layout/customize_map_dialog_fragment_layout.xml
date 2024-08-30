@@ -20,8 +20,7 @@
     <ScrollView
         android:id="@+id/customize_map_scroll_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/dialog_background">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -42,14 +41,16 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:text="@string/show_all"
-                    android:textColor="@color/adaptive_color"
+                    android:textColor="@drawable/chip_text_color"
                     app:checkedIcon="@drawable/map_marker"
                     app:checkedIconEnabled="true"
-                    app:checkedIconTint="@color/adaptive_color"
+                    app:checkedIconTint="@color/md_theme_onPrimary"
                     app:chipBackgroundColor="@drawable/bg_chip_state_list"
                     app:chipIcon="@drawable/map_marker"
                     app:chipIconEnabled="true"
-                    app:chipIconTint="@color/adaptive_color" />
+                    app:chipIconTint="@color/md_theme_onSecondaryContainer"
+                    app:chipStrokeColor="@color/md_theme_secondaryContainer_mediumContrast"
+                    app:chipStrokeWidth="2dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_ais"
@@ -59,14 +60,16 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:text="@string/vessels_ais"
-                    android:textColor="@color/adaptive_color"
+                    android:textColor="@drawable/chip_text_color"
                     app:checkedIcon="@drawable/ship_ais"
                     app:checkedIconEnabled="true"
-                    app:checkedIconTint="@color/adaptive_color"
+                    app:checkedIconTint="@color/md_theme_onPrimary"
                     app:chipBackgroundColor="@drawable/bg_chip_state_list"
                     app:chipIcon="@drawable/ship_ais"
                     app:chipIconEnabled="true"
-                    app:chipIconTint="@color/adaptive_color"
+                    app:chipIconTint="@color/md_theme_onSecondaryContainer"
+                    app:chipStrokeColor="@color/md_theme_secondaryContainer_mediumContrast"
+                    app:chipStrokeWidth="2dp"
                     app:iconStartPadding="5dp" />
 
                 <com.google.android.material.chip.Chip
@@ -77,15 +80,17 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:text="@string/harbours"
-                    android:textColor="@color/adaptive_color"
+                    android:textColor="@drawable/chip_text_color"
                     app:checkedIcon="@drawable/anchor"
                     app:checkedIconEnabled="true"
-                    app:checkedIconTint="@color/adaptive_color"
+                    app:checkedIconTint="@color/md_theme_onPrimary"
                     app:chipBackgroundColor="@drawable/bg_chip_state_list"
                     app:chipIcon="@drawable/anchor"
                     app:chipIconEnabled="true"
                     app:chipIconSize="20dp"
-                    app:chipIconTint="@color/adaptive_color"
+                    app:chipIconTint="@color/md_theme_onSecondaryContainer"
+                    app:chipStrokeColor="@color/md_theme_secondaryContainer_mediumContrast"
+                    app:chipStrokeWidth="2dp"
                     app:iconStartPadding="5dp" />
 
             </com.google.android.material.chip.ChipGroup>
@@ -94,7 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="2dp" />
 
-            <androidx.recyclerview.widget.RecyclerView
+            <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
                 android:id="@+id/poi_categories_recycler_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -107,7 +112,7 @@
                 android:layout_margin="20dp"
                 android:alpha="0.3"
                 android:text="@string/no_pois_downloaded"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSurface"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:visibility="gone"

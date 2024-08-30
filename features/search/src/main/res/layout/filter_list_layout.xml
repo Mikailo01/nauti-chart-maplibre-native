@@ -6,7 +6,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginBottom="15dp"
-    app:cardBackgroundColor="@color/bottom_sheet_color">
+    app:cardBackgroundColor="@color/md_theme_secondaryContainer">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -25,7 +25,7 @@
                 android:id="@+id/tag_title_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onPrimaryContainer"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="Tag" />
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:src="@drawable/expand_less_icon"
-                app:tint="@color/adaptive_color"
+                app:tint="@color/md_theme_onPrimaryContainer"
                 tools:src="@drawable/expand_less_icon" />
         </LinearLayout>
 
@@ -45,8 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_marginStart="40dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginVertical="10dp"
             android:layout_weight="1"
             android:visibility="gone"
             tools:listitem="@layout/check_box_item_view"

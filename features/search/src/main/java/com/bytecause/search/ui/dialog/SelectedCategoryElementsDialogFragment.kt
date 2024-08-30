@@ -36,7 +36,6 @@ import com.bytecause.search.ui.viewmodel.SelectedCategoryElementsViewModel
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
-import com.bytecause.util.poi.PoiUtil.unifyPoiCategoryForSearch
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -460,7 +459,7 @@ class SelectedCategoryElementsDialogFragment :
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    com.bytecause.core.resources.R.color.dialog_background,
+                    com.bytecause.core.resources.R.color.md_theme_primaryContainer,
                 ),
             ),
         )

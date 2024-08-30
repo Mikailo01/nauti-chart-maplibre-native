@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity(), DrawerController {
 
         setupNavigationMenu(navController)
 
-        window.statusBarColor = ResourcesCompat.getColor(resources, com.bytecause.core.resources.R.color.statusBarColor, null)
+        window.statusBarColor = ResourcesCompat.getColor(resources, com.bytecause.core.resources.R.color.md_theme_primary, null)
 
         drawerLayout?.addDrawerListener(
             object : DrawerLayout.DrawerListener {

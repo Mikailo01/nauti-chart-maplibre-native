@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/network_error_linear_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@color/md_theme_surface"
     android:visibility="gone"
     tools:visibility="visible"
     android:gravity="center">
@@ -14,12 +16,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             tools:src="@drawable/network_error"
-            android:contentDescription="@string/error_image" />
+            android:contentDescription="@string/error_image"
+            app:tint="@color/md_theme_onSurface"/>
 
     <TextView
         android:id="@+id/error_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textColor="@color/md_theme_onSurface"
         android:alpha="0.6"
         tools:text="Check your internet connection." />
 

@@ -1,6 +1,5 @@
 package com.bytecause.custom_tile_provider.ui
 
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -54,8 +53,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
@@ -75,6 +73,7 @@ import com.bytecause.presentation.components.compose.Divider
 import com.bytecause.presentation.components.compose.TileSizeChips
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.components.compose.ZoomLevels
+import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.file.FileUtil.checkFilenameExists
 import com.bytecause.util.file.FileUtil.copyFileToFolder
@@ -84,32 +83,31 @@ import com.bytecause.util.map.MbTileType
 import com.bytecause.util.map.MbTilesLoader
 import com.spr.jetpack_loading.components.indicators.BallPulseRiseIndicator
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 private const val MIN_ZOOM = 0f
 private const val MAX_ZOOM = 24f
 
 @AndroidEntryPoint
-class CustomTileSourceComposedDialog : DialogFragment() {
+class CustomTileSourceComposedDialog : Fragment(com.bytecause.nautichart.features.custom_tile_provider.R.layout.custom_tile_source_composed_dialog) {
 
     private val binding by viewBinding(
-        CustomTileSourceComposedDialogBinding::inflate
+        CustomTileSourceComposedDialogBinding::bind
     )
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        return binding.root
+    ): View? {
+        return super.onCreateView(inflater, container, savedInstanceState)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.customTileSourceDialog.setContent {
-            MaterialTheme {
+            AppTheme {
                 CustomTileSourceComposedDialogScreen(
                     onNavigateBack = {
                         findNavController().popBackStack()
@@ -117,23 +115,6 @@ class CustomTileSourceComposedDialog : DialogFragment() {
                 )
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Apply the fullscreen dialog style
-        dialog?.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        dialog?.window?.setBackgroundDrawable(
-            ColorDrawable(
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.dialog_background
-                )
-            )
-        )
     }
 }
 
@@ -238,9 +219,6 @@ fun CustomTileSourceComposedDialogScreen(
                             )?.let { tileUrlInfo ->
                                 // TODO("Add support for online vector tile provider.")
                                 coroutineScope.launch {
-                                    val rasterImage =
-                                        coroutineScope.async { viewModel.getTileImage(tileUrlInfo.url) }
-
                                     viewModel.saveOnlineRasterTileProvider(
                                         CustomTileProvider(
                                             CustomTileProviderType.Raster.Online(
@@ -250,7 +228,7 @@ fun CustomTileSourceComposedDialogScreen(
                                                 minZoom = rangeSliderState.activeRangeStart.toInt(),
                                                 maxZoom = rangeSliderState.activeRangeEnd.toInt(),
                                                 tileSize = state.tileSize,
-                                                image = rasterImage.await()
+                                                imageUrl = formatTileUrl(tileUrlInfo.url)
                                             )
                                         )
                                     )
@@ -475,7 +453,7 @@ fun CustomTileSourceComposedDialogContent(
                     if (state.isLoading) {
                         Box(modifier = Modifier.align(Alignment.Center)) {
                             BallPulseRiseIndicator(
-                                color = colorResource(id = R.color.adaptive_color),
+                                color = colorResource(id = R.color.md_theme_primary),
                                 ballDiameter = 48f
                             )
                         }
@@ -664,6 +642,13 @@ fun OfflineTileSourceContent(
             )
         }
     }
+}
+
+private fun formatTileUrl(url: String, z: Int = 4, y: Int = 5, x: Int = 8): String {
+    return url
+        .replace("{z}", z.toString())
+        .replace("{y}", y.toString())
+        .replace("{x}", x.toString())
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)

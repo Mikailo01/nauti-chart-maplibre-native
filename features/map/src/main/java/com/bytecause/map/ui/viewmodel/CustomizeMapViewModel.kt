@@ -13,7 +13,6 @@ import com.bytecause.map.ui.model.PoiCategory
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import com.bytecause.util.poi.PoiUtil.getUnifiedPoiCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -59,45 +58,31 @@ constructor(
         }
     }
 
-    val getAllDistinctCategories: Flow<List<PoiCategory>> = combine(
+    val getAllDistinctCategories: StateFlow<List<PoiCategory>> = combine(
         poiCacheRepository.getAllDistinctCategories(),
         userPreferencesRepository.getSelectedPoiCategories()
     ) { categories, selectedCategories ->
 
-        if (selectedCategories != null) {
-            this.selectedCategories = selectedCategories
-        }
+        this.selectedCategories = selectedCategories
 
         categories.map { category ->
-            val categoryName = getUnifiedPoiCategory(category) ?: category
+            val categoryName = getUnifiedPoiCategory(category)
 
-            val poiCategory = when (categoryName) {
-                is Int -> {
-                    PoiCategory.PoiCategoryWithNameRes(
-                        nameRes = categoryName,
-                        isSelected = // filter elements that are present in the database and then check if all
-                        // objects under this category are present in selectedCategories set
-                        getCategoriesUnderUnifiedCategory(categoryName)?.filter {
-                            categories.contains(
-                                it
-                            )
-                        }?.all {
-                            selectedCategories?.contains(it) == true
-                        } ?: false
+            PoiCategory(
+                nameRes = categoryName,
+                isSelected =
+                // filter elements that are present in the database and then check if all
+                // objects under this category are present in selectedCategories set
+                getCategoriesUnderUnifiedCategory(categoryName)?.filter {
+                    categories.contains(
+                        it
                     )
-                }
-
-                else -> {
-                    PoiCategory.PoiCategoryWithName(
-                        name = categoryName as String,
-                        isSelected = selectedCategories?.contains(category) == true
-                    )
-                }
-            }
-
-            poiCategory
+                }?.all {
+                    selectedCategories?.contains(it) == true
+                } ?: false
+            )
         }.distinct()
-    }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun selectAllCategories() {
         viewModelScope.launch {
@@ -115,17 +100,9 @@ constructor(
     }
 
     fun setSelectedCategory(category: PoiCategory) {
-        when (category) {
-            is PoiCategory.PoiCategoryWithNameRes -> {
-                getCategoriesUnderUnifiedCategory(category.nameRes)?.let { categories ->
-                    categories.forEach {
-                        selectedCategories += it
-                    }
-                }
-            }
-
-            is PoiCategory.PoiCategoryWithName -> {
-                selectedCategories += category.name
+        getCategoriesUnderUnifiedCategory(category.nameRes)?.let { categories ->
+            categories.forEach {
+                selectedCategories += it
             }
         }
 
@@ -135,17 +112,9 @@ constructor(
     }
 
     fun removeSelectedCategory(category: PoiCategory) {
-        when (category) {
-            is PoiCategory.PoiCategoryWithName -> {
-                selectedCategories -= category.name
-            }
-
-            is PoiCategory.PoiCategoryWithNameRes -> {
-                getCategoriesUnderUnifiedCategory(category.nameRes)?.let { categories ->
-                    categories.forEach {
-                        selectedCategories -= it
-                    }
-                }
+        getCategoriesUnderUnifiedCategory(category.nameRes)?.let { categories ->
+            categories.forEach {
+                selectedCategories -= it
             }
         }
 

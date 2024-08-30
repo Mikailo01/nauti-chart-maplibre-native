@@ -118,7 +118,7 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
             ColorDrawable(
                 ContextCompat.getColor(
                     requireContext(),
-                    com.bytecause.core.resources.R.color.dialog_background
+                    com.bytecause.core.resources.R.color.md_theme_primaryContainer
                 )
             )
         )

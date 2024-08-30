@@ -1,24 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
     <TextView
         android:id="@+id/search_history_recycler_view_child_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginVertical="5dp"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="5dp"
-        android:layout_marginBottom="5dp"
+        android:textColor="@color/md_theme_onSurface"
         android:textSize="18sp"
         tools:text="Today" />
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="2dp"
-        android:layout_marginBottom="5dp" />
+        android:layout_marginBottom="5dp"
+        app:dividerColor="@color/md_theme_onSurface" />
 
     <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
         android:id="@+id/history_list_child_recycler_view"

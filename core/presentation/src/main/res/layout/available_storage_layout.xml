@@ -4,11 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="20dp"
-    android:layout_marginTop="5dp"
-    android:layout_marginEnd="20dp"
-    android:layout_marginBottom="5dp"
-    app:cardBackgroundColor="@color/card_view_color">
+    android:layout_marginHorizontal="20dp"
+    android:layout_marginVertical="5dp"
+    app:cardBackgroundColor="@color/md_theme_secondaryContainer">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -26,14 +24,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="10dp"
                 android:src="@drawable/baseline_storage_24"
-                app:tint="@color/adaptive_color" />
+                app:tint="@color/md_theme_onSecondaryContainer" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/storage_available"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSecondaryContainer"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -42,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="10dp"
-                android:textColor="@color/adaptive_color"
+                android:textColor="@color/md_theme_onSecondaryContainer"
                 android:textSize="16sp"
                 android:textStyle="italic"
                 tools:text="5.45 GB" />
@@ -54,7 +52,7 @@
                 android:background="@color/transparent"
                 android:contentDescription="@string/free_space_refresh_button"
                 android:src="@drawable/baseline_refresh_24"
-                app:tint="@color/adaptive_color" />
+                app:tint="@color/md_theme_onSecondaryContainer" />
         </LinearLayout>
 
         <ProgressBar
@@ -62,8 +60,7 @@
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
+            android:layout_marginHorizontal="20dp"
             android:layout_marginBottom="10dp"
             android:paddingBottom="1dp"
             android:scaleY="4"

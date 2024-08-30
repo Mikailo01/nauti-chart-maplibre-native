@@ -15,36 +15,8 @@ sealed interface CustomTileProviderType {
             val minZoom: Int = 0,
             val maxZoom: Int = 0,
             val tileSize: Int = 256,
-            val image: ByteArray? = null
-        ) : Raster() {
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (javaClass != other?.javaClass) return false
-
-                other as Online
-
-                if (name != other.name) return false
-                if (url != other.url) return false
-                if (tileFileFormat != other.tileFileFormat) return false
-                if (minZoom != other.minZoom) return false
-                if (maxZoom != other.maxZoom) return false
-                if (tileSize != other.tileSize) return false
-                if (!image.contentEquals(other.image)) return false
-
-                return true
-            }
-
-            override fun hashCode(): Int {
-                var result = name.hashCode()
-                result = 31 * result + url.hashCode()
-                result = 31 * result + tileFileFormat.hashCode()
-                result = 31 * result + minZoom
-                result = 31 * result + maxZoom
-                result = 31 * result + tileSize
-                result = 31 * result + image.contentHashCode()
-                return result
-            }
-        }
+            val imageUrl: String? = null
+        ) : Raster()
 
         data class Offline(
             val name: String = "",

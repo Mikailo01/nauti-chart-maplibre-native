@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.bytecause.data.di.IoDispatcher
-import com.bytecause.pois.data.repository.abstractions.DownloadedRegionsRepository
+import com.bytecause.data.repository.abstractions.DownloadedRegionsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

@@ -4,6 +4,7 @@
     android:id="@+id/layers_parent_item_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/md_theme_surface"
     android:orientation="vertical">
 
     <TextView
@@ -12,6 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:layout_marginTop="10dp"
+        android:textColor="@color/md_theme_onSurface"
         android:textStyle="bold"
         android:textSize="14sp" />
 
@@ -25,6 +27,7 @@
     <com.google.android.material.divider.MaterialDivider
         android:id="@+id/recycler_view_divider"
         android:layout_width="match_parent"
-        android:layout_height="2dp"/>
+        android:layout_height="2dp"
+        app:dividerColor="@color/md_theme_onSurface"/>
 
 </LinearLayout>

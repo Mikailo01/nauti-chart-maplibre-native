@@ -19,7 +19,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginVertical="10dp"
-            android:textColor="@color/adaptive_color"
+            android:textColor="@color/md_theme_onPrimaryContainer"
             tools:text="@string/loading_vessels_text" />
 
         <TextView
@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textStyle="bold"
-            android:textColor="@color/adaptive_color"
+            android:textColor="@color/md_theme_onPrimaryContainer"
             android:gravity="center"
             android:layout_marginBottom="10dp"
             android:visibility="gone"

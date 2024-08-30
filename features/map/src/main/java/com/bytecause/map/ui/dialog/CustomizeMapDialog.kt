@@ -21,12 +21,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.CustomizeMapDialogFragmentLayoutBinding
 import com.bytecause.map.ui.model.PoiCategory
 import com.bytecause.map.ui.viewmodel.CustomizeMapViewModel
 import com.bytecause.map.ui.viewmodel.LoadingDialogSharedViewModel
+import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.components.views.recyclerview.decorations.AdaptiveSpacingItemDecoration
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
@@ -53,7 +53,7 @@ class CustomizeMapDialog : DialogFragment() {
     private val viewModel: CustomizeMapViewModel by viewModels()
     private val loadingDialogSharedViewModel: LoadingDialogSharedViewModel by activityViewModels()
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var recyclerView: FullyExpandedRecyclerView
     private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<PoiCategory>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,7 +87,7 @@ class CustomizeMapDialog : DialogFragment() {
                             )
                             val endColor = ContextCompat.getColor(
                                 requireContext(),
-                                com.bytecause.core.resources.R.color.colorPrimary
+                                com.bytecause.core.resources.R.color.md_theme_primary
                             )
 
                             // Create a ValueAnimator that animates between the start and end colors.
@@ -109,56 +109,27 @@ class CustomizeMapDialog : DialogFragment() {
                         }
                     }
 
-                    when (item) {
-                        is PoiCategory.PoiCategoryWithName -> {
+                    applyColorAnimation(item.isSelected)
 
-                            applyColorAnimation(item.isSelected)
+                    val name = getString(item.nameRes)
 
-                            textView.apply {
-                                text = item.name
-                                isSelected = true
-                            }
+                    textView.apply {
+                        text = name
+                        isSelected = true
+                    }
 
-                            getDrawableForPoiCategory(item.name, requireContext())?.let {
-                                innerImageView.setImageDrawable(
-                                    ContextCompat.getDrawable(
-                                        requireContext(),
-                                        it
-                                    )
-                                )
-                            } ?: innerImageView.setImageDrawable(null)
+                    getDrawableForPoiCategory(name, requireContext())?.let {
+                        innerImageView.setImageDrawable(
+                            ContextCompat.getDrawable(
+                                requireContext(),
+                                it
+                            )
+                        )
+                    } ?: innerImageView.setImageDrawable(null)
 
-                            outerImageView.setOnClickListener {
-                                if (item.isSelected) viewModel.removeSelectedCategory(item)
-                                else viewModel.setSelectedCategory(item)
-                            }
-                        }
-
-                        is PoiCategory.PoiCategoryWithNameRes -> {
-
-                            applyColorAnimation(item.isSelected)
-
-                            val name = getString(item.nameRes)
-
-                            textView.apply {
-                                text = name
-                                isSelected = true
-                            }
-
-                            getDrawableForPoiCategory(name, requireContext())?.let {
-                                innerImageView.setImageDrawable(
-                                    ContextCompat.getDrawable(
-                                        requireContext(),
-                                        it
-                                    )
-                                )
-                            } ?: innerImageView.setImageDrawable(null)
-
-                            outerImageView.setOnClickListener {
-                                if (item.isSelected) viewModel.removeSelectedCategory(item)
-                                else viewModel.setSelectedCategory(item)
-                            }
-                        }
+                    outerImageView.setOnClickListener {
+                        if (item.isSelected) viewModel.removeSelectedCategory(item)
+                        else viewModel.setSelectedCategory(item)
                     }
                 }
             }
@@ -190,19 +161,15 @@ class CustomizeMapDialog : DialogFragment() {
                     if (distinctCategoryList.isEmpty()) {
                         binding.poiCategoriesRecyclerView.visibility = View.GONE
                         binding.noPoisDownloadedTextView.visibility = View.VISIBLE
-                        return@collect
+                    } else {
+                        binding.poiCategoriesRecyclerView.visibility = View.VISIBLE
+                        binding.noPoisDownloadedTextView.visibility = View.GONE
                     }
-                    binding.chipShowAll.isChecked = distinctCategoryList.all { poiCategory ->
-                        when (poiCategory) {
-                            is PoiCategory.PoiCategoryWithNameRes -> {
-                                poiCategory.isSelected
-                            }
 
-                            is PoiCategory.PoiCategoryWithName -> {
-                                poiCategory.isSelected
-                            }
-                        }
-                    }
+                    binding.chipShowAll.isChecked =
+                        distinctCategoryList.takeIf { it.isNotEmpty() }?.all { poiCategory ->
+                            poiCategory.isSelected
+                        } ?: false
 
                     genericRecyclerViewAdapter.updateContent(
                         sortCategoriesBySelectionAndName(distinctCategoryList)
@@ -234,27 +201,11 @@ class CustomizeMapDialog : DialogFragment() {
         return categories.sortedWith(
             // Sort by isSelected first (descending)
             compareByDescending<PoiCategory> { poiCategory ->
-                when (poiCategory) {
-                    is PoiCategory.PoiCategoryWithName -> {
-                        poiCategory.isSelected
-                    }
-
-                    is PoiCategory.PoiCategoryWithNameRes -> {
-                        poiCategory.isSelected
-                    }
-                }
+                poiCategory.isSelected
             }
                 // Then sort by name (ascending)
                 .thenBy { poiCategory ->
-                    when (poiCategory) {
-                        is PoiCategory.PoiCategoryWithName -> {
-                            poiCategory.name
-                        }
-
-                        is PoiCategory.PoiCategoryWithNameRes -> {
-                            getString(poiCategory.nameRes)
-                        }
-                    }
+                    getString(poiCategory.nameRes)
                 }
         )
     }
@@ -302,7 +253,7 @@ class CustomizeMapDialog : DialogFragment() {
             ColorUtils.setAlphaComponent(
                 ContextCompat.getColor(
                     requireContext(),
-                    com.bytecause.core.resources.R.color.dialog_background,
+                    com.bytecause.core.resources.R.color.md_theme_surface,
                 ),
                 SCROLL_VIEW_ALPHA,
             ),
@@ -313,7 +264,7 @@ class CustomizeMapDialog : DialogFragment() {
                 ColorUtils.setAlphaComponent(
                     ContextCompat.getColor(
                         requireContext(),
-                        com.bytecause.core.resources.R.color.dialog_background,
+                        com.bytecause.core.resources.R.color.md_theme_surface,
                     ),
                     TOOLBAR_ALPHA,
                 ),
@@ -447,7 +398,6 @@ class CustomizeMapDialog : DialogFragment() {
             }
         }
     }
-
 
     override fun onStart() {
         super.onStart()
