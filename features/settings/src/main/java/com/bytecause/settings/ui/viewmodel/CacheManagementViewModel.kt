@@ -1,29 +1,53 @@
 package com.bytecause.settings.ui.viewmodel
 
+import android.annotation.SuppressLint
+import android.text.format.DateFormat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.data.repository.abstractions.DownloadedRegionsRepository
-import com.bytecause.domain.abstractions.HarboursDatabaseRepository
-import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
+import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
+import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
+import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
+import com.bytecause.domain.model.ApiResult
+import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
+import com.bytecause.domain.util.OverpassQueryBuilder
+import com.bytecause.settings.ui.ConfirmationDialogType
+import com.bytecause.settings.ui.UpdateInterval
 import com.bytecause.settings.ui.event.CacheManagementEffect
 import com.bytecause.settings.ui.event.CacheManagementEvent
+import com.bytecause.settings.ui.model.RegionUiModel
 import com.bytecause.settings.ui.state.CacheManagementState
+import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
+import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.TimeZone
 import javax.inject.Inject
 
 @HiltViewModel
 class CacheManagementViewModel @Inject constructor(
-    private val harboursRepository: HarboursDatabaseRepository,
     private val vesselsRepository: VesselsDatabaseRepository,
-    private val poiCacheRepository: PoiCacheRepository,
-    private val downloadedRegionsRepository: DownloadedRegionsRepository
+    private val osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository,
+    private val harboursMetadataDatasetRepository: HarboursMetadataDatasetRepository,
+    private val vesselsMetadataDatasetRepository: VesselsMetadataDatasetRepository,
+    private val regionRepository: RegionRepository,
+    private val searchHistoryRepository: SearchHistoryRepository,
+    private val getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<CacheManagementState> =
@@ -33,15 +57,281 @@ class CacheManagementViewModel @Inject constructor(
     private val _effect = Channel<CacheManagementEffect>(capacity = Channel.CONFLATED)
     val effect = _effect.receiveAsFlow()
 
+    private var updateJob: Job? = null
+
+    init {
+
+        // get regions datasets and their last update timestamps
+        combine(
+            regionRepository.getAllDownloadedRegions(),
+            osmRegionMetadataDatasetRepository.getAllDatasets()
+        ) { downloadedRegions, regionDatasets ->
+
+            _uiState.update {
+                it.copy(
+                    downloadedRegions = downloadedRegions.map { region ->
+
+                        val timestamp = dateToTimestamp(
+                            regionDatasets.find { dataset -> dataset?.id == region.id }?.timestamp
+                        )
+
+                        RegionUiModel(
+                            regionId = region.id,
+                            names = region.names,
+                            timestamp = timestamp ?: 0L
+                        )
+                    }
+                )
+            }
+        }
+            .launchIn(viewModelScope)
+
+        // get harbours dataset and last update timestamp
+        viewModelScope.launch {
+            harboursMetadataDatasetRepository.getDataset().collect { dataset ->
+                _uiState.update {
+                    it.copy(
+                        harboursTimestamp = dateToTimestamp(dataset?.timestamp)?.let { timestamp ->
+                            DateFormat.format(
+                                "yyyy-MM-dd HH:mm:ss",
+                                timestamp
+                            ).toString()
+                        } ?: ""
+                    )
+                }
+            }
+        }
+
+        // get vessels dataset and last update timestamp
+        viewModelScope.launch {
+            vesselsMetadataDatasetRepository.getDataset().collect { dataset ->
+
+                _uiState.update {
+                    it.copy(
+                        vesselsTimestamp = dataset?.timestamp?.let { timestamp ->
+                            DateFormat.format(
+                                "yyyy-MM-dd HH:mm:ss",
+                                timestamp
+                            ).toString()
+                        } ?: ""
+                    )
+                }
+            }
+        }
+
+        // get selected harbours update interval from preferences datastore
+        viewModelScope.launch {
+            userPreferencesRepository.getHarboursUpdateInterval().collect { interval ->
+                _uiState.update {
+                    it.copy(
+                        harboursUpdateInterval = when {
+                            UpdateInterval.OneWeek().interval == interval -> UpdateInterval.OneWeek()
+                            UpdateInterval.OneMonth().interval == interval -> UpdateInterval.OneMonth()
+                            else -> UpdateInterval.TwoWeeks()
+                        }
+                    )
+                }
+            }
+        }
+
+        // get selected region pois update interval from preferences datastore
+        viewModelScope.launch {
+            userPreferencesRepository.getPoiUpdateInterval().collect { interval ->
+                _uiState.update {
+                    it.copy(
+                        poiUpdateInterval = when {
+                            UpdateInterval.OneWeek().interval == interval -> UpdateInterval.OneWeek()
+                            UpdateInterval.OneMonth().interval == interval -> UpdateInterval.OneMonth()
+                            else -> UpdateInterval.TwoWeeks()
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private fun dateToTimestamp(dateString: String?): Long? {
+        // Define the date format
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        // Set the time zone to UTC as the input date is in UTC (denoted by 'Z')
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+
+        // Parse the date string to a Date object
+        val date = dateString?.let { dateFormat.parse(it) }
+
+        return date?.time
+    }
+
     fun uiEventHandler(event: CacheManagementEvent) {
         when (event) {
             CacheManagementEvent.OnNavigateBack -> sendEffect(CacheManagementEffect.NavigateBack)
+            CacheManagementEvent.OnClearSearchHistory -> onClearSearchHistory()
+            CacheManagementEvent.OnClearHarbours -> onClearHarbours()
+            CacheManagementEvent.OnClearVessels -> onClearVessels()
+            CacheManagementEvent.OnCancelRegionUpdate -> onCancelRegionUpdate()
+            CacheManagementEvent.OnUpdateHarbours -> onUpdateHarbours()
+            is CacheManagementEvent.OnShowConfirmationDialog -> onShowConfirmationDialog(event.value)
+            is CacheManagementEvent.OnDeleteRegion -> onDeleteRegion(event.regionId)
+            is CacheManagementEvent.OnUpdateRegion -> onUpdateRegion(event.regionId)
+            is CacheManagementEvent.OnSetHarboursUpdateInterval -> onSetHarboursUpdateInterval(event.interval)
+            is CacheManagementEvent.OnSetPoiUpdateInterval -> onSetPoiUpdateInterval(event.interval)
         }
     }
 
     private fun sendEffect(effect: CacheManagementEffect) {
         viewModelScope.launch {
             _effect.send(effect)
+        }
+    }
+
+    private fun onDeleteRegion(regionId: Int) {
+        viewModelScope.launch {
+            osmRegionMetadataDatasetRepository.deleteDataset(regionId)
+            // reset download state
+            regionRepository.getRegion(regionId).firstOrNull()?.let { region ->
+                regionRepository.cacheRegions(listOf(region.copy(isDownloaded = false)))
+            }
+            onShowConfirmationDialog(null)
+        }
+    }
+
+    private fun onSetPoiUpdateInterval(interval: UpdateInterval) {
+        viewModelScope.launch {
+            val intervalAsLong = when (interval) {
+                is UpdateInterval.OneWeek -> {
+                    interval.interval
+                }
+
+                is UpdateInterval.TwoWeeks -> {
+                    interval.interval
+                }
+
+                is UpdateInterval.OneMonth -> {
+                    interval.interval
+                }
+            }
+
+            userPreferencesRepository.savePoiUpdateInterval(intervalAsLong)
+        }
+    }
+
+    private fun onSetHarboursUpdateInterval(interval: UpdateInterval) {
+        viewModelScope.launch {
+            val intervalAsLong = when (interval) {
+                is UpdateInterval.OneWeek -> {
+                    interval.interval
+                }
+
+                is UpdateInterval.TwoWeeks -> {
+                    interval.interval
+                }
+
+                is UpdateInterval.OneMonth -> {
+                    interval.interval
+                }
+            }
+
+            userPreferencesRepository.saveHarboursUpdateInterval(intervalAsLong)
+        }
+    }
+
+    private fun onCancelRegionUpdate() {
+        updateJob?.cancel()
+        updateJob = null
+
+        _uiState.update { it.copy(updatingRegionId = -1, progress = -1) }
+    }
+
+    private fun onUpdateHarbours() {
+        TODO()
+    }
+
+    private fun onUpdateRegion(regionId: Int) {
+        if (uiState.value.updatingRegionId != -1) return
+
+        uiState.value.downloadedRegions.find { it.regionId == regionId }?.names?.get("name")
+            ?.let { regionName ->
+
+                updateJob = viewModelScope.launch {
+                    val query = OverpassQueryBuilder
+                        .format(OverpassQueryBuilder.FormatTypes.JSON)
+                        .timeout(240)
+                        .region(regionName)
+                        .type(OverpassQueryBuilder.Type.Node)
+                        .search(
+                            com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)
+                                .filterNot(
+                                    emptyList(),
+                                    excludeAmenityObjectsFilterList,
+                                    emptyList(),
+                                    emptyList(),
+                                    emptyList(),
+                                    emptyList()
+                                )
+                        )
+                        .build()
+
+                    _uiState.update { it.copy(updatingRegionId = regionId) }
+
+                    getPoiResultByRegionUseCase(
+                        query = query,
+                        regionId = regionId
+                    ).collect { result ->
+                        when (result) {
+                            is ApiResult.Success -> {
+                                _uiState.update {
+                                    it.copy(
+                                        updatingRegionId = -1,
+                                        progress = -1
+                                    )
+                                }
+                                sendEffect(CacheManagementEffect.RegionUpdateSuccess)
+                            }
+
+                            is ApiResult.Failure -> {
+                                _uiState.update { it.copy(updatingRegionId = -1, progress = -1) }
+                                sendEffect(CacheManagementEffect.RegionUpdateFailure)
+                            }
+
+                            is ApiResult.Progress -> {
+                                result.progress?.let { progress ->
+                                    _uiState.update {
+                                        it.copy(progress = it.progress.takeIf { it != -1 }
+                                            ?.plus(progress) ?: progress)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun onShowConfirmationDialog(type: ConfirmationDialogType?) {
+        _uiState.update {
+            it.copy(showConfirmationDialog = type)
+        }
+    }
+
+    private fun onClearVessels() {
+        viewModelScope.launch {
+            vesselsMetadataDatasetRepository.deleteDataset()
+            onShowConfirmationDialog(null)
+        }
+    }
+
+    private fun onClearHarbours() {
+        viewModelScope.launch {
+            harboursMetadataDatasetRepository.deleteDataset()
+            onShowConfirmationDialog(null)
+        }
+    }
+
+    private fun onClearSearchHistory() {
+        viewModelScope.launch {
+            searchHistoryRepository.clearRecentlySearchedPlaces()
+            onShowConfirmationDialog(null)
         }
     }
 }

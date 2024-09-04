@@ -6,8 +6,8 @@ import androidx.datastore.dataStore
 import com.bytecause.data.di.IoDispatcher
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.search.data.local.datastore.proto.serializers.RecentlySearchedPlaceSerializer
-import com.bytecause.search.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.data.local.datastore.proto.serializer.RecentlySearchedPlaceSerializer
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +46,14 @@ class SearchHistoryRepositoryImpl @Inject constructor(
         withContext(coroutineDispatcher) {
             context.recentlySearchedPlaceDatastore.updateData {
                 it.toBuilder().clear().build().toBuilder().addAllPlace(entityList).build()
+            }
+        }
+    }
+
+    override suspend fun clearRecentlySearchedPlaces() {
+        withContext(coroutineDispatcher) {
+            context.recentlySearchedPlaceDatastore.updateData {
+                it.toBuilder().clear().build()
             }
         }
     }

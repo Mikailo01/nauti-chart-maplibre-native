@@ -3,7 +3,7 @@ package com.bytecause.search.di
 import android.content.Context
 import com.bytecause.search.data.repository.SearchHistoryRepositoryImpl
 import com.bytecause.search.data.repository.SearchMapRepositoryImpl
-import com.bytecause.search.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
 import dagger.Module
 import dagger.Provides

@@ -14,19 +14,16 @@ import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
-import com.bytecause.data.repository.abstractions.DownloadedRegionsRepository
+import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.pois.ui.getKeyByIndex
 import com.bytecause.pois.ui.model.CountryParentItem
 import com.bytecause.pois.ui.model.RegionChildItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okio.IOException
@@ -44,8 +41,8 @@ constructor(
     private val continentRepository: ContinentRepository,
     private val countryDataExtractSizeRepository: CountryDataExtractSizeRepository,
     private val getRegionsUseCase: GetRegionsUseCase,
+    private val regionRepository: RegionRepository,
     private val getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
-    private val datastoreRepository: DownloadedRegionsRepository,
 ) : ViewModel() {
     private val _mapContent = MutableStateFlow(mapOf<String, CountryParentItem>())
     val mapContent: StateFlow<Map<String, CountryParentItem>> = _mapContent.asStateFlow()
@@ -62,16 +59,8 @@ constructor(
     private val _regionEntityUiStateLiveData = MutableLiveData<UiState<RegionModel>>(UiState())
     val regionEntityUiStateLiveData: LiveData<UiState<RegionModel>> get() = _regionEntityUiStateLiveData
 
-    private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<String>>(UiState())
-    val poiDownloadUiStateLiveData: LiveData<UiState<String>> get() = _poiDownloadUiStateLiveData
-
-    private val downloadedRegionsStateFlow: StateFlow<Set<Long>> =
-        flow {
-            datastoreRepository.getDownloadedRegionsIds().collect { regionIds ->
-                val longRegionIds = regionIds.map { it.toLong() }.toSet()
-                emit(longRegionIds)
-            }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<Nothing>>(UiState())
+    val poiDownloadUiStateLiveData: LiveData<UiState<Nothing>> get() = _poiDownloadUiStateLiveData
 
     var downloadJob: Job? = null
         private set
@@ -153,26 +142,34 @@ constructor(
         }
     }
 
-    private fun addDownloadedRegionId(regionId: String) {
+    private fun addDownloadedRegionId(regionId: Int) {
         viewModelScope.launch {
-            datastoreRepository.addDownloadedRegion(regionId)
+            //datastoreRepository.addDownloadedRegion(regionId)
+            val regionEntity =
+                mapContent.value.entries
+                    .find { it.value.regionList.any { it.regionEntity.id == regionId } }?.value?.regionList
+                    ?.find { it.regionEntity.id == regionId }?.regionEntity?.copy(isDownloaded = true)
+
+            if (regionEntity != null) {
+                regionRepository.cacheRegions(listOf(regionEntity))
+            }
         }
     }
 
     fun getPois(
-        regionName: String,
+        regionId: Int,
         query: String,
     ) {
         downloadJob =
             viewModelScope.launch {
                 _poiDownloadUiStateLiveData.postValue(UiState(loading = Loading(true)))
 
-                getPoiResultByRegionUseCase(regionName, query).collect { result ->
+                getPoiResultByRegionUseCase(query = query, regionId = regionId).collect { result ->
                     when (result) {
                         is ApiResult.Success -> {
                             // save downloaded region id into preferences datastore.
                             getRegionIdList().forEach {
-                                addDownloadedRegionId(it.toString())
+                                addDownloadedRegionId(it)
                             }.also {
                                 updateRegionIsDownloaded()
                                 resetCheckedState()
@@ -181,7 +178,7 @@ constructor(
                             _poiDownloadUiStateLiveData.postValue(
                                 UiState(
                                     loading = Loading(false),
-                                    items = listOf(result.data ?: ""),
+                                    items = emptyList(),
                                 )
                             )
                         }
@@ -328,7 +325,6 @@ constructor(
                         isChecked = !regionChildItem.isChecked,
                         loading = Loading(false),
                         isCheckBoxEnabled = true,
-                        isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size,
                     )
                 } else {
@@ -337,7 +333,6 @@ constructor(
                         isChecked = regionChildItem.isChecked,
                         loading = Loading(isLoading = false),
                         isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
-                        isDownloaded = regionChildItem.isDownloaded,
                         size = regionChildItem.size,
                     )
                 }
@@ -363,11 +358,10 @@ constructor(
                         ->
                         if (index == position) {
                             RegionChildItem(
-                                regionEntity = regionChildItem.regionEntity,
+                                regionEntity = regionChildItem.regionEntity.copy(isDownloaded = true),
                                 isChecked = regionChildItem.isChecked,
                                 loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = true,
-                                isDownloaded = true,
                                 size = regionChildItem.size,
                             )
                         } else {
@@ -376,7 +370,6 @@ constructor(
                                 isChecked = regionChildItem.isChecked,
                                 loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = regionChildItem.isCheckBoxEnabled,
-                                isDownloaded = regionChildItem.isDownloaded,
                                 size = regionChildItem.size,
                             )
                         }
@@ -401,16 +394,6 @@ constructor(
             }
         }
         resetDownloadQueue()
-    }
-
-    private fun searchForDownloadedRegions(id: Long): Boolean {
-        var isDownloaded = false
-        viewModelScope.launch {
-            isDownloaded = downloadedRegionsStateFlow.value.takeIf { it.isNotEmpty() }?.any {
-                it != 0L && it == id
-            } == true
-        }
-        return isDownloaded
     }
 
     private fun getCountryName(iso2: String): String = Locale(
@@ -453,7 +436,6 @@ constructor(
                                 isChecked = false,
                                 loading = Loading(isLoading = false),
                                 isCheckBoxEnabled = getDownloadQueueMapSize() < MAX_REGIONS_TO_DOWNLOAD,
-                                isDownloaded = searchForDownloadedRegions(region.id),
                                 size = regionSize[key] ?: "",
                             )
                         },
@@ -486,7 +468,6 @@ constructor(
                             isChecked = true,
                             loading = Loading(isLoading = showLoading, progress = progress),
                             isCheckBoxEnabled = it.isCheckBoxEnabled,
-                            isDownloaded = it.isDownloaded,
                             size = it.size,
                         )
                     } else {
@@ -495,7 +476,6 @@ constructor(
                             isChecked = false,
                             loading = Loading(isLoading = false),
                             isCheckBoxEnabled = it.isCheckBoxEnabled,
-                            isDownloaded = it.isDownloaded,
                             size = it.size,
                         )
                     }
@@ -512,23 +492,24 @@ constructor(
         }
     }
 
-    fun getRegionNameFromQueue(): List<String> {
-        val regionList = mutableListOf<String>()
+    fun getRegionFromQueue(): Pair<Int, String> {
+        var regions: Pair<Int, String> = -1 to ""
 
-        for ((key, value) in downloadQueueMap) {
+        downloadQueueMap.keys.firstOrNull()?.let { key ->
             mapContent.value[mapContent.value.getKeyByIndex(key)]?.let { countryParentItem ->
-                value.forEach { regionPosition ->
-                    countryParentItem.regionList[regionPosition].let { regionEntity ->
-                        regionList.add(regionEntity.regionEntity.names["name"] ?: "")
-                    }
-                }
+                val region = countryParentItem.regionList[downloadQueueMap.values.first().first()]
+
+                val regionId = region.regionEntity.id
+                val regionName = region.regionEntity.names["name"] ?: ""
+
+                regions = regionId to regionName
             }
         }
-        return regionList
+        return regions
     }
 
-    private fun getRegionIdList(): List<Long> {
-        val idList = mutableListOf<Long>()
+    private fun getRegionIdList(): List<Int> {
+        val idList = mutableListOf<Int>()
 
         for ((key, values) in downloadQueueMap) {
             for (value in values) {

@@ -1,0 +1,39 @@
+package com.bytecause.data.local.room.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import com.bytecause.data.local.room.tables.RegionPoiCacheEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface RegionPoiCacheDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun cacheResult(result: List<RegionPoiCacheEntity>)
+
+    @Query("SELECT DISTINCT category FROM region_poi_cache")
+    fun getAllDistinctCategories(): Flow<List<String>>
+
+    @Query("SELECT (SELECT COUNT(*) FROM region_poi_cache) == 0")
+    fun isCacheEmpty(): Flow<Boolean>
+
+    @Query("SELECT * FROM region_poi_cache WHERE placeId IN (:placeIds)")
+    fun searchInCache(placeIds: List<Long>): Flow<List<RegionPoiCacheEntity>>
+
+    @Query("SELECT * FROM region_poi_cache WHERE placeId = :id")
+    fun searchPoiWithInfoById(id: Long): Flow<RegionPoiCacheEntity>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM region_poi_cache WHERE placeId = :placeId LIMIT 1)")
+    fun isPlaceCached(placeId: Long): Flow<Boolean>
+
+    @Query("SELECT * FROM region_poi_cache WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLon AND :maxLon AND category IN (:selectedCategories)")
+    fun loadPoiCacheByBoundingBox(
+        minLat: Double,
+        maxLat: Double,
+        minLon: Double,
+        maxLon: Double,
+        selectedCategories: Set<String>
+    ): Flow<List<RegionPoiCacheEntity>>
+}

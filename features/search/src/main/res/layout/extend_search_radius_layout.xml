@@ -7,12 +7,13 @@
     android:layout_height="wrap_content"
     android:gravity="center"
     android:orientation="horizontal"
-    android:background="@color/md_theme_primaryContainer"
+    android:background="@color/md_theme_surface"
     android:padding="15dp">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/md_theme_secondaryContainer"
         android:padding="30dp">
 
         <ImageView

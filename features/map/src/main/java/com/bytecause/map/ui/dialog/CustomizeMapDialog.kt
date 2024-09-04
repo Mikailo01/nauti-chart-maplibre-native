@@ -260,6 +260,11 @@ class CustomizeMapDialog : DialogFragment() {
         )
 
         binding.toolbar.apply {
+            val contentColor = ContextCompat.getColor(
+                requireContext(),
+                com.bytecause.core.resources.R.color.md_theme_onSurface,
+            )
+
             toolbarAppBarLayout.setBackgroundColor(
                 ColorUtils.setAlphaComponent(
                     ContextCompat.getColor(
@@ -271,11 +276,13 @@ class CustomizeMapDialog : DialogFragment() {
             )
 
             navBack.apply {
+                setColorFilter(contentColor)
                 setOnClickListener {
                     findNavController().popBackStack()
                 }
             }
             destNameTextView.apply {
+                setTextColor(contentColor)
                 text = findNavController().currentDestination?.label
             }
         }

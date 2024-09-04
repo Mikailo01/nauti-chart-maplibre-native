@@ -1,7 +1,8 @@
 package com.bytecause.search.di
 
 import android.content.Context
-import com.bytecause.search.data.local.appsearch.SearchManager
+import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.SearchManagerImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,5 +17,5 @@ object AppSearchManagerModule {
     @Singleton
     @Provides
     fun providesSearchManager(@ApplicationContext context: Context): SearchManager =
-        SearchManager(context)
+        SearchManagerImpl(context)
 }

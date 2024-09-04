@@ -180,11 +180,11 @@ class RegionChildAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val regionElement = regionEntity.regionList[position]
 
-        if (regionElement.isDownloaded) {
+        if (regionElement.regionEntity.isDownloaded) {
             holder.imageView.apply {
                 val color = ContextCompat.getColor(
                     context,
-                    com.bytecause.core.resources.R.color.md_theme_primary
+                    com.bytecause.core.resources.R.color.dark_blue
                 )
                 setColorFilter(color)
             }
@@ -228,7 +228,7 @@ class RegionChildAdapter(
                 } else {
                     holder.downloadProgressBar.visibility = View.GONE
                     holder.checkBox.visibility =
-                        if (regionElement.isDownloaded) View.INVISIBLE else View.VISIBLE
+                        if (regionElement.regionEntity.isDownloaded) View.INVISIBLE else View.VISIBLE
                     holder.progressTextView.visibility = View.GONE
                 }
             }

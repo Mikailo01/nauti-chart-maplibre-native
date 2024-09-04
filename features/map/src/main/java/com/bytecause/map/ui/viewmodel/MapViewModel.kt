@@ -6,7 +6,7 @@ import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.data.repository.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
-import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.domain.model.HarboursModel
@@ -50,7 +50,7 @@ class MapViewModel
 @Inject
 constructor(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
-    private val poiCacheRepository: PoiCacheRepository,
+    private val regionPoiCacheRepository: RegionPoiCacheRepository,
     private val customPoiRepository: CustomPoiRepository,
     getVesselsUseCase: GetVesselsUseCase,
     getHarboursUseCase: GetHarboursUseCase,
@@ -189,11 +189,11 @@ constructor(
         vesselsDatabaseRepository.searchVesselById(id)
 
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiUiModel>> =
-        poiCacheRepository.searchInCache(placeIds)
+        regionPoiCacheRepository.searchInCache(placeIds)
             .map { originalList -> mapList(originalList) { it.asPoiUiModel() } }
 
     fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
-        poiCacheRepository.searchPoiWithInfoById(id)
+        regionPoiCacheRepository.searchPoiWithInfoById(id)
 
     val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi()
 
@@ -210,7 +210,7 @@ constructor(
     ) { bbox, selectedCategories ->
 
         bbox.takeIf { it != null }?.let {
-            poiCacheRepository.loadPoiCacheByBoundingBox(
+            regionPoiCacheRepository.loadPoiCacheByBoundingBox(
                 minLat = it.latitudeSouth,
                 maxLat = it.latitudeNorth,
                 minLon = it.longitudeWest,

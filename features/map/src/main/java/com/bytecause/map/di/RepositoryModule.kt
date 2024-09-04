@@ -5,7 +5,6 @@ import com.bytecause.data.di.DatabaseModule
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsPositionsRemoteRepository
-import com.bytecause.map.data.remote.HarboursRemoteDataSource
 import com.bytecause.map.data.remote.VesselsPositionsRemoteDataSource
 import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsDatabaseRepositoryImpl
@@ -27,11 +26,6 @@ object RepositoryModule {
         HarboursDatabaseRepositoryImpl(
             DatabaseModule.provideHarboursDao(DatabaseModule.provideDatabase(context))
         )
-
-    @Provides
-    @Singleton
-    fun providesHarboursRemoteDataSource(): HarboursRemoteDataSource =
-        HarboursRemoteDataSource()
 
     @Provides
     @Singleton

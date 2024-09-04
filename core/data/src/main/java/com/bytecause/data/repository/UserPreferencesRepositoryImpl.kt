@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.bytecause.data.di.IoDispatcher
@@ -151,6 +152,47 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             }
     }
 
+    override suspend fun savePoiUpdateInterval(interval: Long) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[POI_UPDATE_INTERVAL] = interval
+            }
+        }
+    }
+
+    override fun getPoiUpdateInterval(): Flow<Long> =
+        userDataStorePreferences.data
+            .map { preferences ->
+                // 2 weeks interval as default value
+                preferences[POI_UPDATE_INTERVAL] ?: 1_209_600_000L
+            }
+            .catch { exception ->
+                if (exception is IOException) emit(1_209_600_000L)
+                throw exception
+            }
+            .flowOn(coroutineDispatcher)
+
+    override suspend fun saveHarboursUpdateInterval(interval: Long) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[HARBOURS_UPDATE_INTERVAL] = interval
+            }
+        }
+    }
+
+    override fun getHarboursUpdateInterval(): Flow<Long> =
+        userDataStorePreferences.data
+            .map { preferences ->
+                // 2 weeks interval as default value
+                preferences[HARBOURS_UPDATE_INTERVAL] ?: 1_209_600_000L
+            }
+            .catch { exception ->
+                if (exception is IOException) emit(1_209_600_000L)
+                throw exception
+            }
+            .flowOn(coroutineDispatcher)
+
+
     override suspend fun saveSelectedPoiCategories(set: Set<String>) {
         withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
@@ -167,5 +209,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         private val SELECTED_POI_CATEGORIES_KEY = stringSetPreferencesKey("selected_poi_categories")
         private val IS_AIS_ACTIVATED = booleanPreferencesKey("is_ais_activated")
         private val ARE_HARBOURS_VISIBLE = booleanPreferencesKey("are_harbours_visible")
+        private val POI_UPDATE_INTERVAL = longPreferencesKey("poi_update_interval")
+        private val HARBOURS_UPDATE_INTERVAL = longPreferencesKey("harbours_update_interval")
     }
 }

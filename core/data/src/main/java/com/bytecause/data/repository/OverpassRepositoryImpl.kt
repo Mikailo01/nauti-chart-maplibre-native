@@ -29,8 +29,9 @@ class OverpassRepositoryImpl @Inject constructor(
     // are emitted, collected and cached in the database. It is slower but safer.
     override fun <T : OverpassElement> makeQuery(
         query: String,
-        clazz: KClass<T>
-    ): Flow<ApiResult<List<T>>> = flow {
+        clazz: KClass<T>,
+        getTimestamp: Boolean
+    ): Flow<ApiResult<Pair<String?, List<T>>>> = flow<ApiResult<Pair<String?, List<T>>>> {
         val response = overpassRestApiService.makeQuery(query)
 
         if (response.isSuccessful) {
@@ -42,31 +43,46 @@ class OverpassRepositoryImpl @Inject constructor(
 
                 reader.beginObject()
                 while (reader.hasNext()) {
-                    if (reader.nextName() == "elements") {
 
-                        reader.beginArray()
-                        while (reader.hasNext()) {
-                            val element = OverpassElementTypeAdapter().read(reader)
-                            if (element != null && clazz.isInstance(element)) {
-                                batch.add(element as T)
-                            }
-
-                            if (batch.size >= BATCH_SIZE) {
-                                emit(ApiResult.Success(batch.toList()))
-                                batch.clear()  // Clear after emission to handle the next batch
-                            }
+                    when (reader.nextName()) {
+                        "osm3s" -> {
+                            if (getTimestamp) {
+                                reader.beginObject()
+                                while (reader.hasNext()) {
+                                    if (reader.nextName() == "timestamp_osm_base") {
+                                        // get the timestamp of the last update of the dataset
+                                        val timestamp = reader.nextString()
+                                        emit(ApiResult.Success(timestamp to emptyList()))
+                                    } else reader.skipValue()
+                                }
+                                reader.endObject()
+                            } else reader.skipValue()
                         }
-                        reader.endArray()
 
-                    } else {
-                        reader.skipValue()
+                        "elements" -> {
+                            reader.beginArray()
+                            while (reader.hasNext()) {
+                                val element = OverpassElementTypeAdapter().read(reader)
+                                if (element != null && clazz.isInstance(element)) {
+                                    batch.add(element as T)
+                                }
+
+                                if (batch.size >= BATCH_SIZE) {
+                                    emit(ApiResult.Success(null to batch.toList()))
+                                    batch.clear()  // Clear after emission to handle the next batch
+                                }
+                            }
+                            reader.endArray()
+                        }
+
+                        else -> reader.skipValue()
                     }
                 }
                 reader.endObject()
 
                 // Emit any remaining elements
                 if (batch.isNotEmpty()) {
-                    emit(ApiResult.Success(batch.toList()))
+                    emit(ApiResult.Success(null to batch.toList()))
                 }
             }
         } else {

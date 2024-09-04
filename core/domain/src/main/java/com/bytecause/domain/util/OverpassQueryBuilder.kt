@@ -27,8 +27,8 @@ class OverpassQueryBuilder {
         private val format: FormatTypes,
         private val timeoutInSeconds: Int
     ) {
-        fun region(regionNameList: List<String>) =
-            RegionStep(format, timeoutInSeconds, regionNameList)
+        fun region(regionName: String) =
+            RegionStep(format, timeoutInSeconds, regionName)
 
         fun geocodeAreaISO(isoCode: String) = GeocodeAreaStep(format, timeoutInSeconds, isoCode)
         fun radius() = RadiusStep(format, timeoutInSeconds)
@@ -38,21 +38,21 @@ class OverpassQueryBuilder {
     class RegionStep(
         private val format: FormatTypes,
         private val timeoutInSeconds: Int,
-        private val regionNameList: List<String>
+        private val regionName: String
     ) {
-        fun type(type: Type) = TypeStep(format, timeoutInSeconds, regionNameList, type)
+        fun type(type: Type) = TypeStep(format, timeoutInSeconds, regionName, type)
     }
 
     class TypeStep(
         private val format: FormatTypes,
         private val timeoutInSeconds: Int,
-        private val regionNameList: List<String>,
+        private val regionName: String,
         private val type: Type
     ) {
         fun search(search: SearchTypes) = OverpassQueryBuilder().SearchStep(
             format,
             timeoutInSeconds,
-            regionNameList,
+            regionName,
             type,
             search
         )
@@ -117,14 +117,14 @@ class OverpassQueryBuilder {
     inner class SearchStep(
         private val format: FormatTypes,
         private val timeoutInSeconds: Int,
-        private val regionNameList: List<String>,
+        private val regionName: String,
         private val type: Type,
         private val search: SearchTypes
     ) {
         fun build(): String {
             val queryBuilder = StringBuilder()
             appendFormatAndTimeout(queryBuilder, format, timeoutInSeconds)
-            appendRegion(queryBuilder, regionNameList)
+            appendRegion(queryBuilder, regionName)
             queryBuilder.append("(")
             when (search) {
                 is SearchTypes.Amenity -> {
@@ -289,14 +289,8 @@ class OverpassQueryBuilder {
         if (lineEnd) builder.append(";")
     }
 
-    private fun appendRegion(builder: StringBuilder, regionNameList: List<String>) {
-        if (regionNameList.size == 1) {
-            builder.append("area[\"name\"=\"${regionNameList.first()}\"]->.searchArea;")
-        } else {
-            builder.append("area[\"name\"~\"")
-            regionNameList.joinTo(builder, separator = "|")
-            builder.append("\"]->.searchArea;")
-        }
+    private fun appendRegion(builder: StringBuilder, regionName: String) {
+        builder.append("area[\"name\"=\"${regionName}\"]->.searchArea;")
     }
 
     private fun appendType(builder: StringBuilder, type: String) {

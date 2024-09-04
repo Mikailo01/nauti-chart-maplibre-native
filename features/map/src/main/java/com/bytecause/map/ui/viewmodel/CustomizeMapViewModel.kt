@@ -3,7 +3,7 @@ package com.bytecause.map.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.UserPreferencesRepository
-import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.UiState
@@ -27,7 +27,7 @@ import javax.inject.Inject
 class CustomizeMapViewModel
 @Inject
 constructor(
-    private val poiCacheRepository: PoiCacheRepository,
+    private val regionPoiCacheRepository: RegionPoiCacheRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val updateVesselsUseCase: UpdateVesselsUseCase,
     private val updateHarboursUseCase: UpdateHarboursUseCase
@@ -59,7 +59,7 @@ constructor(
     }
 
     val getAllDistinctCategories: StateFlow<List<PoiCategory>> = combine(
-        poiCacheRepository.getAllDistinctCategories(),
+        regionPoiCacheRepository.getAllDistinctCategories(),
         userPreferencesRepository.getSelectedPoiCategories()
     ) { categories, selectedCategories ->
 
@@ -78,7 +78,7 @@ constructor(
                         it
                     )
                 }?.all {
-                    selectedCategories?.contains(it) == true
+                    selectedCategories.contains(it)
                 } ?: false
             )
         }.distinct()
@@ -86,7 +86,7 @@ constructor(
 
     fun selectAllCategories() {
         viewModelScope.launch {
-            poiCacheRepository.getAllDistinctCategories().firstOrNull()?.let { categories ->
+            regionPoiCacheRepository.getAllDistinctCategories().firstOrNull()?.let { categories ->
                 selectedCategories = categories.toSet()
                 userPreferencesRepository.saveSelectedPoiCategories(selectedCategories)
             }

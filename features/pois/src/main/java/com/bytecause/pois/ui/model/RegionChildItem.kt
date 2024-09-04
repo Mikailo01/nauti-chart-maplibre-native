@@ -8,6 +8,5 @@ data class RegionChildItem(
     val isChecked: Boolean,
     val loading: Loading = Loading(),
     val isCheckBoxEnabled: Boolean,
-    val isDownloaded: Boolean,
     val size: String
 )

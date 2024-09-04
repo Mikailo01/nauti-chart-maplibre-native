@@ -17,9 +17,6 @@ interface VesselInfoDao {
     @Query("SELECT * FROM vessel_info")
     fun loadAllVessels(): Flow<List<VesselInfoEntity>>
 
-    @Query("DELETE FROM vessel_info")
-    suspend fun deleteAllVessels()
-
     @Query("SELECT (SELECT COUNT(*) FROM vessel_info) == 0")
     fun isVesselDatabaseEmpty(): Flow<Boolean>
 

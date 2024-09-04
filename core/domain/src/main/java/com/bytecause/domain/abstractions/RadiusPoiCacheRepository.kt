@@ -3,8 +3,8 @@ package com.bytecause.domain.abstractions
 import com.bytecause.domain.model.PoiCacheModel
 import kotlinx.coroutines.flow.Flow
 
-interface PoiCacheRepository {
-    fun loadResultsByCategory(category: List<String>): Flow<List<PoiCacheModel>>
+interface RadiusPoiCacheRepository {
+    fun loadByCategory(category: List<String>): Flow<List<PoiCacheModel>>
     fun isCacheEmpty(): Flow<Boolean>
     fun getAllDistinctCategories(): Flow<List<String>>
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheModel>>

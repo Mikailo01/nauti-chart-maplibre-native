@@ -1,9 +1,11 @@
 package com.bytecause.domain.usecase
 
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
+import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OverpassRepository
 import com.bytecause.domain.abstractions.makeQuery
 import com.bytecause.domain.model.ApiResult
+import com.bytecause.domain.model.HarboursMetadataDatasetModel
 import com.bytecause.domain.model.HarboursModel
 import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.util.OverpassQueryBuilder
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.flowOn
 class UpdateHarboursUseCase(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
     private val overpassRepository: OverpassRepository,
+    private val harboursMetadataDatasetRepository: HarboursMetadataDatasetRepository,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -47,8 +50,18 @@ class UpdateHarboursUseCase(
                         return@collect
                     }
 
-                    !result.data?.toList().isNullOrEmpty() -> {
-                        val harbours = result.data?.map {
+                    result.data?.first != null -> {
+                        result.data.first?.let { timestamp ->
+                            harboursMetadataDatasetRepository.insertDataset(
+                                HarboursMetadataDatasetModel(
+                                    timestamp = timestamp
+                                )
+                            )
+                        }
+                    }
+
+                    !result.data?.second?.toList().isNullOrEmpty() -> {
+                        val harbours = result.data?.second?.map {
                             HarboursModel(
                                 latitude = it.lat,
                                 longitude = it.lon,

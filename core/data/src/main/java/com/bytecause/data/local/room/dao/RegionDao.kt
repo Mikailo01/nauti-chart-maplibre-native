@@ -16,6 +16,12 @@ interface RegionDao {
     @Query("SELECT * FROM country WHERE id = :countryId")
     fun getCountryRegions(countryId: Int): Flow<CountryRegionsRelation>
 
+    @Query("SELECT * FROM region WHERE isDownloaded = 1")
+    fun getAllDownloadedRegions(): Flow<List<RegionEntity>>
+
+    @Query("SELECT * FROM region WHERE id = :id")
+    fun getRegionById(id: Int): Flow<RegionEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun cacheRegions(regionEntities: List<RegionEntity>)
 }

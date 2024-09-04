@@ -5,9 +5,9 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.bytecause.data.local.room.converter.MapTypeConverter
 
-@Entity(tableName = "poi_cache")
+@Entity(tableName = "radius_poi_cache")
 @TypeConverters(MapTypeConverter::class)
-data class PoiCacheEntity(
+data class RadiusPoiCacheEntity(
     @PrimaryKey val placeId: Long = 0,
     val category: String = "",
     val drawableResourceName: String = "",

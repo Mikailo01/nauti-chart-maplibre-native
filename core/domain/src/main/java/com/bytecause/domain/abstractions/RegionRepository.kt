@@ -7,4 +7,6 @@ import kotlinx.coroutines.flow.Flow
 interface RegionRepository {
     suspend fun cacheRegions(regionModels: List<RegionModel>)
     fun getRegions(countryId: Int): Flow<CountryRegionsModel>
+    fun getAllDownloadedRegions(): Flow<List<RegionModel>>
+    fun getRegion(regionId: Int): Flow<RegionModel>
 }

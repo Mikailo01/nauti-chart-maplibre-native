@@ -3,7 +3,8 @@
 
     <string name="app_name">NautiChart</string>
     <string name="settings">Settings</string>
-    <string name="action_clear">Clear</string>
+    <string name="clear">Clear</string>
+    <string name="are_you_sure">Are you sure?</string>
     <string name="title_activity_navigation"> Navigation Activity </string>
     <string name="exit_action"> Exit </string>
     <string name="navigation_drawer_open"> Open Drawer</string>
@@ -123,6 +124,7 @@
     <string name="add_icon">Add icon</string>
     <string name="change_icon">Change icon</string>
     <string name="fetching_regions">Fetching regions…</string>
+    <string name="region_update_success">Region updated successfully.</string>
     <string name="download_started">Download started. This can take few minutes.</string>
     <string name="vessels_ais">Vessels AIS</string>
     <string name="show_all">Show all</string>
@@ -176,6 +178,7 @@
     <string name="add_marker">Add Marker</string>
     <string name="add_description">Add description</string>
     <string name="remove_description">Remove description</string>
+    <string name="delete_pois">Delete points-of-interest</string>
 
     <string name="art">Art</string>
     <string name="animals">Animals</string>

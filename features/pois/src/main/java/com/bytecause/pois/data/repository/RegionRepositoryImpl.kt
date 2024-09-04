@@ -4,6 +4,7 @@ import com.bytecause.data.di.IoDispatcher
 import com.bytecause.data.local.room.dao.RegionDao
 import com.bytecause.data.mappers.asCountryRegionsModel
 import com.bytecause.data.mappers.asRegionEntity
+import com.bytecause.data.mappers.asRegionModel
 import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.model.CountryRegionsModel
 import com.bytecause.domain.model.RegionModel
@@ -28,5 +29,15 @@ class RegionRepositoryImpl @Inject constructor(
     override fun getRegions(countryId: Int): Flow<CountryRegionsModel> =
         regionDao.getCountryRegions(countryId)
             .map { it.asCountryRegionsModel() }
+            .flowOn(coroutineDispatcher)
+
+    override fun getAllDownloadedRegions(): Flow<List<RegionModel>> =
+        regionDao.getAllDownloadedRegions()
+            .map { originalList -> mapList(originalList) { it.asRegionModel() } }
+            .flowOn(coroutineDispatcher)
+
+    override fun getRegion(regionId: Int): Flow<RegionModel> =
+        regionDao.getRegionById(regionId)
+            .map { it.asRegionModel() }
             .flowOn(coroutineDispatcher)
 }

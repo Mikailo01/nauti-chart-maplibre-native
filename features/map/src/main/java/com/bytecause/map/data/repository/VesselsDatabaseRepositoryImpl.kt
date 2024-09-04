@@ -39,12 +39,6 @@ constructor(
         vesselInfoDao.shouldUpdateVesselDatabase(currentTimeMillis)
             .flowOn(coroutineDispatcher)
 
-    override suspend fun deleteAllVessels() {
-        withContext(coroutineDispatcher) {
-            vesselInfoDao.deleteAllVessels()
-        }
-    }
-
     override suspend fun addAllVessels(vesselInfo: List<VesselInfoModel>) {
         withContext(coroutineDispatcher) {
             vesselInfoDao.addAllVessels(mapList(vesselInfo) { it.asVesselInfoEntity() })

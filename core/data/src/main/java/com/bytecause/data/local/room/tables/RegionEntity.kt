@@ -8,7 +8,8 @@ import com.bytecause.data.local.room.converter.MapTypeConverter
 @Entity(tableName = "region")
 @TypeConverters(MapTypeConverter::class)
 data class RegionEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val names: Map<String, String> = emptyMap(),
-    val countryId: Int = 1
+    val countryId: Int = 1,
+    val isDownloaded: Boolean = false
 )

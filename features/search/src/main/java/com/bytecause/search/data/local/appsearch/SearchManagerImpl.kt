@@ -7,16 +7,19 @@ import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.app.SearchSpec.RANKING_STRATEGY_RELEVANCE_SCORE
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.localstorage.LocalStorage
+import com.bytecause.data.repository.abstractions.SearchManager
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class SearchManager(
-    private val applicationContext: Context
-) {
+class SearchManagerImpl(
+    private val applicationContext: Context,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : SearchManager {
     private var session: AppSearchSession? = null
 
-    suspend fun openSession() {
-        withContext(Dispatchers.IO) {
+    override suspend fun openSession() {
+        withContext(coroutineDispatcher) {
             val sessionFuture = LocalStorage.createSearchSessionAsync(
                 LocalStorage.SearchContext.Builder(
                     applicationContext,
@@ -32,8 +35,8 @@ class SearchManager(
         }
     }
 
-    suspend fun putResults(results: List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>): Boolean {
-        return withContext(Dispatchers.IO) {
+    override suspend fun putResults(results: List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>): Boolean {
+        return withContext(coroutineDispatcher) {
             session?.putAsync(
                 PutDocumentsRequest.Builder()
                     .addDocuments(results)
@@ -42,8 +45,8 @@ class SearchManager(
         }
     }
 
-    suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> {
-        return withContext(Dispatchers.IO) {
+    override suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> {
+        return withContext(coroutineDispatcher) {
             val searchSpec = SearchSpec.Builder()
                 .setRankingStrategy(RANKING_STRATEGY_RELEVANCE_SCORE)
                 .build()
@@ -62,7 +65,7 @@ class SearchManager(
         }
     }
 
-    fun closeSession() {
+    override fun closeSession() {
         session?.close()
         session = null
     }

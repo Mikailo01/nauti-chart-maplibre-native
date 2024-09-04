@@ -25,4 +25,10 @@ interface UserPreferencesRepository {
 
     suspend fun saveAreHarboursVisible(boolean: Boolean)
     fun getAreHarboursVisible(): Flow<Boolean>
+
+    suspend fun savePoiUpdateInterval(interval: Long)
+    fun getPoiUpdateInterval(): Flow<Long>
+
+    suspend fun saveHarboursUpdateInterval(interval: Long)
+    fun getHarboursUpdateInterval(): Flow<Long>
 }

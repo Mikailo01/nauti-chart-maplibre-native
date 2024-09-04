@@ -71,7 +71,7 @@ class GetRegionsUseCase(
         isoCode: String,
         query: String,
     ): Flow<ApiResult<List<RegionModel>>> = flow {
-        var filteredList: List<RegionModel>
+        var filteredList: List<RegionModel> = emptyList()
         // if regions are cached in the database emit results and return flow, otherwise make query
         // to obtain them
         regionRepository.getRegions(countryId)
@@ -79,12 +79,13 @@ class GetRegionsUseCase(
                 emit(ApiResult.Success(data = it))
                 return@flow
             } ?: run {
-            overpassRepository.makeQuery<OverpassRelationModel>(query).firstOrNull()!!.let { result ->
+            overpassRepository.makeQuery<OverpassRelationModel>(query = query, getTimestamp = false)
+                .firstOrNull()?.let { result ->
                 when {
                     result.exception == null && !result.data?.toList().isNullOrEmpty() -> {
                         filteredList =
                             filterRegionObjects(
-                                result.data?.toList() ?: emptyList(),
+                                result.data?.second ?: emptyList(),
                                 countryId,
                                 isoCode,
                             ).takeIf { it.isNotEmpty() } ?: run {
@@ -98,18 +99,19 @@ class GetRegionsUseCase(
                                             .type(OverpassQueryBuilder.Type.Relation)
                                             .adminLevel(6)
                                             .build()
-                                    ).firstOrNull()!!
+                                    ).firstOrNull()
 
                                 when {
-                                    newResult.exception == null && !newResult.data?.toList().isNullOrEmpty() -> {
+                                    newResult?.exception == null && !newResult?.data?.toList()
+                                        .isNullOrEmpty() -> {
                                         filterRegionObjects(
-                                            newResult.data?.toList() ?: emptyList(),
+                                            newResult?.data?.second ?: emptyList(),
                                             countryId,
                                             isoCode,
                                         )
                                     }
 
-                                    newResult.exception != null -> {
+                                    newResult?.exception != null -> {
                                         emit(ApiResult.Failure(newResult.exception))
                                         return@flow
                                     }
@@ -126,12 +128,14 @@ class GetRegionsUseCase(
                         emit(ApiResult.Failure(exception = result.exception))
                         return@flow
                     }
+
                     else -> {
                         emit(ApiResult.Failure(exception = NoSuchElementException()))
                         return@flow
                     }
                 }
             }
+
             filteredList.let {
                 regionRepository.apply {
                     cacheRegions(it)

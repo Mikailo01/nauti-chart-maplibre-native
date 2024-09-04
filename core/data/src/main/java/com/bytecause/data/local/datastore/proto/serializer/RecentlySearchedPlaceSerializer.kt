@@ -1,4 +1,4 @@
-package com.bytecause.search.data.local.datastore.proto.serializers
+package com.bytecause.data.local.datastore.proto.serializer
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer

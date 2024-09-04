@@ -4,19 +4,26 @@ import com.bytecause.data.local.room.tables.ContinentCountriesRelation
 import com.bytecause.data.local.room.tables.ContinentEntity
 import com.bytecause.data.local.room.tables.CountryEntity
 import com.bytecause.data.local.room.tables.HarboursEntity
-import com.bytecause.data.local.room.tables.PoiCacheEntity
+import com.bytecause.data.local.room.tables.HarboursMetadataDatasetEntity
+import com.bytecause.data.local.room.tables.OsmRegionMetadataDatasetEntity
+import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
+import com.bytecause.data.local.room.tables.RegionPoiCacheEntity
 import com.bytecause.data.local.room.tables.RegionEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
+import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.relations.CountryRegionsRelation
 import com.bytecause.domain.model.ContinentCountriesModel
 import com.bytecause.domain.model.ContinentModel
 import com.bytecause.domain.model.CountryModel
 import com.bytecause.domain.model.CountryRegionsModel
+import com.bytecause.domain.model.HarboursMetadataDatasetModel
 import com.bytecause.domain.model.HarboursModel
+import com.bytecause.domain.model.OsmRegionMetadataDatasetModel
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.model.RegionModel
 import com.bytecause.domain.model.VesselInfoModel
 import com.bytecause.domain.model.VesselModel
+import com.bytecause.domain.model.VesselsMetadataDatasetModel
 import com.bytecause.util.mappers.mapList
 
 
@@ -75,8 +82,20 @@ fun HarboursModel.asHarboursEntity(): HarboursEntity = HarboursEntity(
     tags = tags
 )
 
-fun PoiCacheModel.asPoiCacheEntity(drawableResourceName: String? = null): PoiCacheEntity =
-    PoiCacheEntity(
+fun PoiCacheModel.asRegionPoiCacheEntity(drawableResourceName: String? = null): RegionPoiCacheEntity =
+    RegionPoiCacheEntity(
+        placeId = placeId,
+        category = category,
+        drawableResourceName = drawableResourceName.takeIf { it != null }
+            ?: this.drawableResourceName,
+        latitude = latitude,
+        longitude = longitude,
+        tags = tags,
+        datasetId = datasetId
+    )
+
+fun PoiCacheModel.asRadiusPoiCacheEntity(drawableResourceName: String? = null): RadiusPoiCacheEntity =
+    RadiusPoiCacheEntity(
         placeId = placeId,
         category = category,
         drawableResourceName = drawableResourceName.takeIf { it != null }
@@ -86,7 +105,16 @@ fun PoiCacheModel.asPoiCacheEntity(drawableResourceName: String? = null): PoiCac
         tags = tags
     )
 
-fun PoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
+fun RegionPoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
+    placeId = placeId,
+    category = category,
+    drawableResourceName = drawableResourceName,
+    latitude = latitude,
+    longitude = longitude,
+    tags = tags
+)
+
+fun RadiusPoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
     placeId = placeId,
     category = category,
     drawableResourceName = drawableResourceName,
@@ -96,11 +124,11 @@ fun PoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
 )
 
 fun RegionEntity.asRegionModel(): RegionModel =
-    RegionModel(id = id, names = names, countryId = countryId)
+    RegionModel(id = id, names = names, countryId = countryId, isDownloaded = isDownloaded)
 
 
 fun RegionModel.asRegionEntity(): RegionEntity =
-    RegionEntity(id = id, names = names, countryId = countryId)
+    RegionEntity(id = id, names = names, countryId = countryId, isDownloaded = isDownloaded)
 
 fun CountryEntity.asCountryModel(): CountryModel = CountryModel(
     id = id,
@@ -122,3 +150,37 @@ fun CountryRegionsRelation.asCountryRegionsModel() = CountryRegionsModel(
     countryModel = countryEntity.asCountryModel(),
     regionModels = mapList(regionEntities) { it.asRegionModel() }
 )
+
+fun OsmRegionMetadataDatasetModel.asOsmRegionMetadataDatasetEntity() = OsmRegionMetadataDatasetEntity(
+    id = id,
+    timestamp = timestamp
+)
+
+fun OsmRegionMetadataDatasetEntity.asOsmRegionMetadataDatasetModel() = OsmRegionMetadataDatasetModel(
+    id = id,
+    timestamp = timestamp
+)
+
+fun HarboursMetadataDatasetModel.asHarboursMetadataDatasetEntity(): HarboursMetadataDatasetEntity =
+    HarboursMetadataDatasetEntity(
+        id = id,
+        timestamp = timestamp
+    )
+
+fun HarboursMetadataDatasetEntity.asHarboursMetadataDatasetModel(): HarboursMetadataDatasetModel =
+    HarboursMetadataDatasetModel(
+        id = id,
+        timestamp = timestamp
+    )
+
+fun VesselsMetadataDatasetModel.asVesselsMetadataDatasetEntity(): VesselsMetadataDatasetEntity =
+    VesselsMetadataDatasetEntity(
+        id = id,
+        timestamp = timestamp
+    )
+
+fun VesselsMetadataDatasetEntity.asVesselsMetadataDatasetModel(): VesselsMetadataDatasetModel =
+    VesselsMetadataDatasetModel(
+        id = id,
+        timestamp = timestamp
+    )

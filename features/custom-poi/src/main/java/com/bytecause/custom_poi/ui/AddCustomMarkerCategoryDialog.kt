@@ -62,11 +62,26 @@ class AddCustomMarkerCategoryDialog :
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.apply {
-            navBack.setOnClickListener {
-                sharedViewModel.resetDrawableId()
-                findNavController().popBackStack()
+            val contentColor =
+                ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer)
+
+            toolbarAppBarLayout.setBackgroundColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.md_theme_primaryContainer
+                )
+            )
+            navBack.apply {
+                setColorFilter(contentColor)
+                setOnClickListener {
+                    sharedViewModel.resetDrawableId()
+                    findNavController().popBackStack()
+                }
             }
-            destNameTextView.text = getString(R.string.new_category)
+            destNameTextView.apply {
+                text = getString(R.string.new_category)
+                setTextColor(contentColor)
+            }
             toolbarDivider.visibility = View.GONE
         }
 

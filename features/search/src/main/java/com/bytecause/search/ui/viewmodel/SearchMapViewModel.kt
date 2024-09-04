@@ -2,14 +2,14 @@ package com.bytecause.search.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.SearchedPlace
 import com.bytecause.domain.model.UiState
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.search.data.local.appsearch.SearchManager
-import com.bytecause.search.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
-import java.net.ConnectException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,7 +36,7 @@ constructor(
         private set
 
     private var _uiSearchState =
-        MutableStateFlow<com.bytecause.domain.model.UiState<SearchedPlace>?>(null)
+        MutableStateFlow<UiState<SearchedPlace>?>(null)
     val uiSearchState get() = _uiSearchState.asStateFlow()
 
     // place that should be shown on map

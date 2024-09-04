@@ -1,6 +1,5 @@
 package com.bytecause.first_run.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.UserPreferencesRepository
@@ -14,11 +13,8 @@ import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
 import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -62,7 +58,7 @@ constructor(
                     val query = OverpassQueryBuilder
                         .format(OverpassQueryBuilder.FormatTypes.JSON)
                         .timeout(240)
-                        .region(listOf(regionName))
+                        .region(regionName)
                         .type(OverpassQueryBuilder.Type.Node)
                         .search(
                             SearchTypes.UnionSet(searchTypesStringList)
@@ -77,7 +73,7 @@ constructor(
                         )
                         .build()
 
-                    getPoiResultByRegionUseCase(regionName, query).collect { result ->
+                    getPoiResultByRegionUseCase(query = query).collect { result ->
                         when (result) {
                             is ApiResult.Success -> {
                                 _uiStateFlow.emit(

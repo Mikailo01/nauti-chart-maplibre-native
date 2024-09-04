@@ -181,25 +181,22 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 }
 
                 null -> {
-                    if (!uiState.loading.isLoading) setDownloadState(false)
-                    else viewModel.showDownloadProgressBar(true, uiState.loading.progress)
+                    when {
+                        !uiState.loading.isLoading -> {
+                            setDownloadState(false)
 
-                    if (uiState.items.isEmpty()) return@observe
+                            Toast.makeText(
+                                requireContext(),
+                                getString(com.bytecause.core.resources.R.string.download_success),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
 
-                    Toast.makeText(
-                        requireContext(),
-                        getString(com.bytecause.core.resources.R.string.download_success),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
-                else -> {
-                    setDownloadState(false)
-                    Toast.makeText(
-                        requireContext(),
-                        getString(com.bytecause.core.resources.R.string.something_went_wrong),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        uiState.loading.isLoading -> viewModel.showDownloadProgressBar(
+                            true,
+                            uiState.loading.progress
+                        )
+                    }
                 }
             }
         }
@@ -228,11 +225,11 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
         when (isDownloading) {
             true -> {
                 viewModel.getPois(
-                    regionName = "",
+                    regionId = viewModel.getRegionFromQueue().first,
                     query = OverpassQueryBuilder
                         .format(OverpassQueryBuilder.FormatTypes.JSON)
                         .timeout(240)
-                        .region(viewModel.getRegionNameFromQueue())
+                        .region(viewModel.getRegionFromQueue().second)
                         .type(OverpassQueryBuilder.Type.Node)
                         .search(
                             com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)

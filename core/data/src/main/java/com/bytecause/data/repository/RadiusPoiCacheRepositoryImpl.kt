@@ -1,12 +1,12 @@
 package com.bytecause.data.repository
 
-import com.bytecause.data.di.IoDispatcher
-import com.bytecause.data.local.room.dao.PoiCacheDao
-import com.bytecause.data.mappers.asPoiCacheEntity
+import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.mappers.asPoiCacheModel
-import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.data.mappers.asRadiusPoiCacheEntity
+import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
+import com.bytecause.util.mappers.mapList
 import com.bytecause.util.poi.PoiUtil
 import com.bytecause.util.poi.PoiUtil.getResourceName
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,37 +15,36 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-class PoiCacheRepositoryImpl @Inject constructor(
-    private val poiCacheDao: PoiCacheDao,
-    @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : PoiCacheRepository {
-
-    override fun loadResultsByCategory(category: List<String>): Flow<List<PoiCacheModel>> =
-        poiCacheDao.loadTest(category)
-            .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
+class RadiusPoiCacheRepositoryImpl(
+    private val radiusPoiCacheDao: RadiusPoiCacheDao,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : RadiusPoiCacheRepository {
+    override fun loadByCategory(category: List<String>): Flow<List<PoiCacheModel>> =
+        radiusPoiCacheDao.loadByCategory(category)
+            .map { entityList -> mapList(entityList) { it.asPoiCacheModel() } }
             .flowOn(coroutineDispatcher)
 
-    override fun isCacheEmpty(): Flow<Boolean> = poiCacheDao.isCacheEmpty()
+    override fun isCacheEmpty(): Flow<Boolean> = radiusPoiCacheDao.isCacheEmpty()
         .flowOn(coroutineDispatcher)
 
     override fun getAllDistinctCategories(): Flow<List<String>> =
-        poiCacheDao.getAllDistinctCategories()
+        radiusPoiCacheDao.getAllDistinctCategories()
             .flowOn(coroutineDispatcher)
 
     override fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheModel>> =
-        poiCacheDao.searchInCache(placeIds)
+        radiusPoiCacheDao.searchInCache(placeIds)
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
             .flowOn(coroutineDispatcher)
 
     override fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
-        poiCacheDao.searchPoiWithInfoById(id)
+        radiusPoiCacheDao.searchPoiWithInfoById(id)
             .map { it.asPoiCacheModel() }
             .flowOn(coroutineDispatcher)
 
-    override fun isPlaceCached(placeId: Long): Flow<Boolean> = poiCacheDao.isPlaceCached(placeId)
-        .flowOn(coroutineDispatcher)
+    override fun isPlaceCached(placeId: Long): Flow<Boolean> =
+        radiusPoiCacheDao.isPlaceCached(placeId)
+            .flowOn(coroutineDispatcher)
 
     override fun loadPoiCacheByBoundingBox(
         minLat: Double,
@@ -54,27 +53,34 @@ class PoiCacheRepositoryImpl @Inject constructor(
         maxLon: Double,
         selectedCategories: Set<String>
     ): Flow<List<PoiCacheModel>> =
-        poiCacheDao.loadPoiCacheByBoundingBox(minLat, maxLat, minLon, maxLon, selectedCategories)
+        radiusPoiCacheDao.loadPoiCacheByBoundingBox(
+            minLat,
+            maxLat,
+            minLon,
+            maxLon,
+            selectedCategories
+        )
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
 
 
     override suspend fun cacheResult(result: List<PoiCacheModel>) =
         withContext(coroutineDispatcher) {
             result.map {
-                it.asPoiCacheEntity(
+                it.asRadiusPoiCacheEntity(
                     // Extracts drawable resource name from poi's tags
-                    getResourceName(PoiUtil.extractCategoryFromPoiEntity(it.tags)
-                        .takeIf { category -> !category.isNullOrEmpty() }
-                        .let { tagValue -> formatTagString(tagValue) })
+                    getResourceName(
+                        PoiUtil.extractCategoryFromPoiEntity(it.tags)
+                            .takeIf { category -> !category.isNullOrEmpty() }
+                            .let { tagValue -> formatTagString(tagValue) })
                 )
             }.let {
-                poiCacheDao.cacheResult(it)
+                radiusPoiCacheDao.cacheResult(it)
             }
         }
 
     override suspend fun clearCache() {
         withContext(coroutineDispatcher) {
-            poiCacheDao.clearCache()
+            radiusPoiCacheDao.clearCache()
         }
     }
 }

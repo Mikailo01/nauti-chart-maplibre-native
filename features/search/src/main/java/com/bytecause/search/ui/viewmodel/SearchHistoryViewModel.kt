@@ -3,10 +3,10 @@ package com.bytecause.search.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.SearchPlaceCacheEntity
+import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.search.data.local.appsearch.SearchManager
-import com.bytecause.search.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
