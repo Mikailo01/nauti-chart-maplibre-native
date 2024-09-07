@@ -40,6 +40,7 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.workManager)
 
+    // Lifecycle service
     implementation(libs.androidx.lifecycle.lifecycleService)
 
     // Gson

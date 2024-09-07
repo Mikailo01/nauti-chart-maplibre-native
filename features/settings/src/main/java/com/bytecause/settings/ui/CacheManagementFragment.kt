@@ -55,6 +55,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.bytecause.data.services.HarboursUpdateService
+import com.bytecause.data.services.RegionPoiUpdateService
 import com.bytecause.features.settings.R
 import com.bytecause.features.settings.databinding.CacheManagementLayoutBinding
 import com.bytecause.presentation.components.compose.ConfirmationDialog
@@ -231,18 +232,21 @@ fun CacheManagementContent(
                             ActionButtons(
                                 isUpdating = state.harboursModel.isUpdating,
                                 onForceUpdateClick = {
-
+                                    // Start service
                                     Intent(activity, HarboursUpdateService::class.java).also {
                                         it.setAction(HarboursUpdateService.Actions.START.toString())
                                         activity.startService(it)
                                     }
-
-                                    onEvent(CacheManagementEvent.OnUpdateHarbours)
                                 },
                                 onCancelUpdateClick = {
-                                    onEvent(
-                                        CacheManagementEvent.OnCancelHarboursUpdate
-                                    )
+                                    // Stop service
+                                    Intent(
+                                        activity,
+                                        HarboursUpdateService::class.java
+                                    ).also {
+                                        it.setAction(HarboursUpdateService.Actions.STOP.toString())
+                                        activity.startService(it)
+                                    }
                                 },
                                 onClearButtonClick = {
                                     onEvent(
@@ -313,24 +317,32 @@ fun CacheManagementContent(
                                             )
                                         },
                                         onUpdate = { regionId ->
-
+                                            // Start service
                                             Intent(
                                                 activity,
-                                                HarboursUpdateService::class.java
+                                                RegionPoiUpdateService::class.java
                                             ).also {
-                                                it.setAction(HarboursUpdateService.Actions.START.toString())
-                                                it.putExtra("regionId", regionId)
+                                                it.setAction(RegionPoiUpdateService.Actions.START.toString())
                                                 it.putExtra(
-                                                    "regionName",
+                                                    RegionPoiUpdateService.REGION_ID_PARAM,
+                                                    regionId
+                                                )
+                                                it.putExtra(
+                                                    RegionPoiUpdateService.REGION_NAME_PARAM,
                                                     state.downloadedRegions[regionId]?.names?.get("name")
                                                 )
                                                 activity.startService(it)
                                             }
-
-                                            onEvent(CacheManagementEvent.OnUpdateRegion(regionId))
                                         },
                                         onCancel = {
-                                            onEvent(CacheManagementEvent.OnCancelRegionUpdate(it))
+                                            // Stop service
+                                            Intent(
+                                                activity,
+                                                RegionPoiUpdateService::class.java
+                                            ).also {
+                                                it.setAction(RegionPoiUpdateService.Actions.STOP.toString())
+                                                activity.startService(it)
+                                            }
                                         }
                                     )
                                 }

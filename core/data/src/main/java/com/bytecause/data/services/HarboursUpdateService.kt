@@ -50,8 +50,7 @@ class HarboursUpdateService : LifecycleService() {
             }
 
             Actions.STOP.toString() -> {
-                ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdateCancelled)
-                stopSelf()
+                stopService()
             }
         }
         return START_STICKY // Ensures that the service continues running until explicitly stopped
@@ -97,6 +96,9 @@ class HarboursUpdateService : LifecycleService() {
 
     private fun updateHarboursData() {
         lifecycleScope.launch {
+
+            ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdateStarted)
+
             updateHarboursUseCase(forceUpdate = true).collect { result ->
                 when (result) {
                     is ApiResult.Progress -> {
@@ -108,12 +110,12 @@ class HarboursUpdateService : LifecycleService() {
 
                     is ApiResult.Success -> {
                         ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdate(result))
-                        onHarboursUpdateSuccess()
+                        stopService()
                     }
 
                     is ApiResult.Failure -> {
                         ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdate(result))
-                        onHarboursUpdateFailure()
+                        stopService()
                     }
                 }
             }
@@ -131,18 +133,9 @@ class HarboursUpdateService : LifecycleService() {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
-    private fun onHarboursUpdateSuccess() {
-        //stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun onHarboursUpdateFailure() {
-        notificationBuilder.setContentText("Failed to update harbours")
-            .setProgress(0, 0, false) // Remove progress bar
-            .setOngoing(false) // Allow user to dismiss the notification
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
-
-        // stopForeground(STOP_FOREGROUND_REMOVE)
+    private fun stopService() {
+        ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdateCancelled)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 

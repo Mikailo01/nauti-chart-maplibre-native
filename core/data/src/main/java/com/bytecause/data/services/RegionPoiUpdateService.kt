@@ -37,6 +37,8 @@ class RegionPoiUpdateService : LifecycleService() {
 
     companion object {
         const val NOTIFICATION_ID = 1
+        const val REGION_ID_PARAM = "regionId"
+        const val REGION_NAME_PARAM = "regionName"
     }
 
     override fun onCreate() {
@@ -51,16 +53,15 @@ class RegionPoiUpdateService : LifecycleService() {
         when (intent?.action) {
             Actions.START.toString() -> {
 
-                regionId = intent.getIntExtra("regionId", -1)
-                val regionName = intent.getStringExtra("regionName") ?: ""
+                regionId = intent.getIntExtra(REGION_ID_PARAM, -1)
+                val regionName = intent.getStringExtra(REGION_NAME_PARAM) ?: ""
 
                 startForegroundServiceWithProgress()
                 downloadRegionPoisData(regionId = regionId, regionName = regionName)
             }
 
             Actions.STOP.toString() -> {
-                ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiUpdateCancelled(regionId = regionId))
-                stopSelf()
+                stopService()
             }
         }
         return START_STICKY // Ensures that the service continues running until explicitly stopped
@@ -124,6 +125,8 @@ class RegionPoiUpdateService : LifecycleService() {
                 )
                 .build()
 
+            ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiUpdateStarted(regionId))
+
             getPoiResultByRegionUseCase(query = query, regionId = regionId).collect { result ->
                 when (result) {
                     is ApiResult.Progress -> {
@@ -145,7 +148,7 @@ class RegionPoiUpdateService : LifecycleService() {
                                 result
                             )
                         )
-                        onPoiDownloadSuccess()
+                        stopService()
                     }
 
                     is ApiResult.Failure -> {
@@ -155,7 +158,7 @@ class RegionPoiUpdateService : LifecycleService() {
                                 result
                             )
                         )
-                        onPoiDownloadFailure()
+                        stopService()
                     }
                 }
             }
@@ -173,13 +176,9 @@ class RegionPoiUpdateService : LifecycleService() {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
-    private fun onPoiDownloadSuccess() {
-        //stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun onPoiDownloadFailure() {
-        // stopForeground(STOP_FOREGROUND_REMOVE)
+    private fun stopService() {
+        ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiUpdateCancelled(regionId))
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 

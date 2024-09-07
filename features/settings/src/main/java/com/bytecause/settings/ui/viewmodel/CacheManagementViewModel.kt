@@ -12,8 +12,6 @@ import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import com.bytecause.domain.model.ApiResult
-import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
-import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import com.bytecause.settings.ui.ConfirmationDialogType
 import com.bytecause.settings.ui.UpdateInterval
 import com.bytecause.settings.ui.event.CacheManagementEffect
@@ -52,9 +50,6 @@ class CacheManagementViewModel @Inject constructor(
 
     private val _effect = Channel<CacheManagementEffect>(capacity = Channel.CONFLATED)
     val effect = _effect.receiveAsFlow()
-
-    private var poiRegionUpdateJob: Job? = null
-    private var harboursUpdateJob: Job? = null
 
     init {
         // get regions datasets and their last update timestamps
@@ -259,6 +254,16 @@ class CacheManagementViewModel @Inject constructor(
                         }
                     }
 
+                    is ServiceEvent.RegionPoiUpdateStarted -> {
+                        _uiState.update {
+                            it.copy(downloadedRegions = it.downloadedRegions.toMutableMap().apply {
+                                it.downloadedRegions[event.regionId]?.let { region ->
+                                    replace(event.regionId, region.copy(isUpdating = true))
+                                }
+                            })
+                        }
+                    }
+
                     is ServiceEvent.RegionPoiUpdateCancelled -> {
                         _uiState.update {
                             it.copy(
@@ -287,6 +292,12 @@ class CacheManagementViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    ServiceEvent.HarboursUpdateStarted -> {
+                        _uiState.update {
+                            it.copy(harboursModel = it.harboursModel.copy(isUpdating = true))
+                        }
+                    }
                 }
             }
         }
@@ -298,12 +309,8 @@ class CacheManagementViewModel @Inject constructor(
             CacheManagementEvent.OnClearSearchHistory -> onClearSearchHistory()
             CacheManagementEvent.OnClearHarbours -> onClearHarbours()
             CacheManagementEvent.OnClearVessels -> onClearVessels()
-            CacheManagementEvent.OnUpdateHarbours -> onUpdateHarbours()
-            CacheManagementEvent.OnCancelHarboursUpdate -> onCancelHarboursUpdate()
             is CacheManagementEvent.OnShowConfirmationDialog -> onShowConfirmationDialog(event.value)
             is CacheManagementEvent.OnDeleteRegion -> onDeleteRegion(event.regionId)
-            is CacheManagementEvent.OnUpdateRegion -> onUpdateRegion(event.regionId)
-            is CacheManagementEvent.OnCancelRegionUpdate -> onCancelRegionUpdate(event.regionId)
             is CacheManagementEvent.OnSetHarboursUpdateInterval -> onSetHarboursUpdateInterval(event.interval)
             is CacheManagementEvent.OnSetPoiUpdateInterval -> onSetPoiUpdateInterval(event.interval)
         }
@@ -363,56 +370,6 @@ class CacheManagementViewModel @Inject constructor(
             }
 
             userPreferencesRepository.saveHarboursUpdateInterval(intervalAsLong)
-        }
-    }
-
-    private fun onCancelRegionUpdate(regionId: Int) {
-        poiRegionUpdateJob?.cancel()
-        poiRegionUpdateJob = null
-
-        _uiState.update {
-            it.copy(
-                downloadedRegions = it.downloadedRegions.toMutableMap().apply {
-                    replace(
-                        regionId, it.downloadedRegions[regionId]?.copy(
-                            isUpdating = false,
-                            progress = -1
-                        ) ?: return
-                    )
-                }
-            )
-        }
-    }
-
-    private fun onCancelHarboursUpdate() {
-        harboursUpdateJob?.cancel()
-        harboursUpdateJob = null
-
-        _uiState.update {
-            it.copy(
-                harboursModel = it.harboursModel.copy(isUpdating = false, progress = -1)
-            )
-        }
-    }
-
-    private fun onUpdateHarbours() {
-        viewModelScope.launch {
-
-            _uiState.update {
-                it.copy(harboursModel = it.harboursModel.copy(isUpdating = true))
-            }
-        }
-    }
-
-    private fun onUpdateRegion(regionId: Int) {
-        if (uiState.value.downloadedRegions[regionId]?.isUpdating == true) return
-
-        _uiState.update {
-            it.copy(downloadedRegions = it.downloadedRegions.toMutableMap().apply {
-                it.downloadedRegions[regionId]?.let { region ->
-                    replace(regionId, region.copy(isUpdating = true))
-                }
-            })
         }
     }
 

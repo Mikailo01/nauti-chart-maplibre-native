@@ -46,6 +46,9 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.presentation)
 
+    // Lifecycle service
+    implementation(libs.androidx.lifecycle.lifecycleService)
+
     // Navigation
     implementation(libs.androidx.navigation.uiKtx)
     implementation(libs.androidx.navigation.fragmentKtx)
