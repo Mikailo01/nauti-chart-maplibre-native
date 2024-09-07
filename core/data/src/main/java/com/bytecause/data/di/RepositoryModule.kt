@@ -21,7 +21,7 @@ import com.bytecause.data.repository.RegionPoiCacheRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository

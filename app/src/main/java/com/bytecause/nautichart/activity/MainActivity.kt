@@ -2,9 +2,12 @@ package com.bytecause.nautichart.activity
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.GravityCompat
@@ -27,37 +30,38 @@ class MainActivity : AppCompatActivity(), DrawerController {
 
     private val mapSharedViewModel: MapSharedViewModel by viewModels()
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Splash Screen API throws iconView NPE when navigating from implicit intent.
         // Start-up splash screen.
-       /* installSplashScreen().apply {
-            setOnExitAnimationListener { screen ->
-                val zoomX = ObjectAnimator.ofFloat(
-                    screen.iconView,
-                    View.SCALE_X,
-                    0.5f,
-                    0.0f
-                )
-                zoomX.interpolator = OvershootInterpolator()
-                zoomX.duration = 500L
-                zoomX.doOnEnd { screen.remove() }
+        /* installSplashScreen().apply {
+             setOnExitAnimationListener { screen ->
+                 val zoomX = ObjectAnimator.ofFloat(
+                     screen.iconView,
+                     View.SCALE_X,
+                     0.5f,
+                     0.0f
+                 )
+                 zoomX.interpolator = OvershootInterpolator()
+                 zoomX.duration = 500L
+                 zoomX.doOnEnd { screen.remove() }
 
-                val zoomY = ObjectAnimator.ofFloat(
-                    screen.iconView,
-                    View.SCALE_Y,
-                    0.5f,
-                    0.0f
-                )
-                zoomY.interpolator = OvershootInterpolator()
-                zoomY.duration = 500L
-                zoomY.doOnEnd { screen.remove() }
+                 val zoomY = ObjectAnimator.ofFloat(
+                     screen.iconView,
+                     View.SCALE_Y,
+                     0.5f,
+                     0.0f
+                 )
+                 zoomY.interpolator = OvershootInterpolator()
+                 zoomY.duration = 500L
+                 zoomY.doOnEnd { screen.remove() }
 
-                zoomX.start()
-                zoomY.start()
-            }
-        }*/
+                 zoomX.start()
+                 zoomY.start()
+             }
+         }*/
 
         setContentView(R.layout.navigation_activity)
 
@@ -110,7 +114,7 @@ class MainActivity : AppCompatActivity(), DrawerController {
                             val zoom = parts[1].substringAfter("=")
 
                             mapSharedViewModel.setIntentCoordinates(
-                               LatLng(
+                                LatLng(
                                     latitude = latitude.toDouble(),
                                     longitude = longitude.toDouble(),
                                 ),
@@ -121,6 +125,14 @@ class MainActivity : AppCompatActivity(), DrawerController {
                 }
             }
         }
+
+        //pushNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private val pushNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+
     }
 
     private fun setupNavigationMenu(navController: NavController) {

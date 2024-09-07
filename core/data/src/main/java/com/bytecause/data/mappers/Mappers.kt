@@ -163,24 +163,20 @@ fun OsmRegionMetadataDatasetEntity.asOsmRegionMetadataDatasetModel() = OsmRegion
 
 fun HarboursMetadataDatasetModel.asHarboursMetadataDatasetEntity(): HarboursMetadataDatasetEntity =
     HarboursMetadataDatasetEntity(
-        id = id,
         timestamp = timestamp
     )
 
 fun HarboursMetadataDatasetEntity.asHarboursMetadataDatasetModel(): HarboursMetadataDatasetModel =
     HarboursMetadataDatasetModel(
-        id = id,
         timestamp = timestamp
     )
 
 fun VesselsMetadataDatasetModel.asVesselsMetadataDatasetEntity(): VesselsMetadataDatasetEntity =
     VesselsMetadataDatasetEntity(
-        id = id,
         timestamp = timestamp
     )
 
 fun VesselsMetadataDatasetEntity.asVesselsMetadataDatasetModel(): VesselsMetadataDatasetModel =
     VesselsMetadataDatasetModel(
-        id = id,
         timestamp = timestamp
     )

@@ -9,12 +9,12 @@ import kotlinx.coroutines.flow.flow
 
 class GetHarboursUseCase(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
-    private val fetchHarboursUseCase: UpdateHarboursUseCase
+    private val updateHarboursUseCase: UpdateHarboursUseCase
 ) {
 
     operator fun invoke(): Flow<ApiResult<List<HarboursModel>>> = flow {
         // Ensure that harbours are present in database
-        val updateResult = fetchHarboursUseCase().firstOrNull()
+        val updateResult = updateHarboursUseCase().firstOrNull()
         if (updateResult is ApiResult.Failure) {
             emit(
                 ApiResult.Failure(

@@ -35,6 +35,13 @@ dependencies {
     implementation(libs.androidx.room)
     ksp(libs.androidx.room.compiler)
 
+    implementation(libs.androidx.activity.ktx)
+
+    // WorkManager
+    implementation(libs.androidx.workManager)
+
+    implementation(libs.androidx.lifecycle.lifecycleService)
+
     // Gson
     implementation(libs.gson)
 

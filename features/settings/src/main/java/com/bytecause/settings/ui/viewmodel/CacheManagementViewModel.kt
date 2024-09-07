@@ -1,27 +1,25 @@
 package com.bytecause.settings.ui.viewmodel
 
-import android.annotation.SuppressLint
 import android.text.format.DateFormat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
-import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.data.services.communication.ServiceApiResultListener
+import com.bytecause.data.services.communication.ServiceEvent
 import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
 import com.bytecause.domain.abstractions.RegionRepository
-import com.bytecause.domain.abstractions.VesselsDatabaseRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
-import com.bytecause.domain.util.OverpassQueryBuilder
+import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import com.bytecause.settings.ui.ConfirmationDialogType
 import com.bytecause.settings.ui.UpdateInterval
 import com.bytecause.settings.ui.event.CacheManagementEffect
 import com.bytecause.settings.ui.event.CacheManagementEvent
 import com.bytecause.settings.ui.model.RegionUiModel
 import com.bytecause.settings.ui.state.CacheManagementState
-import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
-import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -34,19 +32,17 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.TimeZone
 import javax.inject.Inject
+
+private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss"
 
 @HiltViewModel
 class CacheManagementViewModel @Inject constructor(
-    private val vesselsRepository: VesselsDatabaseRepository,
     private val osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository,
     private val harboursMetadataDatasetRepository: HarboursMetadataDatasetRepository,
     private val vesselsMetadataDatasetRepository: VesselsMetadataDatasetRepository,
     private val regionRepository: RegionRepository,
     private val searchHistoryRepository: SearchHistoryRepository,
-    private val getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -57,28 +53,29 @@ class CacheManagementViewModel @Inject constructor(
     private val _effect = Channel<CacheManagementEffect>(capacity = Channel.CONFLATED)
     val effect = _effect.receiveAsFlow()
 
-    private var updateJob: Job? = null
+    private var poiRegionUpdateJob: Job? = null
+    private var harboursUpdateJob: Job? = null
 
     init {
-
         // get regions datasets and their last update timestamps
         combine(
             regionRepository.getAllDownloadedRegions(),
             osmRegionMetadataDatasetRepository.getAllDatasets()
         ) { downloadedRegions, regionDatasets ->
 
-            _uiState.update {
-                it.copy(
-                    downloadedRegions = downloadedRegions.map { region ->
+            _uiState.update { state ->
+                state.copy(
+                    downloadedRegions = downloadedRegions.associate { region ->
 
-                        val timestamp = dateToTimestamp(
+                        val timestamp =
                             regionDatasets.find { dataset -> dataset?.id == region.id }?.timestamp
-                        )
 
-                        RegionUiModel(
+                        region.id to RegionUiModel(
                             regionId = region.id,
                             names = region.names,
-                            timestamp = timestamp ?: 0L
+                            timestamp = timestamp ?: 0L,
+                            isUpdating = state.downloadedRegions[region.id]?.isUpdating ?: false,
+                            progress = state.downloadedRegions[region.id]?.progress ?: -1
                         )
                     }
                 )
@@ -91,12 +88,14 @@ class CacheManagementViewModel @Inject constructor(
             harboursMetadataDatasetRepository.getDataset().collect { dataset ->
                 _uiState.update {
                     it.copy(
-                        harboursTimestamp = dateToTimestamp(dataset?.timestamp)?.let { timestamp ->
-                            DateFormat.format(
-                                "yyyy-MM-dd HH:mm:ss",
-                                timestamp
-                            ).toString()
-                        } ?: ""
+                        harboursModel = it.harboursModel.copy(
+                            timestamp = dataset?.timestamp?.let { timestamp ->
+                                DateFormat.format(
+                                    DEFAULT_DATE_FORMAT,
+                                    timestamp
+                                ).toString()
+                            } ?: ""
+                        )
                     )
                 }
             }
@@ -110,7 +109,7 @@ class CacheManagementViewModel @Inject constructor(
                     it.copy(
                         vesselsTimestamp = dataset?.timestamp?.let { timestamp ->
                             DateFormat.format(
-                                "yyyy-MM-dd HH:mm:ss",
+                                DEFAULT_DATE_FORMAT,
                                 timestamp
                             ).toString()
                         } ?: ""
@@ -124,11 +123,13 @@ class CacheManagementViewModel @Inject constructor(
             userPreferencesRepository.getHarboursUpdateInterval().collect { interval ->
                 _uiState.update {
                     it.copy(
-                        harboursUpdateInterval = when {
-                            UpdateInterval.OneWeek().interval == interval -> UpdateInterval.OneWeek()
-                            UpdateInterval.OneMonth().interval == interval -> UpdateInterval.OneMonth()
-                            else -> UpdateInterval.TwoWeeks()
-                        }
+                        harboursModel = it.harboursModel.copy(
+                            harboursUpdateInterval = when {
+                                UpdateInterval.OneWeek().interval == interval -> UpdateInterval.OneWeek()
+                                UpdateInterval.OneMonth().interval == interval -> UpdateInterval.OneMonth()
+                                else -> UpdateInterval.TwoWeeks()
+                            }
+                        ),
                     )
                 }
             }
@@ -148,19 +149,147 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
-    }
 
-    @SuppressLint("SimpleDateFormat")
-    private fun dateToTimestamp(dateString: String?): Long? {
-        // Define the date format
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
-        // Set the time zone to UTC as the input date is in UTC (denoted by 'Z')
-        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+        viewModelScope.launch {
+            ServiceApiResultListener.eventFlow.collect { event ->
+                when (event) {
+                    is ServiceEvent.HarboursUpdate -> {
+                        when (event.result) {
+                            is ApiResult.Failure -> {
+                                _uiState.update {
+                                    it.copy(
+                                        harboursModel = it.harboursModel.copy(
+                                            isUpdating = false,
+                                            progress = -1
+                                        )
+                                    )
+                                }
 
-        // Parse the date string to a Date object
-        val date = dateString?.let { dateFormat.parse(it) }
+                                sendEffect(CacheManagementEffect.HarboursUpdateFailure)
+                            }
 
-        return date?.time
+                            is ApiResult.Progress -> {
+                                event.result.progress?.let { progress ->
+                                    _uiState.update {
+                                        it.copy(
+                                            harboursModel = it.harboursModel.copy(
+                                                progress = it.harboursModel.progress.takeIf { it != -1 }
+                                                    ?.plus(progress) ?: progress
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            is ApiResult.Success -> {
+                                _uiState.update {
+                                    it.copy(
+                                        harboursModel = it.harboursModel.copy(
+                                            isUpdating = false,
+                                            progress = -1
+                                        )
+                                    )
+                                }
+
+                                sendEffect(CacheManagementEffect.HarboursUpdateSuccess)
+                            }
+                        }
+                    }
+
+                    is ServiceEvent.RegionPoiUpdate -> {
+                        when (event.result) {
+                            is ApiResult.Success -> {
+
+                                _uiState.update {
+                                    it.copy(
+                                        downloadedRegions = it.downloadedRegions.toMutableMap()
+                                            .apply {
+                                                it.downloadedRegions[event.regionId]?.let { region ->
+                                                    replace(
+                                                        event.regionId,
+                                                        region.copy(
+                                                            isUpdating = false,
+                                                            progress = -1
+                                                        )
+                                                    )
+                                                }
+                                            })
+                                }
+
+                                sendEffect(CacheManagementEffect.RegionUpdateSuccess)
+                            }
+
+                            is ApiResult.Failure -> {
+                                _uiState.update {
+                                    it.copy(
+                                        downloadedRegions = it.downloadedRegions.toMutableMap()
+                                            .apply {
+                                                it.downloadedRegions[event.regionId]?.let { region ->
+                                                    replace(
+                                                        event.regionId,
+                                                        region.copy(
+                                                            isUpdating = false,
+                                                            progress = -1
+                                                        )
+                                                    )
+                                                }
+                                            })
+                                }
+                                sendEffect(CacheManagementEffect.RegionUpdateFailure)
+                            }
+
+                            is ApiResult.Progress -> {
+                                event.result.progress?.let { progress ->
+
+                                    _uiState.update {
+                                        it.copy(
+                                            downloadedRegions = it.downloadedRegions.toMutableMap()
+                                                .apply {
+                                                    it.downloadedRegions[event.regionId]?.let { region ->
+                                                        replace(
+                                                            event.regionId,
+                                                            region.copy(progress = region.progress.takeIf { it != -1 }
+                                                                ?.plus(progress) ?: progress)
+                                                        )
+                                                    }
+                                                })
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    is ServiceEvent.RegionPoiUpdateCancelled -> {
+                        _uiState.update {
+                            it.copy(
+                                downloadedRegions = it.downloadedRegions.toMutableMap()
+                                    .apply {
+                                        it.downloadedRegions[event.regionId]?.let { region ->
+                                            replace(
+                                                event.regionId,
+                                                region.copy(
+                                                    isUpdating = false,
+                                                    progress = -1
+                                                )
+                                            )
+                                        }
+                                    })
+                        }
+                    }
+
+                    ServiceEvent.HarboursUpdateCancelled -> {
+                        _uiState.update {
+                            it.copy(
+                                harboursModel = it.harboursModel.copy(
+                                    isUpdating = false,
+                                    progress = -1
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun uiEventHandler(event: CacheManagementEvent) {
@@ -169,11 +298,12 @@ class CacheManagementViewModel @Inject constructor(
             CacheManagementEvent.OnClearSearchHistory -> onClearSearchHistory()
             CacheManagementEvent.OnClearHarbours -> onClearHarbours()
             CacheManagementEvent.OnClearVessels -> onClearVessels()
-            CacheManagementEvent.OnCancelRegionUpdate -> onCancelRegionUpdate()
             CacheManagementEvent.OnUpdateHarbours -> onUpdateHarbours()
+            CacheManagementEvent.OnCancelHarboursUpdate -> onCancelHarboursUpdate()
             is CacheManagementEvent.OnShowConfirmationDialog -> onShowConfirmationDialog(event.value)
             is CacheManagementEvent.OnDeleteRegion -> onDeleteRegion(event.regionId)
             is CacheManagementEvent.OnUpdateRegion -> onUpdateRegion(event.regionId)
+            is CacheManagementEvent.OnCancelRegionUpdate -> onCancelRegionUpdate(event.regionId)
             is CacheManagementEvent.OnSetHarboursUpdateInterval -> onSetHarboursUpdateInterval(event.interval)
             is CacheManagementEvent.OnSetPoiUpdateInterval -> onSetPoiUpdateInterval(event.interval)
         }
@@ -236,76 +366,54 @@ class CacheManagementViewModel @Inject constructor(
         }
     }
 
-    private fun onCancelRegionUpdate() {
-        updateJob?.cancel()
-        updateJob = null
+    private fun onCancelRegionUpdate(regionId: Int) {
+        poiRegionUpdateJob?.cancel()
+        poiRegionUpdateJob = null
 
-        _uiState.update { it.copy(updatingRegionId = -1, progress = -1) }
+        _uiState.update {
+            it.copy(
+                downloadedRegions = it.downloadedRegions.toMutableMap().apply {
+                    replace(
+                        regionId, it.downloadedRegions[regionId]?.copy(
+                            isUpdating = false,
+                            progress = -1
+                        ) ?: return
+                    )
+                }
+            )
+        }
+    }
+
+    private fun onCancelHarboursUpdate() {
+        harboursUpdateJob?.cancel()
+        harboursUpdateJob = null
+
+        _uiState.update {
+            it.copy(
+                harboursModel = it.harboursModel.copy(isUpdating = false, progress = -1)
+            )
+        }
     }
 
     private fun onUpdateHarbours() {
-        TODO()
+        viewModelScope.launch {
+
+            _uiState.update {
+                it.copy(harboursModel = it.harboursModel.copy(isUpdating = true))
+            }
+        }
     }
 
     private fun onUpdateRegion(regionId: Int) {
-        if (uiState.value.updatingRegionId != -1) return
+        if (uiState.value.downloadedRegions[regionId]?.isUpdating == true) return
 
-        uiState.value.downloadedRegions.find { it.regionId == regionId }?.names?.get("name")
-            ?.let { regionName ->
-
-                updateJob = viewModelScope.launch {
-                    val query = OverpassQueryBuilder
-                        .format(OverpassQueryBuilder.FormatTypes.JSON)
-                        .timeout(240)
-                        .region(regionName)
-                        .type(OverpassQueryBuilder.Type.Node)
-                        .search(
-                            com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)
-                                .filterNot(
-                                    emptyList(),
-                                    excludeAmenityObjectsFilterList,
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList()
-                                )
-                        )
-                        .build()
-
-                    _uiState.update { it.copy(updatingRegionId = regionId) }
-
-                    getPoiResultByRegionUseCase(
-                        query = query,
-                        regionId = regionId
-                    ).collect { result ->
-                        when (result) {
-                            is ApiResult.Success -> {
-                                _uiState.update {
-                                    it.copy(
-                                        updatingRegionId = -1,
-                                        progress = -1
-                                    )
-                                }
-                                sendEffect(CacheManagementEffect.RegionUpdateSuccess)
-                            }
-
-                            is ApiResult.Failure -> {
-                                _uiState.update { it.copy(updatingRegionId = -1, progress = -1) }
-                                sendEffect(CacheManagementEffect.RegionUpdateFailure)
-                            }
-
-                            is ApiResult.Progress -> {
-                                result.progress?.let { progress ->
-                                    _uiState.update {
-                                        it.copy(progress = it.progress.takeIf { it != -1 }
-                                            ?.plus(progress) ?: progress)
-                                    }
-                                }
-                            }
-                        }
-                    }
+        _uiState.update {
+            it.copy(downloadedRegions = it.downloadedRegions.toMutableMap().apply {
+                it.downloadedRegions[regionId]?.let { region ->
+                    replace(regionId, region.copy(isUpdating = true))
                 }
-            }
+            })
+        }
     }
 
     private fun onShowConfirmationDialog(type: ConfirmationDialogType?) {

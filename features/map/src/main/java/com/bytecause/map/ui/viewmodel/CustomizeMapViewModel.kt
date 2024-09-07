@@ -2,7 +2,7 @@ package com.bytecause.map.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading

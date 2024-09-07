@@ -10,11 +10,11 @@ import com.bytecause.domain.model.CountryModel
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.RegionModel
 import com.bytecause.domain.model.UiState
-import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
 import com.bytecause.domain.abstractions.RegionRepository
+import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.pois.ui.getKeyByIndex
 import com.bytecause.pois.ui.model.CountryParentItem
 import com.bytecause.pois.ui.model.RegionChildItem

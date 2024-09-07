@@ -4,3 +4,5 @@ import com.bytecause.domain.model.LatLngModel
 import org.maplibre.android.geometry.LatLng
 
 fun LatLng.asLatLngModel(): LatLngModel = LatLngModel(latitude, longitude)
+
+fun LatLngModel.asLatLng(): LatLng = LatLng(latitude, longitude)

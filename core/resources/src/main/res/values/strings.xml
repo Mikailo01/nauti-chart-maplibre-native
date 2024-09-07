@@ -55,6 +55,18 @@
     <string name="tiles">Tiles:</string>
     <string name="depth_contours">Depth contours</string>
     <string name="harbours">Harbours</string>
+    <string name="processed_count">Processed: %1s</string>
+    <string name="waiting_for_server_response">Waiting for server response…</string>
+    <string name="force_update">Force update</string>
+    <string name="harbours_update_success">Harbours updated successfully</string>
+    <string name="updating_harbours">Updating Harbours</string>
+    <string name="updating_region">Updating region dataset</string>
+    <string name="update_interval">Update interval</string>
+    <string name="data_will_be_permanently_deleted.">Data will be permanently deleted.</string>
+    <string name="one_week">1 week</string>
+    <string name="two_weeks">2 weeks</string>
+    <string name="one_month">1 month</string>
+    <string name="search_history">Search history</string>
     <string name="description">Description</string>
     <string name="contacts">Contacts</string>
     <string name="name">Name</string>
@@ -104,7 +116,6 @@
     <string name="show_results_on_the_map_place_holder">Show %1s on the map</string>
     <string name="loading_elements">Loading elements…</string>
     <string name="processing">Processing</string>
-    <string name="processed_count">(%1s)</string>
     <string name="unknown_region">Unknown region</string>
     <string name="skip">SKIP</string>
     <string name="choose_region_description">Please choose your region for which POIs should be downloaded.</string>

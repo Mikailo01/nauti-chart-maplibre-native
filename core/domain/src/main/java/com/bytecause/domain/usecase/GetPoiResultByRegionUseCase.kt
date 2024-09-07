@@ -10,6 +10,7 @@ import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.util.PoiTagsUtil.extractCategoryFromPoiEntity
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
+import com.bytecause.domain.util.Util.timestampStringToTimestampLong
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,7 @@ class GetPoiResultByRegionUseCase(
     private val osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+
     operator fun invoke(
         query: String,
         regionId: Int? = null
@@ -31,12 +33,13 @@ class GetPoiResultByRegionUseCase(
 
                 when {
                     result.data.first != null && result.data.second.isEmpty() -> {
-                        result.data.first?.let { timestamp ->
+                        result.data.first?.let { dateString ->
                             regionId?.let { id ->
+
                                 osmRegionMetadataDatasetRepository.insertDataset(
                                     OsmRegionMetadataDatasetModel(
                                         id = id,
-                                        timestamp = timestamp
+                                        timestamp = timestampStringToTimestampLong(dateString)
                                     )
                                 )
                             }

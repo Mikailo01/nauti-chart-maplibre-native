@@ -8,7 +8,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.bytecause.data.di.IoDispatcher
-import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
+import com.bytecause.domain.model.LatLngModel
 import com.bytecause.domain.util.GsonProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.maplibre.android.geometry.LatLng
 import java.io.IOException
 import javax.inject.Inject
 
@@ -46,7 +46,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             throw exception
         }
 
-    override suspend fun saveUserPosition(position: LatLng) {
+    override suspend fun saveUserPosition(position: LatLngModel) {
         withContext(coroutineDispatcher) {
             userDataStorePreferences.edit { preferences ->
                 preferences[USER_POSITION_KEY] = GsonProvider.gson.toJson(position)
@@ -54,10 +54,10 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getUserPosition(): Flow<LatLng?> = flow {
+    override fun getUserPosition(): Flow<LatLngModel?> = flow {
         val jsonString =
             userDataStorePreferences.data.firstOrNull()?.get(USER_POSITION_KEY)
-        emit(GsonProvider.gson.fromJson(jsonString, LatLng::class.java))
+        emit(GsonProvider.gson.fromJson(jsonString, LatLngModel::class.java))
     }
         .flowOn(coroutineDispatcher)
         .catch { exception ->

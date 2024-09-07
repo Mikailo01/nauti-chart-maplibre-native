@@ -4,7 +4,6 @@ import com.bytecause.domain.model.LatLngModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.domain.util.SearchTypes
 import com.bytecause.util.poi.PoiUtil.searchTypesStringList
-import com.bytecause.util.string.StringUtil
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -138,7 +137,7 @@ class QueryBuilderTest {
         val searchByRegionQuery = OverpassQueryBuilder
             .format(OverpassQueryBuilder.FormatTypes.JSON)
             .timeout(60)
-            .region(listOf("Jihomoravský kraj"))
+            .region("Jihomoravský kraj")
             .type(OverpassQueryBuilder.Type.Node)
             .search(SearchTypes.UnionSet(searchTypesStringList))
             .build()
@@ -185,7 +184,7 @@ class QueryBuilderTest {
         val filterNotQuery = OverpassQueryBuilder
             .format(OverpassQueryBuilder.FormatTypes.JSON)
             .timeout(120)
-            .region(listOf("Jihovýchod"))
+            .region("Jihovýchod")
             .type(OverpassQueryBuilder.Type.Node)
             .search(
                 SearchTypes.UnionSet(searchTypesStringList)
@@ -212,7 +211,7 @@ class QueryBuilderTest {
                 OverpassQueryBuilder.FormatTypes.JSON
             )
             .timeout(120)
-            .region(listOf("Jihovýchod"))
+            .region("Jihovýchod")
             .type(OverpassQueryBuilder.Type.Node)
             .search(
                 SearchTypes.UnionSet(

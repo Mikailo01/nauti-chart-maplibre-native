@@ -1,15 +1,15 @@
-package com.bytecause.data.repository.abstractions
+package com.bytecause.domain.abstractions
 
+import com.bytecause.domain.model.LatLngModel
 import kotlinx.coroutines.flow.Flow
-import org.maplibre.android.geometry.LatLng
 
 interface UserPreferencesRepository {
 
     suspend fun saveFirstRunFlag(flag: Boolean)
     fun getFirstRunFlag(): Flow<Boolean?>
 
-    suspend fun saveUserPosition(position: LatLng)
-    fun getUserPosition(): Flow<LatLng?>
+    suspend fun saveUserPosition(position: LatLngModel)
+    fun getUserPosition(): Flow<LatLngModel?>
 
     suspend fun cacheSelectedTileSource(tileSourceName: String)
     fun getCachedTileSource(): Flow<String?>

@@ -10,5 +10,5 @@ import androidx.room.PrimaryKey
 )
 data class OsmRegionMetadataDatasetEntity(
     @PrimaryKey val id: Int = 0,
-    val timestamp: String
+    val timestamp: Long
 )

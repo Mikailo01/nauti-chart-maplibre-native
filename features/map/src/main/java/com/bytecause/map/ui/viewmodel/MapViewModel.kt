@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.data.repository.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
@@ -23,6 +23,8 @@ import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.util.MapUtil
+import com.bytecause.util.mappers.asLatLng
+import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -315,11 +317,12 @@ constructor(
 
     fun saveUserLocation(position: LatLng) {
         viewModelScope.launch {
-            userPreferencesRepository.saveUserPosition(position)
+            userPreferencesRepository.saveUserPosition(position.asLatLngModel())
         }
     }
 
-    fun getUserLocation() = userPreferencesRepository.getUserPosition()
+    fun getUserLocation(): Flow<LatLng?> = userPreferencesRepository.getUserPosition()
+        .map { it?.asLatLng() }
 
     fun getCachedTileSourceType(): Flow<TileSources?> =
         flow {

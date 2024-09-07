@@ -1,5 +1,7 @@
 package com.bytecause.settings.ui
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.LayoutInflater
@@ -52,6 +54,7 @@ import androidx.fragment.app.Fragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
+import com.bytecause.data.services.HarboursUpdateService
 import com.bytecause.features.settings.R
 import com.bytecause.features.settings.databinding.CacheManagementLayoutBinding
 import com.bytecause.presentation.components.compose.ConfirmationDialog
@@ -129,6 +132,18 @@ fun CacheManagementScreen(
                         context.getString(com.bytecause.core.resources.R.string.region_update_success)
                     )
                 }
+
+                CacheManagementEffect.HarboursUpdateFailure -> {
+                    state.snackbarHostState.showSnackbar(
+                        context.getString(com.bytecause.core.resources.R.string.network_error)
+                    )
+                }
+
+                CacheManagementEffect.HarboursUpdateSuccess -> {
+                    state.snackbarHostState.showSnackbar(
+                        context.getString(com.bytecause.core.resources.R.string.harbours_update_success)
+                    )
+                }
             }
         }
     }
@@ -145,6 +160,7 @@ fun CacheManagementContent(
     state: CacheManagementState,
     onEvent: (CacheManagementEvent) -> Unit
 ) {
+    val activity = LocalContext.current as Activity
 
     Scaffold(
         topBar = {
@@ -171,16 +187,17 @@ fun CacheManagementContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Row {
                             Text(
-                                text = "Harbours",
+                                text = stringResource(id = com.bytecause.core.resources.R.string.harbours),
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
-                                text = state.harboursTimestamp,
+                                text = state.harboursModel.timestamp,
                                 fontStyle = FontStyle.Italic,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -188,35 +205,53 @@ fun CacheManagementContent(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         ChipsRow(
-                            interval = state.harboursUpdateInterval,
+                            interval = state.harboursModel.harboursUpdateInterval,
                             onClick = { onEvent(CacheManagementEvent.OnSetHarboursUpdateInterval(it)) })
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Spacer(modifier = Modifier.weight(1f))
-                            OutlinedButton(
-                                onClick = {
+                        if (state.harboursModel.isUpdating) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .padding(
+                                        top = 20.dp,
+                                        bottom = 20.dp
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            if (state.harboursModel.progress != -1) {
+                                Text(
+                                    text = stringResource(id = com.bytecause.core.resources.R.string.processed_count)
+                                        .format(state.harboursModel.progress),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (state.harboursModel.timestamp.isNotBlank()) {
+                            ActionButtons(
+                                isUpdating = state.harboursModel.isUpdating,
+                                onForceUpdateClick = {
+
+                                    Intent(activity, HarboursUpdateService::class.java).also {
+                                        it.setAction(HarboursUpdateService.Actions.START.toString())
+                                        activity.startService(it)
+                                    }
+
                                     onEvent(CacheManagementEvent.OnUpdateHarbours)
                                 },
-                                modifier = Modifier.wrapContentHeight()
-                            ) {
-                                Text(text = "Force update", fontSize = 14.sp)
-                            }
-                            OutlinedButton(
-                                onClick = {
+                                onCancelUpdateClick = {
+                                    onEvent(
+                                        CacheManagementEvent.OnCancelHarboursUpdate
+                                    )
+                                },
+                                onClearButtonClick = {
                                     onEvent(
                                         CacheManagementEvent.OnShowConfirmationDialog(
                                             ConfirmationDialogType.ClearHarbours
                                         )
                                     )
-                                },
-                                modifier = Modifier.wrapContentHeight()
-                            ) {
-                                Text(text = "Clear", fontSize = 14.sp, color = Color.Red)
-                            }
+                                }
+                            )
                         }
                     }
                 }
@@ -256,7 +291,9 @@ fun CacheManagementContent(
                         val locale = Locale.getDefault().language
 
                         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(state.downloadedRegions) { item ->
+                            items(
+                                state.downloadedRegions.values.toList(),
+                                key = { it.regionId }) { item ->
                                 val regionName = item.names["name:$locale"]
                                     ?: item.names["name:en"]
                                     ?: item.names["name"]
@@ -266,20 +303,34 @@ fun CacheManagementContent(
                                         regionId = item.regionId,
                                         regionName = name,
                                         timeStamp = item.timestamp,
-                                        isUpdating = state.updatingRegionId == item.regionId,
-                                        progress = state.progress,
-                                        onRemove = {
+                                        isUpdating = item.isUpdating,
+                                        progress = item.progress,
+                                        onClear = {
                                             onEvent(
                                                 CacheManagementEvent.OnShowConfirmationDialog(
                                                     ConfirmationDialogType.ClearPoiRegion(it)
                                                 )
                                             )
                                         },
-                                        onUpdate = {
-                                            onEvent(CacheManagementEvent.OnUpdateRegion(it))
+                                        onUpdate = { regionId ->
+
+                                            Intent(
+                                                activity,
+                                                HarboursUpdateService::class.java
+                                            ).also {
+                                                it.setAction(HarboursUpdateService.Actions.START.toString())
+                                                it.putExtra("regionId", regionId)
+                                                it.putExtra(
+                                                    "regionName",
+                                                    state.downloadedRegions[regionId]?.names?.get("name")
+                                                )
+                                                activity.startService(it)
+                                            }
+
+                                            onEvent(CacheManagementEvent.OnUpdateRegion(regionId))
                                         },
                                         onCancel = {
-                                            onEvent(CacheManagementEvent.OnCancelRegionUpdate)
+                                            onEvent(CacheManagementEvent.OnCancelRegionUpdate(it))
                                         }
                                     )
                                 }
@@ -300,7 +351,7 @@ fun CacheManagementContent(
                     ) {
                         Row {
                             Text(
-                                text = "Vessels",
+                                text = stringResource(id = com.bytecause.core.resources.R.string.vessels),
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -348,7 +399,7 @@ fun CacheManagementContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Search history",
+                            text = stringResource(id = com.bytecause.core.resources.R.string.search_history),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -408,7 +459,7 @@ fun CacheManagementContent(
                 }
             ) {
                 Text(
-                    text = "Data will be permanently deleted.",
+                    text = stringResource(id = com.bytecause.core.resources.R.string.data_will_be_permanently_deleted_),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
@@ -420,7 +471,7 @@ fun CacheManagementContent(
 fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Update interval",
+            text = stringResource(id = com.bytecause.core.resources.R.string.update_interval),
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
 
@@ -428,7 +479,7 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
             FilterChip(
                 selected = interval == UpdateInterval.OneWeek(),
                 onClick = { onClick(UpdateInterval.OneWeek()) },
-                label = { Text(text = "1 week") },
+                label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.one_week)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = com.bytecause.core.resources.R.drawable.time_left),
@@ -448,7 +499,7 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
             FilterChip(
                 selected = interval == UpdateInterval.TwoWeeks(),
                 onClick = { onClick(UpdateInterval.TwoWeeks()) },
-                label = { Text(text = "2 weeks") },
+                label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.two_weeks)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = com.bytecause.core.resources.R.drawable.time_left),
@@ -468,7 +519,7 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
             FilterChip(
                 selected = interval == UpdateInterval.OneMonth(),
                 onClick = { onClick(UpdateInterval.OneMonth()) },
-                label = { Text(text = "1 month") },
+                label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.one_month)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = com.bytecause.core.resources.R.drawable.time_left),
@@ -489,15 +540,60 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
 }
 
 @Composable
+fun ActionButtons(
+    modifier: Modifier = Modifier,
+    isUpdating: Boolean,
+    onForceUpdateClick: () -> Unit,
+    onCancelUpdateClick: () -> Unit,
+    onClearButtonClick: () -> Unit
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
+    ) {
+        OutlinedButton(
+            onClick = {
+                if (isUpdating) onCancelUpdateClick()
+                else onForceUpdateClick()
+            },
+            modifier = Modifier.wrapContentHeight()
+        ) {
+            if (isUpdating) Text(
+                text = stringResource(id = com.bytecause.core.resources.R.string.cancel),
+                fontSize = 14.sp
+            )
+            else Text(
+                text = stringResource(id = com.bytecause.core.resources.R.string.force_update),
+                fontSize = 14.sp
+            )
+        }
+
+        Spacer(modifier = modifier.width(20.dp))
+
+        OutlinedButton(
+            onClick = onClearButtonClick,
+            modifier = Modifier.wrapContentHeight()
+        ) {
+            Text(
+                text = stringResource(id = com.bytecause.core.resources.R.string.clear),
+                fontSize = 14.sp,
+                color = Color.Red
+            )
+        }
+    }
+}
+
+
+@Composable
 fun DownloadedRegionItem(
     regionId: Int,
     regionName: String,
     timeStamp: Long,
     isUpdating: Boolean,
     progress: Int = -1,
-    onRemove: (Int) -> Unit,
+    onClear: (Int) -> Unit,
     onUpdate: (Int) -> Unit,
-    onCancel: () -> Unit
+    onCancel: (Int) -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -536,42 +632,12 @@ fun DownloadedRegionItem(
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp, end = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End
-        ) {
-
-            OutlinedButton(
-                onClick = {
-                    if (isUpdating) onCancel()
-                    else onUpdate(regionId)
-                },
-                modifier = Modifier.wrapContentHeight()
-            ) {
-                if (isUpdating) {
-                    Text(
-                        text = stringResource(id = com.bytecause.core.resources.R.string.cancel),
-                        fontSize = 14.sp
-                    )
-                } else Text(text = "Force update", fontSize = 14.sp)
-            }
-
-            Spacer(modifier = Modifier.width(30.dp))
-
-            OutlinedButton(
-                onClick = { onRemove(regionId) },
-                modifier = Modifier.wrapContentHeight()
-            ) {
-                Text(
-                    text = stringResource(id = com.bytecause.core.resources.R.string.clear),
-                    fontSize = 14.sp,
-                    color = Color.Red
-                )
-            }
-        }
+        ActionButtons(
+            isUpdating = isUpdating,
+            onForceUpdateClick = { onUpdate(regionId) },
+            onCancelUpdateClick = { onCancel(regionId) },
+            onClearButtonClick = { onClear(regionId) }
+        )
     }
 }
 
@@ -593,7 +659,7 @@ fun DownloadedRegionItemPreview() {
         timeStamp = 1724861327000L,
         isUpdating = true,
         progress = 10000,
-        onRemove = {},
+        onClear = {},
         onUpdate = {},
         onCancel = {}
     )

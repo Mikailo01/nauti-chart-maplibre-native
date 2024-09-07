@@ -10,6 +10,7 @@ import com.bytecause.domain.model.HarboursModel
 import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.domain.util.SearchTypes
+import com.bytecause.domain.util.Util.timestampStringToTimestampLong
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -24,63 +25,64 @@ class UpdateHarboursUseCase(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
-    operator fun invoke(): Flow<ApiResult<Unit>> = flow<ApiResult<Unit>> {
-        val isEmpty = harboursDatabaseRepository.isHarboursDatabaseEmpty().firstOrNull() ?: true
+    operator fun invoke(forceUpdate: Boolean = false): Flow<ApiResult<Nothing>> =
+        flow<ApiResult<Nothing>> {
+            val isEmpty = harboursDatabaseRepository.isHarboursDatabaseEmpty().firstOrNull() ?: true
 
-        if (isEmpty) {
-            val query: String = OverpassQueryBuilder
-                .format(OverpassQueryBuilder.FormatTypes.JSON)
-                .timeout(120)
-                .wholeWorld()
-                .search(
-                    OverpassQueryBuilder.Type.Node,
-                    SearchTypes.UnionSet(
-                        listOf(
-                            "seamark:type",
-                            "leisure"
-                        )
-                    ).filter(listOf("harbour"), listOf("marina"))
-                )
-                .build()
-
-            overpassRepository.makeQuery<OverpassNodeModel>(query).collect { result ->
-                when {
-                    result.exception != null -> {
-                        emit(ApiResult.Failure(exception = result.exception))
-                        return@collect
-                    }
-
-                    result.data?.first != null -> {
-                        result.data.first?.let { timestamp ->
-                            harboursMetadataDatasetRepository.insertDataset(
-                                HarboursMetadataDatasetModel(
-                                    timestamp = timestamp
-                                )
+            if (isEmpty || forceUpdate) {
+                val query: String = OverpassQueryBuilder
+                    .format(OverpassQueryBuilder.FormatTypes.JSON)
+                    .timeout(120)
+                    .wholeWorld()
+                    .search(
+                        OverpassQueryBuilder.Type.Node,
+                        SearchTypes.UnionSet(
+                            listOf(
+                                "seamark:type",
+                                "leisure"
                             )
+                        ).filter(listOf("harbour"), listOf("marina"))
+                    )
+                    .build()
+
+                overpassRepository.makeQuery<OverpassNodeModel>(query).collect { result ->
+                    when {
+                        result.exception != null -> {
+                            emit(ApiResult.Failure(exception = result.exception))
+                            return@collect
+                        }
+
+                        result.data?.first != null -> {
+                            result.data.first?.let { dateString ->
+                                harboursMetadataDatasetRepository.insertDataset(
+                                    HarboursMetadataDatasetModel(
+                                        timestamp = timestampStringToTimestampLong(dateString)
+                                    )
+                                )
+                            }
+                        }
+
+                        !result.data?.second?.toList().isNullOrEmpty() -> {
+                            val harbours = result.data?.second?.map {
+                                HarboursModel(
+                                    latitude = it.lat,
+                                    longitude = it.lon,
+                                    tags = it.tags
+                                )
+                            } ?: emptyList()
+
+                            harboursDatabaseRepository.insertAllHarbours(harbours)
+                            emit(ApiResult.Progress(progress = harbours.size))
                         }
                     }
-
-                    !result.data?.second?.toList().isNullOrEmpty() -> {
-                        val harbours = result.data?.second?.map {
-                            HarboursModel(
-                                latitude = it.lat,
-                                longitude = it.lon,
-                                tags = it.tags
-                            )
-                        } ?: emptyList()
-
-                        harboursDatabaseRepository.insertAllHarbours(harbours)
-                        emit(ApiResult.Progress(progress = harbours.size))
-                    }
                 }
-            }
 
-            // harbours saved, emit success
-            emit(ApiResult.Success(Unit))
-        } else {
-            // harbours present, emit success
-            emit(ApiResult.Success(Unit))
+                // harbours saved, emit success
+                emit(ApiResult.Success(null))
+            } else {
+                // harbours present, emit success
+                emit(ApiResult.Success(null))
+            }
         }
-    }
-        .flowOn(coroutineDispatcher)
+            .flowOn(coroutineDispatcher)
 }

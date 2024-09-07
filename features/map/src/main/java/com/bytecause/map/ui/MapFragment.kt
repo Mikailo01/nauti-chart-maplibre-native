@@ -104,6 +104,7 @@ import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.map.MapUtil.Companion.bearingTo
 import com.bytecause.util.map.TileSourceLoader
+import com.bytecause.util.mappers.asLatLng
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
 import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
 import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
