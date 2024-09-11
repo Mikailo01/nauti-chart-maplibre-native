@@ -31,7 +31,7 @@ class HarboursUpdateService : LifecycleService() {
     lateinit var updateHarboursUseCase: UpdateHarboursUseCase
 
     companion object {
-        const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_ID = 2
     }
 
     override fun onCreate() {
@@ -60,11 +60,9 @@ class HarboursUpdateService : LifecycleService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Harbours Update Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Channel for updating harbours data"
-            }
+                getString(R.string.harbours_update),
+                NotificationManager.IMPORTANCE_LOW
+            )
             notificationManager.createNotificationChannel(channel)
         }
     }
@@ -129,7 +127,6 @@ class HarboursUpdateService : LifecycleService() {
             .setContentText(
                 getString(R.string.processed_count).format(this.progress)
             )
-            .setPriority(NotificationCompat.PRIORITY_LOW)
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 

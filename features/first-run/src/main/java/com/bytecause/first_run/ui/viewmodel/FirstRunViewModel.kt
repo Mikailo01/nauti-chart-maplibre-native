@@ -2,130 +2,78 @@ package com.bytecause.first_run.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
-import com.bytecause.domain.model.UiState
-import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
+import com.bytecause.domain.model.RegionModel
+import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.domain.util.OverpassQueryBuilder
-import com.bytecause.domain.util.SearchTypes
-import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
-import com.bytecause.util.poi.PoiUtil.searchTypesStringList
+import com.bytecause.first_run.ui.Region
+import com.bytecause.presentation.model.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.net.ConnectException
 import javax.inject.Inject
 
 @HiltViewModel
 class FirstRunViewModel
 @Inject
 constructor(
-    private val getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val getRegionsUseCase: GetRegionsUseCase,
+    private val countryRepository: CountryRepository
 ) : ViewModel() {
-    private val _uiStateFlow = MutableStateFlow<UiState<String>?>(null)
-    val uiStateFlow get() = _uiStateFlow.asStateFlow()
+    private val _downloadPoiUiState = MutableStateFlow<UiState<String>?>(null)
+    val downloadPoiUiState = _downloadPoiUiState.asStateFlow()
 
-    private var downloadJob: Job? = null
+    private val _downloadRegionsUiState = MutableStateFlow<UiState<RegionModel>?>(null)
+    val downloadRegionsUiState = _downloadRegionsUiState.asStateFlow()
 
-    var region: String? = null
+    var region: Region? = null
         private set
 
-    fun resetUiState() {
-        _uiStateFlow.value = null
-    }
-
-    fun cancelDownloadJob() {
-        downloadJob?.cancel()
-        downloadJob = null
-    }
-
-    fun setRegion(region: String) {
+    fun setRegion(region: Region) {
         this.region = region
     }
 
-    fun getPoiResult() {
-        region?.let { regionName ->
-            downloadJob =
-                viewModelScope.launch {
-                    _uiStateFlow.value = UiState(loading = Loading(true))
+    fun resetUiState() {
+        _downloadPoiUiState.value = null
+    }
 
-                    val query = OverpassQueryBuilder
-                        .format(OverpassQueryBuilder.FormatTypes.JSON)
-                        .timeout(240)
-                        .region(regionName)
-                        .type(OverpassQueryBuilder.Type.Node)
-                        .search(
-                            SearchTypes.UnionSet(searchTypesStringList)
-                                .filterNot(
-                                    emptyList(),
-                                    excludeAmenityObjectsFilterList,
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList()
-                                )
-                        )
-                        .build()
+    fun getRegions(isoCode: String) {
+        viewModelScope.launch {
+            val countryId = countryRepository.getCountryByIso(isoCode).first().id
 
-                    getPoiResultByRegionUseCase(query = query).collect { result ->
-                        when (result) {
-                            is ApiResult.Success -> {
-                                _uiStateFlow.emit(
-                                    UiState(
-                                        loading = Loading(false),
-                                        items = listOf(result.data ?: ""),
-                                    ),
-                                )
-                            }
+            val query = OverpassQueryBuilder
+                .format(OverpassQueryBuilder.FormatTypes.JSON)
+                .timeout(120)
+                .geocodeAreaISO(isoCode)
+                .type(OverpassQueryBuilder.Type.Relation)
+                .adminLevel(4)
+                .build()
 
-                            is ApiResult.Failure -> {
-                                when (result.exception) {
-                                    is ConnectException -> {
-                                        _uiStateFlow.emit(UiState(error = ConnectException()))
-                                    }
+            _downloadRegionsUiState.value = UiState(loading = Loading(true))
 
-                                    is FileNotFoundException -> {
-                                        _uiStateFlow.emit(UiState(error = FileNotFoundException()))
-                                    }
-
-                                    else -> {
-                                        _uiStateFlow.emit(UiState(error = IOException()))
-                                    }
-                                }
-                            }
-
-                            is ApiResult.Progress -> {
-                                result.progress?.let { progress ->
-                                    _uiStateFlow.emit(
-                                        UiState(
-                                            loading = Loading(
-                                                true,
-                                                progress = uiStateFlow.value?.loading?.progress?.plus(
-                                                    progress
-                                                )
-                                                    ?: progress
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-
-                            else -> _uiStateFlow.emit(UiState(loading = Loading(false)))
-                        }
-                    }
+            when (val result = getRegionsUseCase(countryId, isoCode, query).first()) {
+                is ApiResult.Failure -> {
+                    _downloadRegionsUiState.emit(UiState(error = result.exception))
                 }
+
+                is ApiResult.Progress -> {
+
+                }
+
+                is ApiResult.Success -> {
+                    _downloadRegionsUiState.emit(UiState(items = result.data ?: emptyList()))
+                }
+            }
         }
     }
 
-    fun saveFirstRunFlag(flag: Boolean) {
-        viewModelScope.launch {
-            userPreferencesRepository.saveFirstRunFlag(flag)
-        }
+    suspend fun saveFirstRunFlag(flag: Boolean) {
+        userPreferencesRepository.saveFirstRunFlag(flag)
     }
 }

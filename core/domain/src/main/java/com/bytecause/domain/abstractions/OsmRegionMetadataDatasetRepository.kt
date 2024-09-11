@@ -7,5 +7,5 @@ interface OsmRegionMetadataDatasetRepository {
     suspend fun insertDataset(dataset: OsmRegionMetadataDatasetModel)
     suspend fun deleteDataset(regionId: Int)
     fun getDataset(regionId: Int): Flow<OsmRegionMetadataDatasetModel?>
-    fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetModel?>>
+    fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetModel>>
 }

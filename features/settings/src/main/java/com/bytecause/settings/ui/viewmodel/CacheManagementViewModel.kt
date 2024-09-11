@@ -12,6 +12,7 @@ import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import com.bytecause.domain.model.ApiResult
+import com.bytecause.domain.model.NetworkType
 import com.bytecause.settings.ui.ConfirmationDialogType
 import com.bytecause.settings.ui.UpdateInterval
 import com.bytecause.settings.ui.event.CacheManagementEffect
@@ -19,7 +20,6 @@ import com.bytecause.settings.ui.event.CacheManagementEvent
 import com.bytecause.settings.ui.model.RegionUiModel
 import com.bytecause.settings.ui.state.CacheManagementState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,7 +63,7 @@ class CacheManagementViewModel @Inject constructor(
                     downloadedRegions = downloadedRegions.associate { region ->
 
                         val timestamp =
-                            regionDatasets.find { dataset -> dataset?.id == region.id }?.timestamp
+                            regionDatasets.find { dataset -> dataset.id == region.id }?.timestamp
 
                         region.id to RegionUiModel(
                             regionId = region.id,
@@ -141,6 +141,14 @@ class CacheManagementViewModel @Inject constructor(
                             else -> UpdateInterval.TwoWeeks()
                         }
                     )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.getAutoUpdatesNetworkPreference().collect { preference ->
+                _uiState.update {
+                    it.copy(autoUpdateNetworkType = preference)
                 }
             }
         }
@@ -313,6 +321,9 @@ class CacheManagementViewModel @Inject constructor(
             is CacheManagementEvent.OnDeleteRegion -> onDeleteRegion(event.regionId)
             is CacheManagementEvent.OnSetHarboursUpdateInterval -> onSetHarboursUpdateInterval(event.interval)
             is CacheManagementEvent.OnSetPoiUpdateInterval -> onSetPoiUpdateInterval(event.interval)
+            is CacheManagementEvent.OnSetAutoUpdateNetworkTypePreference -> onSetAutoUpdateNetworkTypePreference(
+                event.networkType
+            )
         }
     }
 
@@ -350,6 +361,12 @@ class CacheManagementViewModel @Inject constructor(
             }
 
             userPreferencesRepository.savePoiUpdateInterval(intervalAsLong)
+        }
+    }
+
+    private fun onSetAutoUpdateNetworkTypePreference(networkType: NetworkType) {
+        viewModelScope.launch {
+            userPreferencesRepository.saveAutoUpdateNetworkPreference(networkType)
         }
     }
 

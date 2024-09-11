@@ -20,4 +20,8 @@
         android:name="com.bytecause.first_run.ui.bottomsheet.SelectRegionBottomSheetDialog"
         android:label="SelectRegionBottomSheetDialog"
         tools:layout="@layout/select_region_bottom_sheet_layout"/>
+    <dialog
+        android:id="@+id/selectRegionComposedDialog"
+        android:name="com.bytecause.first_run.ui.dialog.SelectRegionComposedDialog"
+        android:label="SelectRegionComposedDialog" />
 </navigation>

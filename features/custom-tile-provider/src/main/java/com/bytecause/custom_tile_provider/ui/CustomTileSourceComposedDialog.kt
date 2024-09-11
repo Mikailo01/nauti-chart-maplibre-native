@@ -119,7 +119,6 @@ class CustomTileSourceComposedDialog : Fragment(com.bytecause.nautichart.feature
 }
 
 @OptIn(
-    ExperimentalFoundationApi::class,
     ExperimentalMaterial3Api::class
 )
 @Composable

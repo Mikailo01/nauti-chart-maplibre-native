@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.nautichart.android.library)
     alias(libs.plugins.nautichart.android.library.compose)
-    alias(libs.plugins.compose.compiler)
 }
 
 android {

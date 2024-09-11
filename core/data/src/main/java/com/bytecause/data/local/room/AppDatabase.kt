@@ -7,7 +7,7 @@ import com.bytecause.data.local.room.dao.CountryDao
 import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.dao.HarboursDao
 import com.bytecause.data.local.room.dao.HarboursMetadataDatasetDao
-import com.bytecause.data.local.room.dao.OsmRegionMetadataDataset
+import com.bytecause.data.local.room.dao.OsmRegionMetadataDatasetDao
 import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.local.room.dao.RegionPoiCacheDao
 import com.bytecause.data.local.room.dao.RegionDao
@@ -63,7 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun regionDao(): RegionDao
 
-    abstract fun osmRegionMetadataDatasetDao(): OsmRegionMetadataDataset
+    abstract fun osmRegionMetadataDatasetDao(): OsmRegionMetadataDatasetDao
 
     abstract fun harboursMetadataDatasetDao(): HarboursMetadataDatasetDao
 

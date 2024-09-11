@@ -13,6 +13,7 @@ class AndroidFeatureWithComposeConventionPlugin : Plugin<Project> {
             pluginManager.apply {
                 apply("nautichart.android.library")
                 apply("nautichart.android.hilt")
+                apply("org.jetbrains.kotlin.plugin.compose")
             }
 
             val extension = extensions.getByType<LibraryExtension>()

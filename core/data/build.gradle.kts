@@ -40,6 +40,8 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.workManager)
 
+    implementation(libs.hilt.work)
+
     // Lifecycle service
     implementation(libs.androidx.lifecycle.lifecycleService)
 

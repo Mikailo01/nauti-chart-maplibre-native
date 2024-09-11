@@ -6,7 +6,7 @@ import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.SearchedPlace
-import com.bytecause.domain.model.UiState
+import com.bytecause.presentation.model.UiState
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository

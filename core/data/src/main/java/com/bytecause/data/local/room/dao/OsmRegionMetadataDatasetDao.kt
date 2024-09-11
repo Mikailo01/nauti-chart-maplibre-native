@@ -8,7 +8,7 @@ import com.bytecause.data.local.room.tables.OsmRegionMetadataDatasetEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface OsmRegionMetadataDataset {
+interface OsmRegionMetadataDatasetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDataset(dataset: OsmRegionMetadataDatasetEntity): Long
 
@@ -19,5 +19,5 @@ interface OsmRegionMetadataDataset {
     fun getDatasetById(regionId: Int): Flow<OsmRegionMetadataDatasetEntity?>
 
     @Query("SELECT * FROM osm_region_metadata_dataset")
-    fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetEntity?>>
+    fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetEntity>>
 }

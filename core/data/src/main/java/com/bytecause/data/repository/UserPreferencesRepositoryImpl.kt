@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.bytecause.data.di.IoDispatcher
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.model.LatLngModel
+import com.bytecause.domain.model.NetworkType
 import com.bytecause.domain.util.GsonProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -40,11 +41,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val firstRunFlag = userDataStorePreferences.data.firstOrNull()?.get(FIRST_RUN_KEY)
         emit(firstRunFlag)
     }
-        .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            throw exception
+            else throw exception
         }
+        .flowOn(coroutineDispatcher)
 
     override suspend fun saveUserPosition(position: LatLngModel) {
         withContext(coroutineDispatcher) {
@@ -59,11 +60,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             userDataStorePreferences.data.firstOrNull()?.get(USER_POSITION_KEY)
         emit(GsonProvider.gson.fromJson(jsonString, LatLngModel::class.java))
     }
-        .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            throw exception
+            else throw exception
         }
+        .flowOn(coroutineDispatcher)
 
     override suspend fun cacheSelectedTileSource(tileSourceName: String) {
         withContext(coroutineDispatcher) {
@@ -77,11 +78,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val cachedTileSource = userDataStorePreferences.data.firstOrNull()?.get(TILE_SOURCE_KEY)
         emit(cachedTileSource)
     }
-        .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            throw exception
+            else throw exception
         }
+        .flowOn(coroutineDispatcher)
 
     override suspend fun cacheLoadedStyle(styleName: String) {
         withContext(coroutineDispatcher) {
@@ -94,22 +95,22 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override fun getCachedStyle(): Flow<String?> = flow {
         emit(userDataStorePreferences.data.firstOrNull()?.get(STYLE_KEY))
     }
-        .flowOn(coroutineDispatcher)
         .catch { exception ->
             if (exception is IOException) emit(null)
-            throw exception
+            else throw exception
         }
+        .flowOn(coroutineDispatcher)
 
     override fun getSelectedPoiCategories(): Flow<Set<String>> {
         return userDataStorePreferences.data
             .map { preferences ->
                 preferences[SELECTED_POI_CATEGORIES_KEY] ?: emptySet()
             }
-            .flowOn(coroutineDispatcher)
             .catch { exception ->
                 if (exception is IOException) emit(emptySet())
-                throw exception
+                else throw exception
             }
+            .flowOn(coroutineDispatcher)
     }
 
     override suspend fun saveIsAisActivated(boolean: Boolean) {
@@ -125,11 +126,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             .map { preferences ->
                 preferences[IS_AIS_ACTIVATED] ?: false
             }
-            .flowOn(coroutineDispatcher)
             .catch { exception ->
                 if (exception is IOException) emit(false)
-                throw exception
+                else throw exception
             }
+            .flowOn(coroutineDispatcher)
     }
 
     override suspend fun saveAreHarboursVisible(boolean: Boolean) {
@@ -145,11 +146,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             .map { preferences ->
                 preferences[ARE_HARBOURS_VISIBLE] ?: false
             }
-            .flowOn(coroutineDispatcher)
             .catch { exception ->
                 if (exception is IOException) emit(false)
-                throw exception
+                else throw exception
             }
+            .flowOn(coroutineDispatcher)
     }
 
     override suspend fun savePoiUpdateInterval(interval: Long) {
@@ -163,12 +164,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override fun getPoiUpdateInterval(): Flow<Long> =
         userDataStorePreferences.data
             .map { preferences ->
-                // 2 weeks interval as default value
-                preferences[POI_UPDATE_INTERVAL] ?: 1_209_600_000L
+                preferences[POI_UPDATE_INTERVAL] ?: DEFAULT_UPDATE_INTERVAL
             }
             .catch { exception ->
-                if (exception is IOException) emit(1_209_600_000L)
-                throw exception
+                if (exception is IOException) emit(DEFAULT_UPDATE_INTERVAL)
+                else throw exception
             }
             .flowOn(coroutineDispatcher)
 
@@ -183,12 +183,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override fun getHarboursUpdateInterval(): Flow<Long> =
         userDataStorePreferences.data
             .map { preferences ->
-                // 2 weeks interval as default value
-                preferences[HARBOURS_UPDATE_INTERVAL] ?: 1_209_600_000L
+                preferences[HARBOURS_UPDATE_INTERVAL] ?: DEFAULT_UPDATE_INTERVAL
             }
             .catch { exception ->
-                if (exception is IOException) emit(1_209_600_000L)
-                throw exception
+                if (exception is IOException) emit(DEFAULT_UPDATE_INTERVAL)
+                else throw exception
             }
             .flowOn(coroutineDispatcher)
 
@@ -201,7 +200,32 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun saveAutoUpdateNetworkPreference(networkType: NetworkType) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[AUTO_UPDATE_NETWORK_TYPE_PREFERENCE] = networkType.name
+            }
+        }
+    }
+
+    override fun getAutoUpdatesNetworkPreference(): Flow<NetworkType> =
+        userDataStorePreferences.data
+            .map { preferences ->
+                // Retrieve the stored network type or default to WIFI_ONLY
+                val networkTypeName = preferences[AUTO_UPDATE_NETWORK_TYPE_PREFERENCE]
+                // Safely return the enum value or fallback to WIFI_ONLY if null
+                networkTypeName?.let { NetworkType.valueOf(it) } ?: NetworkType.WIFI_ONLY
+            }
+            .catch { exception ->
+                if (exception is IOException) emit(NetworkType.WIFI_ONLY)
+                else throw exception
+            }
+            .flowOn(coroutineDispatcher)
+
     private companion object {
+        // Default interval set to 2 weeks
+        private const val DEFAULT_UPDATE_INTERVAL = 1_209_600_000L
+
         private val USER_POSITION_KEY = stringPreferencesKey("user_position")
         private val TILE_SOURCE_KEY = stringPreferencesKey("tile_source")
         private val STYLE_KEY = stringPreferencesKey("style_key")
@@ -211,5 +235,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         private val ARE_HARBOURS_VISIBLE = booleanPreferencesKey("are_harbours_visible")
         private val POI_UPDATE_INTERVAL = longPreferencesKey("poi_update_interval")
         private val HARBOURS_UPDATE_INTERVAL = longPreferencesKey("harbours_update_interval")
+        private val AUTO_UPDATE_NETWORK_TYPE_PREFERENCE =
+            stringPreferencesKey("auto_update_network_type_preference")
     }
 }

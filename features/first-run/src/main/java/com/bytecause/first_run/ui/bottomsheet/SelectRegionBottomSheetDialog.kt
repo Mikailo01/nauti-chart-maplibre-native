@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDeepLinkRequest
 import androidx.navigation.fragment.findNavController
 import com.bytecause.features.first_run.R
@@ -20,6 +21,7 @@ import com.bytecause.util.delegates.viewBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
@@ -65,15 +67,17 @@ class SelectRegionBottomSheetDialog :
 
         binding.pickRegionTextView.setOnClickListener {
             if (!lastClick.lastClick(500)) return@setOnClickListener
-            viewModel.saveFirstRunFlag(false)
 
-            // Navigation between features can be achieved using deep links only, because at compile time,
-            // independent feature modules cannot see each other, so you can't use IDs to navigate to
-            // destinations in other modules.
-            val request = NavDeepLinkRequest.Builder
-                .fromUri("nautichart://download_poi_dest_deep_link".toUri())
-                .build()
-            findNavController().navigate(request)
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.saveFirstRunFlag(false)
+                // Navigation between features can be achieved using deep links only, because at compile time,
+                // independent feature modules cannot see each other, so you can't use IDs to navigate to
+                // destinations in other modules.
+                val request = NavDeepLinkRequest.Builder
+                    .fromUri("nautichart://download_poi_dest_deep_link".toUri())
+                    .build()
+                findNavController().navigate(request)
+            }
         }
     }
 }

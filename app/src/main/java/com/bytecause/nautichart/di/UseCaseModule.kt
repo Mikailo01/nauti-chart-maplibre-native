@@ -1,6 +1,5 @@
 package com.bytecause.nautichart.di
 
-import android.content.Context
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
@@ -11,6 +10,8 @@ import com.bytecause.domain.abstractions.OverpassRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
 import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.abstractions.RegionRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
+import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.domain.usecase.GetHarboursUseCase
@@ -18,14 +19,13 @@ import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
+import com.bytecause.domain.usecase.UpdateExpiredDatasetsUseCase
 import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import com.bytecause.domain.usecase.UpdateVesselsUseCase
-import com.bytecause.map.di.RepositoryModule.providesVesselsDatabaseRepository
 import com.bytecause.map.di.RepositoryModule.providesVesselsPositionsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
 @Module
@@ -68,27 +68,41 @@ object UseCaseModule {
 
     @Provides
     fun providesGetVesselsUseCase(
-        @ApplicationContext context: Context,
-        vesselsMetadataDatasetRepository: VesselsMetadataDatasetRepository
+        vesselsDatabaseRepository: VesselsDatabaseRepository,
+        updateVesselsUseCase: UpdateVesselsUseCase
     ): GetVesselsUseCase =
         GetVesselsUseCase(
-            vesselsDatabaseRepository = providesVesselsDatabaseRepository(context = context),
-            updateVesselsUseCase = providesUpdateVesselsIfNecessaryUseCase(
-                context = context,
-                vesselsMetadataDatasetRepository = vesselsMetadataDatasetRepository
-            )
+            vesselsDatabaseRepository = vesselsDatabaseRepository,
+            updateVesselsUseCase = updateVesselsUseCase
         )
 
     @Provides
     fun providesUpdateVesselsIfNecessaryUseCase(
-        @ApplicationContext context: Context,
-        vesselsMetadataDatasetRepository: VesselsMetadataDatasetRepository
+        vesselsMetadataDatasetRepository: VesselsMetadataDatasetRepository,
+        vesselsDatabaseRepository: VesselsDatabaseRepository
     ): UpdateVesselsUseCase =
         UpdateVesselsUseCase(
-            vesselsDatabaseRepository = providesVesselsDatabaseRepository(context = context),
+            vesselsDatabaseRepository = vesselsDatabaseRepository,
             vesselsPositionsRemoteRepository = providesVesselsPositionsRepository(),
             vesselsMetadataDatasetRepository = vesselsMetadataDatasetRepository
         )
+
+    @Provides
+    fun providesUpdateExpiredDatasetsUseCase(
+        userPreferencesRepository: UserPreferencesRepository,
+        osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository,
+        harboursMetadataDatasetRepository: HarboursMetadataDatasetRepository,
+        regionRepository: RegionRepository,
+        getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
+        updateHarboursUseCase: UpdateHarboursUseCase
+    ): UpdateExpiredDatasetsUseCase = UpdateExpiredDatasetsUseCase(
+        userPreferencesRepository = userPreferencesRepository,
+        osmRegionMetadataDatasetRepository = osmRegionMetadataDatasetRepository,
+        harboursMetadataDatasetRepository = harboursMetadataDatasetRepository,
+        regionRepository = regionRepository,
+        getPoiResultByRegionUseCase = getPoiResultByRegionUseCase,
+        updateHarboursUseCase = updateHarboursUseCase
+    )
 
     @Provides
     fun providesUpdateHarboursUseCase(
@@ -105,16 +119,11 @@ object UseCaseModule {
     @Provides
     fun providesGetHarboursUseCase(
         harboursDatabaseRepository: HarboursDatabaseRepository,
-        overpassRepository: OverpassRepository,
-        harboursMetadataDatasetRepository: HarboursMetadataDatasetRepository
+        updateHarboursUseCase: UpdateHarboursUseCase
     ): GetHarboursUseCase =
         GetHarboursUseCase(
-            harboursDatabaseRepository,
-            providesUpdateHarboursUseCase(
-                harboursDatabaseRepository = harboursDatabaseRepository,
-                overpassRepository = overpassRepository,
-                harboursMetadataDatasetRepository = harboursMetadataDatasetRepository
-            )
+           harboursDatabaseRepository =  harboursDatabaseRepository,
+            updateHarboursUseCase = updateHarboursUseCase
         )
 
     @Provides

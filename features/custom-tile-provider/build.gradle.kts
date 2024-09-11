@@ -2,7 +2,6 @@ import com.bytecause.convention.implementation
 
 plugins {
     alias(libs.plugins.nautichart.android.feature.compose)
-    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -18,7 +17,6 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.resources)
     implementation(projects.core.domain)
-
 
     implementation(libs.simplestorage.storage)
 

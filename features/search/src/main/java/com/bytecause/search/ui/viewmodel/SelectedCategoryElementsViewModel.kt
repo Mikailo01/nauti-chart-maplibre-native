@@ -10,6 +10,7 @@ import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
+import com.bytecause.presentation.model.UiState
 import com.bytecause.util.poi.PoiUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +64,7 @@ constructor(
         )
 
     private var _uiSearchCategoryState =
-        MutableStateFlow<com.bytecause.domain.model.UiState<OverpassNodeModel>?>(
+        MutableStateFlow<UiState<OverpassNodeModel>?>(
             null
         )
     val uiSearchCategoryState get() = _uiSearchCategoryState.asStateFlow()
@@ -140,7 +141,7 @@ constructor(
     fun getPoiResult(entity: PoiQueryModel) {
         viewModelScope.launch {
             _uiSearchCategoryState.value =
-                com.bytecause.domain.model.UiState(loading = Loading(true))
+                UiState(loading = Loading(true))
 
             getPoiResultByRadiusUseCase(entity).collect { result ->
                 when (result) {
@@ -168,7 +169,7 @@ constructor(
                     }
 
                     is ApiResult.Failure -> {
-                        _uiSearchCategoryState.emit(com.bytecause.domain.model.UiState(error = result.exception))
+                        _uiSearchCategoryState.emit(UiState(error = result.exception))
                     }
 
                     else -> {

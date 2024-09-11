@@ -30,6 +30,7 @@ openingHoursParser = "0.28.0"
 datastore = "1.1.1"
 protobufJavaLite = "3.25.1"
 hilt = "2.51.1"
+hiltWork = "1.2.0"
 storage = "1.5.5"
 splashScreen = "1.0.1"
 retrofit = "2.11.0"
@@ -99,6 +100,7 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 # Hilt
 hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
 
 androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preference" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

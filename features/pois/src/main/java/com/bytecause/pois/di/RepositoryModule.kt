@@ -25,8 +25,7 @@ object RepositoryModule {
         ContinentRepositoryImpl(
             DatabaseModule.provideContinentDao(
                 DatabaseModule.provideDatabase(context)
-            ),
-            DatabaseModule.provideCountryDao(DatabaseModule.provideDatabase(context))
+            )
         )
 
     @Singleton

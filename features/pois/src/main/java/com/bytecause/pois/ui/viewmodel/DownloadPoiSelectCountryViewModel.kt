@@ -9,7 +9,7 @@ import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.CountryModel
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.RegionModel
-import com.bytecause.domain.model.UiState
+import com.bytecause.presentation.model.UiState
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
@@ -87,7 +87,8 @@ constructor(
             _regionEntityUiStateLiveData.postValue(UiState(loading = Loading(true)))
             when (val data = getRegionsUseCase(countryId, isoCode, query).firstOrNull()) {
                 is ApiResult.Success -> {
-                    _regionEntityUiStateLiveData.postValue(UiState(
+                    _regionEntityUiStateLiveData.postValue(
+                        UiState(
                         loading = Loading(false),
                         items =
                         data.data?.sortedBy {
@@ -144,7 +145,6 @@ constructor(
 
     private fun addDownloadedRegionId(regionId: Int) {
         viewModelScope.launch {
-            //datastoreRepository.addDownloadedRegion(regionId)
             val regionEntity =
                 mapContent.value.entries
                     .find { it.value.regionList.any { it.regionEntity.id == regionId } }?.value?.regionList

@@ -1,6 +1,6 @@
 package com.bytecause.data.repository
 
-import com.bytecause.data.local.room.dao.OsmRegionMetadataDataset
+import com.bytecause.data.local.room.dao.OsmRegionMetadataDatasetDao
 import com.bytecause.data.mappers.asOsmRegionMetadataDatasetEntity
 import com.bytecause.data.mappers.asOsmRegionMetadataDatasetModel
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
@@ -15,30 +15,30 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class OsmRegionMetadataDatasetRepositoryImpl @Inject constructor(
-    private val osmRegionMetadataDataset: OsmRegionMetadataDataset,
+    private val osmRegionMetadataDatasetDao: OsmRegionMetadataDatasetDao,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : OsmRegionMetadataDatasetRepository {
 
     override suspend fun insertDataset(dataset: OsmRegionMetadataDatasetModel) {
         withContext(coroutineDispatcher) {
-            osmRegionMetadataDataset.insertDataset(dataset.asOsmRegionMetadataDatasetEntity())
+            osmRegionMetadataDatasetDao.insertDataset(dataset.asOsmRegionMetadataDatasetEntity())
         }
     }
 
     override suspend fun deleteDataset(regionId: Int) {
         withContext(coroutineDispatcher) {
-            osmRegionMetadataDataset.deleteDatasetById(regionId)
+            osmRegionMetadataDatasetDao.deleteDatasetById(regionId)
         }
     }
 
     override fun getDataset(regionId: Int): Flow<OsmRegionMetadataDatasetModel?> =
-        osmRegionMetadataDataset.getDatasetById(regionId)
+        osmRegionMetadataDatasetDao.getDatasetById(regionId)
             .map { it?.asOsmRegionMetadataDatasetModel() }
             .flowOn(coroutineDispatcher)
 
-    override fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetModel?>> =
-        osmRegionMetadataDataset.getAllDatasets()
-            .map { originalList -> mapList(originalList) { it?.asOsmRegionMetadataDatasetModel() } }
+    override fun getAllDatasets(): Flow<List<OsmRegionMetadataDatasetModel>> =
+        osmRegionMetadataDatasetDao.getAllDatasets()
+            .map { originalList -> mapList(originalList) { it.asOsmRegionMetadataDatasetModel() } }
             .flowOn(coroutineDispatcher)
 
 }

@@ -17,11 +17,11 @@
             android:clickable="true"
             android:drawableLeft="@drawable/gps_icon"
             android:drawablePadding="15dp"
-            android:drawableTint="@color/md_theme_onPrimaryContainer"
+            android:drawableTint="@color/md_theme_onSurface"
             android:focusable="true"
             android:gravity="center_vertical"
             android:text="@string/grant_location_permission_to_determine_your_region"
-            android:textColor="@color/md_theme_onPrimaryContainer"
+            android:textColor="@color/md_theme_onSurface"
             android:textStyle="bold" />
 
         <TextView
@@ -32,11 +32,11 @@
             android:clickable="true"
             android:drawableLeft="@drawable/map_marker"
             android:drawablePadding="15dp"
-            android:drawableTint="@color/md_theme_onPrimaryContainer"
+            android:drawableTint="@color/md_theme_onSurface"
             android:focusable="true"
             android:gravity="center_vertical"
             android:text="@string/pick_your_desired_region"
-            android:textColor="@color/md_theme_onPrimaryContainer"
+            android:textColor="@color/md_theme_onSurface"
             android:textStyle="bold" />
     </LinearLayout>
 

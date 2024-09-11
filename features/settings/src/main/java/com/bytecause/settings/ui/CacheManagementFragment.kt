@@ -7,7 +7,6 @@ import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,18 +15,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -55,10 +54,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.bytecause.data.services.HarboursUpdateService
-import com.bytecause.data.services.RegionPoiUpdateService
+import com.bytecause.data.services.RegionPoiDownloadService
+import com.bytecause.domain.model.NetworkType
 import com.bytecause.features.settings.R
 import com.bytecause.features.settings.databinding.CacheManagementLayoutBinding
 import com.bytecause.presentation.components.compose.ConfirmationDialog
+import com.bytecause.presentation.components.compose.StyledFilterChip
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.settings.ui.event.CacheManagementEffect
@@ -173,12 +174,96 @@ fun CacheManagementContent(
         },
         snackbarHost = { SnackbarHost(hostState = state.snackbarHostState) }
     ) { innerPadding ->
-        Box {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
             ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(5.dp),
+                    colors = CardDefaults.cardColors()
+                        .copy(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                    ) {
+                        Text(
+                            text = stringResource(id = com.bytecause.core.resources.R.string.auto_updates),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                StyledFilterChip(
+                                    isSelected = state.autoUpdateNetworkType == NetworkType.WIFI_ONLY,
+                                    label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.wifi_only)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = com.bytecause.core.resources.R.drawable.wifi),
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        onEvent(
+                                            CacheManagementEvent.OnSetAutoUpdateNetworkTypePreference(
+                                                NetworkType.WIFI_ONLY
+                                            )
+                                        )
+                                    }
+                                )
+
+                                StyledFilterChip(
+                                    isSelected = state.autoUpdateNetworkType == NetworkType.WIFI_AND_MOBILE_DATA,
+                                    label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.wifi_and_mobile_Data)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = com.bytecause.core.resources.R.drawable.network_cellular),
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        onEvent(
+                                            CacheManagementEvent.OnSetAutoUpdateNetworkTypePreference(
+                                                NetworkType.WIFI_AND_MOBILE_DATA
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+
+                            StyledFilterChip(
+                                isSelected = state.autoUpdateNetworkType == NetworkType.DISABLED,
+                                label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.disabled)) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = com.bytecause.core.resources.R.drawable.disabled),
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    onEvent(
+                                        CacheManagementEvent.OnSetAutoUpdateNetworkTypePreference(
+                                            NetworkType.DISABLED
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Card(
                     modifier = Modifier.padding(5.dp),
                     colors = CardDefaults.cardColors()
@@ -206,6 +291,7 @@ fun CacheManagementContent(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         ChipsRow(
+                            autoUpdateEnabled = state.autoUpdateNetworkType != NetworkType.DISABLED,
                             interval = state.harboursModel.harboursUpdateInterval,
                             onClick = { onEvent(CacheManagementEvent.OnSetHarboursUpdateInterval(it)) })
 
@@ -218,14 +304,16 @@ fun CacheManagementContent(
                                     )
                                     .fillMaxWidth()
                             )
-                            if (state.harboursModel.progress != -1) {
-                                Text(
-                                    text = stringResource(id = com.bytecause.core.resources.R.string.processed_count)
-                                        .format(state.harboursModel.progress),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Text(
+                                text = if (state.harboursModel.progress != -1) {
+                                    stringResource(id = com.bytecause.core.resources.R.string.processed_count)
+                                        .format(state.harboursModel.progress)
+                                } else {
+                                    stringResource(id = com.bytecause.core.resources.R.string.waiting_for_server_response)
+                                },
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         if (state.harboursModel.timestamp.isNotBlank()) {
@@ -281,6 +369,7 @@ fun CacheManagementContent(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         ChipsRow(
+                            autoUpdateEnabled = state.autoUpdateNetworkType != NetworkType.DISABLED,
                             interval = state.poiUpdateInterval,
                             onClick = { onEvent(CacheManagementEvent.OnSetPoiUpdateInterval(it)) })
 
@@ -294,7 +383,11 @@ fun CacheManagementContent(
 
                         val locale = Locale.getDefault().language
 
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 0.dp, max = 200.dp)
+                        ) {
                             items(
                                 state.downloadedRegions.values.toList(),
                                 key = { it.regionId }) { item ->
@@ -320,15 +413,15 @@ fun CacheManagementContent(
                                             // Start service
                                             Intent(
                                                 activity,
-                                                RegionPoiUpdateService::class.java
+                                                RegionPoiDownloadService::class.java
                                             ).also {
-                                                it.setAction(RegionPoiUpdateService.Actions.START.toString())
+                                                it.setAction(RegionPoiDownloadService.Actions.START.toString())
                                                 it.putExtra(
-                                                    RegionPoiUpdateService.REGION_ID_PARAM,
+                                                    RegionPoiDownloadService.REGION_ID_PARAM,
                                                     regionId
                                                 )
                                                 it.putExtra(
-                                                    RegionPoiUpdateService.REGION_NAME_PARAM,
+                                                    RegionPoiDownloadService.REGION_NAME_PARAM,
                                                     state.downloadedRegions[regionId]?.names?.get("name")
                                                 )
                                                 activity.startService(it)
@@ -338,9 +431,9 @@ fun CacheManagementContent(
                                             // Stop service
                                             Intent(
                                                 activity,
-                                                RegionPoiUpdateService::class.java
+                                                RegionPoiDownloadService::class.java
                                             ).also {
-                                                it.setAction(RegionPoiUpdateService.Actions.STOP.toString())
+                                                it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
                                                 activity.startService(it)
                                             }
                                         }
@@ -480,7 +573,11 @@ fun CacheManagementContent(
 }
 
 @Composable
-fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
+fun ChipsRow(
+    autoUpdateEnabled: Boolean,
+    interval: UpdateInterval?,
+    onClick: (UpdateInterval) -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(id = com.bytecause.core.resources.R.string.update_interval),
@@ -488,9 +585,9 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip(
-                selected = interval == UpdateInterval.OneWeek(),
-                onClick = { onClick(UpdateInterval.OneWeek()) },
+            StyledFilterChip(
+                isSelected = interval == UpdateInterval.OneWeek(),
+                enabled = autoUpdateEnabled,
                 label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.one_week)) },
                 leadingIcon = {
                     Icon(
@@ -498,19 +595,12 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
                         contentDescription = null
                     )
                 },
-                border = BorderStroke(
-                    2.dp,
-                    colorResource(id = com.bytecause.core.resources.R.color.md_theme_secondaryContainer_mediumContrast)
-                ),
-                colors = FilterChipDefaults.filterChipColors().copy(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedContainerColor = MaterialTheme.colorScheme.inversePrimary
-                )
+                onClick = { onClick(UpdateInterval.OneWeek()) }
             )
 
-            FilterChip(
-                selected = interval == UpdateInterval.TwoWeeks(),
-                onClick = { onClick(UpdateInterval.TwoWeeks()) },
+            StyledFilterChip(
+                isSelected = interval == UpdateInterval.TwoWeeks(),
+                enabled = autoUpdateEnabled,
                 label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.two_weeks)) },
                 leadingIcon = {
                     Icon(
@@ -518,19 +608,12 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
                         contentDescription = null
                     )
                 },
-                border = BorderStroke(
-                    2.dp,
-                    colorResource(id = com.bytecause.core.resources.R.color.md_theme_secondaryContainer_mediumContrast)
-                ),
-                colors = FilterChipDefaults.filterChipColors().copy(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedContainerColor = MaterialTheme.colorScheme.inversePrimary
-                )
+                onClick = { onClick(UpdateInterval.TwoWeeks()) }
             )
 
-            FilterChip(
-                selected = interval == UpdateInterval.OneMonth(),
-                onClick = { onClick(UpdateInterval.OneMonth()) },
+            StyledFilterChip(
+                isSelected = interval == UpdateInterval.OneMonth(),
+                enabled = autoUpdateEnabled,
                 label = { Text(text = stringResource(id = com.bytecause.core.resources.R.string.one_month)) },
                 leadingIcon = {
                     Icon(
@@ -538,14 +621,7 @@ fun ChipsRow(interval: UpdateInterval?, onClick: (UpdateInterval) -> Unit) {
                         contentDescription = null
                     )
                 },
-                border = BorderStroke(
-                    2.dp,
-                    colorResource(id = com.bytecause.core.resources.R.color.md_theme_secondaryContainer_mediumContrast)
-                ),
-                colors = FilterChipDefaults.filterChipColors().copy(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedContainerColor = MaterialTheme.colorScheme.inversePrimary
-                )
+                onClick = { onClick(UpdateInterval.OneMonth()) }
             )
         }
     }
@@ -634,14 +710,15 @@ fun DownloadedRegionItem(
 
         if (isUpdating) {
             LinearProgressIndicator()
-            if (progress != -1) {
-                Text(
-                    text = stringResource(id = com.bytecause.core.resources.R.string.processed_count)
-                        .format(progress),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                text = if (progress != -1) {
+                    stringResource(id = com.bytecause.core.resources.R.string.processed_count).format(
+                        progress
+                    )
+                } else stringResource(id = com.bytecause.core.resources.R.string.waiting_for_server_response),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         ActionButtons(

@@ -30,6 +30,7 @@ import com.bytecause.features.search.databinding.SearchMapFragmentDialogBinding
 import com.bytecause.presentation.components.views.CustomTextInputEditText
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
+import com.bytecause.presentation.model.UiState
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.SearchHistoryFragment
 import com.bytecause.search.ui.SearchMapCategoriesFragment
@@ -350,7 +351,7 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
     }*/
 
-    private fun populateRecyclerView(places: com.bytecause.domain.model.UiState<SearchedPlace>) {
+    private fun populateRecyclerView(places: UiState<SearchedPlace>) {
         when (val exception = places.error) {
 
             is IOException -> {

@@ -18,4 +18,16 @@ object Util {
             -1
         }
     }
+
+    // types of objects that should be queried for the entire region
+    val searchTypesStringList =
+        listOf("shop", "amenity", "leisure", "tourism", "seamark:type", "public_transport")
+
+    // types of objects that should be omitted in the query for the entire region
+    val excludeAmenityObjectsFilterList = listOf(
+        "clock",
+        "fixme",
+        "smoking_area",
+        "internet_kiosk"
+    )
 }

@@ -26,23 +26,19 @@ class GetPoiResultByRegionUseCase(
 
     operator fun invoke(
         query: String,
-        regionId: Int? = null
+        regionId: Int
     ): Flow<ApiResult<Nothing>> = flow<ApiResult<Nothing>> {
         overpassRepository.makeQuery<OverpassNodeModel>(query).collect { result ->
             if (result.exception == null && result.data != null) {
-
                 when {
                     result.data.first != null && result.data.second.isEmpty() -> {
                         result.data.first?.let { dateString ->
-                            regionId?.let { id ->
-
-                                osmRegionMetadataDatasetRepository.insertDataset(
-                                    OsmRegionMetadataDatasetModel(
-                                        id = id,
-                                        timestamp = timestampStringToTimestampLong(dateString)
-                                    )
+                            osmRegionMetadataDatasetRepository.insertDataset(
+                                OsmRegionMetadataDatasetModel(
+                                    id = regionId,
+                                    timestamp = timestampStringToTimestampLong(dateString)
                                 )
-                            }
+                            )
                         }
                     }
 
@@ -60,10 +56,11 @@ class GetPoiResultByRegionUseCase(
                                 latitude = it.lat,
                                 longitude = it.lon,
                                 tags = it.tags,
+                                datasetId = regionId
                             )
                         }
 
-                        regionPoiCacheRepository.cacheResult(entityList.map { it.copy(datasetId = regionId!!) })
+                        regionPoiCacheRepository.cacheResult(entityList)
                         emit(ApiResult.Progress(progress = entityList.size))
                     }
                 }

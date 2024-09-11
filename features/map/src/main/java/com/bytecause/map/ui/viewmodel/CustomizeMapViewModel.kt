@@ -6,7 +6,7 @@ import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
-import com.bytecause.domain.model.UiState
+import com.bytecause.presentation.model.UiState
 import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import com.bytecause.domain.usecase.UpdateVesselsUseCase
 import com.bytecause.map.ui.model.PoiCategory

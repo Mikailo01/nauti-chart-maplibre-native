@@ -16,6 +16,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bytecause.domain.util.OverpassQueryBuilder
+import com.bytecause.domain.util.Util.excludeAmenityObjectsFilterList
+import com.bytecause.domain.util.Util.searchTypesStringList
 import com.bytecause.features.pois.R
 import com.bytecause.features.pois.databinding.DownloadPoiFragmentLayoutBinding
 import com.bytecause.pois.ui.model.CountryParentItem
@@ -25,8 +27,6 @@ import com.bytecause.pois.ui.viewmodel.DownloadPoiSelectCountryViewModel
 import com.bytecause.presentation.components.views.recyclerview.StatefulRecyclerView
 import com.bytecause.util.context.storageAvailable
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.poi.PoiUtil.excludeAmenityObjectsFilterList
-import com.bytecause.util.poi.PoiUtil.searchTypesStringList
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest

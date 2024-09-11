@@ -1,3 +1,5 @@
+import com.bytecause.convention.implementation
+
 plugins {
     alias(libs.plugins.nautichart.android.application)
     alias(libs.plugins.nautichart.android.hilt)
@@ -45,6 +47,11 @@ dependencies {
     implementation(projects.core.resources)
     implementation(projects.core.data)
     implementation(projects.core.presentation)
+
+    // WorkManager
+    implementation(libs.androidx.workManager)
+
+    implementation(libs.hilt.work)
 
     // Lifecycle service
     implementation(libs.androidx.lifecycle.lifecycleService)

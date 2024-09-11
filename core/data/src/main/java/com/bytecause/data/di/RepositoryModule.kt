@@ -9,6 +9,7 @@ import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.local.room.dao.RegionPoiCacheDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
+import com.bytecause.data.repository.CountryRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineRasterTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineVectorTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomOnlineRasterTileSourceRepositoryImpl
@@ -20,6 +21,7 @@ import com.bytecause.data.repository.RadiusPoiCacheRepositoryImpl
 import com.bytecause.data.repository.RegionPoiCacheRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
+import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
@@ -103,4 +105,9 @@ object RepositoryModule {
         UserPreferencesRepositoryImpl(
             context.userDataStore
         )
+
+    @Provides
+    @Singleton
+    fun providesCountryRepository(appDatabase: AppDatabase): CountryRepository =
+        CountryRepositoryImpl(appDatabase.countryDao())
 }

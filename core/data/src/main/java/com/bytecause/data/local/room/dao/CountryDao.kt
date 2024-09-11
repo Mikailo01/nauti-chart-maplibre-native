@@ -2,14 +2,12 @@ package com.bytecause.data.local.room.dao
 
 import androidx.room.Dao
 import androidx.room.Query
-import androidx.room.Transaction
-import com.bytecause.data.local.room.tables.ContinentCountriesRelation
+import com.bytecause.domain.model.CountryModel
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CountryDao {
 
-    @Transaction
-    @Query("SELECT * FROM continent WHERE id = :continentId")
-    fun getContinentCountries(continentId: Int): Flow<ContinentCountriesRelation>
+    @Query("SELECT * FROM country WHERE iso2 = :isoCode")
+    fun getCountryByIso(isoCode: String): Flow<CountryModel>
 }

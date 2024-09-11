@@ -35,18 +35,6 @@ object PoiUtil {
             }
     }
 
-    // types of objects that should be queried for the entire region
-    val searchTypesStringList =
-        listOf("shop", "amenity", "leisure", "tourism", "seamark:type", "public_transport")
-
-    // types of objects that should be omitted in the query for the entire region
-    val excludeAmenityObjectsFilterList = listOf(
-        "clock",
-        "fixme",
-        "smoking_area",
-        "internet_kiosk"
-    )
-
     /** extracts category from overpass element's tags **/
     fun extractCategoryFromPoiEntity(tagsMap: Map<String, String>): String? {
         return when {

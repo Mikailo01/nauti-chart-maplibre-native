@@ -1,6 +1,7 @@
 package com.bytecause.domain.abstractions
 
 import com.bytecause.domain.model.LatLngModel
+import com.bytecause.domain.model.NetworkType
 import kotlinx.coroutines.flow.Flow
 
 interface UserPreferencesRepository {
@@ -31,4 +32,7 @@ interface UserPreferencesRepository {
 
     suspend fun saveHarboursUpdateInterval(interval: Long)
     fun getHarboursUpdateInterval(): Flow<Long>
+
+    suspend fun saveAutoUpdateNetworkPreference(networkType: NetworkType)
+    fun getAutoUpdatesNetworkPreference(): Flow<NetworkType>
 }
