@@ -1,7 +1,7 @@
 package com.bytecause.domain.usecase
 
 import com.bytecause.domain.abstractions.OverpassRepository
-import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
+import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.makeQuery
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.LatLngModel
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 class GetPoiResultByRadiusUseCase(
-    private val radiusPoiCacheRepository: RadiusPoiCacheRepository,
+    private val poiCacheRepository: PoiCacheRepository,
     private val overpassRepository: OverpassRepository,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
@@ -42,7 +42,7 @@ class GetPoiResultByRadiusUseCase(
 
     operator fun invoke(entity: PoiQueryModel): Flow<ApiResult<List<PoiCacheModel>>> {
         return flow<ApiResult<List<PoiCacheModel>>> {
-            radiusPoiCacheRepository.loadByCategory(entity.category).firstOrNull()
+            poiCacheRepository.getPoiByCategory(entity.categoryList).firstOrNull()
                 ?.let { poiEntityList ->
                     val cachedPoiList = poiEntityList.filter { poiElement ->
                         entity.position.distanceTo(
@@ -58,16 +58,9 @@ class GetPoiResultByRadiusUseCase(
                                 .collect { result ->
                                     when {
                                         result.exception != null -> emit(ApiResult.Failure(result.exception))
-                                        result.data?.first != null && result.data.second.isEmpty() -> {
-
-                                        }
-
-                                        else -> {
+                                        !result.data?.second.isNullOrEmpty() && result.data?.first == null -> {
                                             result.data?.second?.let { data ->
-                                                data.filter { element ->
-                                                    radiusPoiCacheRepository.isPlaceCached(element.id)
-                                                        .firstOrNull() == false
-                                                }.takeIf { it.isNotEmpty() }?.map {
+                                                data.map {
                                                     // extract POI category from tags
                                                     val category =
                                                         extractCategoryFromPoiEntity(it.tags)
@@ -81,40 +74,12 @@ class GetPoiResultByRadiusUseCase(
                                                     PoiCacheModel(
                                                         placeId = it.id,
                                                         category = category,
-                                                        // can't access android resources in platform-agnostic domain module
-                                                        drawableResourceName = "",
                                                         latitude = it.lat,
                                                         longitude = it.lon,
                                                         tags = it.tags,
                                                     )
-                                                }?.let { poiCacheEntity ->
-                                                    radiusPoiCacheRepository.cacheResult(poiCacheEntity)
+                                                }.let { poiCacheEntity ->
                                                     emit(ApiResult.Success(poiCacheEntity))
-                                                } ?: run {
-                                                    // result returned by api is already cached, emit this result.
-                                                    data.map {
-                                                        val category =
-                                                            extractCategoryFromPoiEntity(it.tags)
-                                                                .takeIf { category -> !category.isNullOrEmpty() }
-                                                                .let { tagValue ->
-                                                                    formatTagString(
-                                                                        tagValue
-                                                                    )
-                                                                }
-                                                                ?: ""
-
-                                                        PoiCacheModel(
-                                                            placeId = it.id,
-                                                            category = category,
-                                                            // can't access android resources in platform-agnostic domain module
-                                                            drawableResourceName = "",
-                                                            latitude = it.lat,
-                                                            longitude = it.lon,
-                                                            tags = it.tags,
-                                                        )
-                                                    }.let {
-                                                        emit(ApiResult.Success(data = it))
-                                                    }
                                                 }
                                             }
                                         }

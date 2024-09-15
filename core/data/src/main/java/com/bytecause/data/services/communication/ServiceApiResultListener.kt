@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 sealed class ServiceEvent {
-    data class RegionPoiUpdate(val regionId: Int, val result: ApiResult<*>) : ServiceEvent()
+    data class RegionPoiDownload(val regionId: Int, val result: ApiResult<*>) : ServiceEvent()
     data class HarboursUpdate(val result: ApiResult<*>) : ServiceEvent()
-    data class RegionPoiUpdateStarted(val regionId: Int) : ServiceEvent()
-    data class RegionPoiUpdateCancelled(val regionId: Int) : ServiceEvent()
+    data class RegionPoiDownloadStarted(val regionId: Int) : ServiceEvent()
+    data class RegionPoiDownloadCancelled(val regionId: Int) : ServiceEvent()
     data object HarboursUpdateStarted : ServiceEvent()
     data object HarboursUpdateCancelled : ServiceEvent()
 }

@@ -17,7 +17,7 @@ class FirstRunSharedViewModel : ViewModel() {
     private val _selectedRegion = MutableStateFlow<RegionModel?>(null)
     val selectedRegion: StateFlow<RegionModel?> = _selectedRegion.asStateFlow()
 
-    fun saveRegions(regions: List<RegionModel>) {
+    fun setRegions(regions: List<RegionModel>) {
         _regionsSharedFlow.update { regions }
     }
 

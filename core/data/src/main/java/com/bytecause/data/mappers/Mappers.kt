@@ -6,8 +6,7 @@ import com.bytecause.data.local.room.tables.CountryEntity
 import com.bytecause.data.local.room.tables.HarboursEntity
 import com.bytecause.data.local.room.tables.HarboursMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.OsmRegionMetadataDatasetEntity
-import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
-import com.bytecause.data.local.room.tables.RegionPoiCacheEntity
+import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.RegionEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
@@ -82,42 +81,19 @@ fun HarboursModel.asHarboursEntity(): HarboursEntity = HarboursEntity(
     tags = tags
 )
 
-fun PoiCacheModel.asRegionPoiCacheEntity(drawableResourceName: String? = null): RegionPoiCacheEntity =
-    RegionPoiCacheEntity(
+fun PoiCacheModel.asRegionPoiCacheEntity(drawableResourceName: String? = null): PoiCacheEntity =
+    PoiCacheEntity(
         placeId = placeId,
         category = category,
-        drawableResourceName = drawableResourceName.takeIf { it != null }
-            ?: this.drawableResourceName,
         latitude = latitude,
         longitude = longitude,
         tags = tags,
         datasetId = datasetId
     )
 
-fun PoiCacheModel.asRadiusPoiCacheEntity(drawableResourceName: String? = null): RadiusPoiCacheEntity =
-    RadiusPoiCacheEntity(
-        placeId = placeId,
-        category = category,
-        drawableResourceName = drawableResourceName.takeIf { it != null }
-            ?: this.drawableResourceName,
-        latitude = latitude,
-        longitude = longitude,
-        tags = tags
-    )
-
-fun RegionPoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
+fun PoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
     placeId = placeId,
     category = category,
-    drawableResourceName = drawableResourceName,
-    latitude = latitude,
-    longitude = longitude,
-    tags = tags
-)
-
-fun RadiusPoiCacheEntity.asPoiCacheModel(): PoiCacheModel = PoiCacheModel(
-    placeId = placeId,
-    category = category,
-    drawableResourceName = drawableResourceName,
     latitude = latitude,
     longitude = longitude,
     tags = tags

@@ -28,7 +28,7 @@ object MapFragmentConstants {
     const val POI_GEOJSON_SOURCE = "poi-geojson-source"
     const val POI_SYMBOL_LAYER = "poi-geojson-layer"
     const val POI_SYMBOL_ICON_SIZE = 1.3f
-    const val POI_SYMBOL_ICON_DRAWABLE_KEY = "poi_icon_drawable"
+    const val POI_CATEGORY_KEY = "poi_category"
     const val POI_SYMBOL_PROPERTY_ID_KEY = "poi_id"
     const val POI_SYMBOL_NAME_KEY = "poi_symbol_name"
     const val POI_SYMBOL_TEXT_OFFSET_KEY = "poi_symbol_text_offset"

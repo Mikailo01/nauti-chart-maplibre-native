@@ -5,21 +5,20 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.services.communication.ServiceApiResultListener
+import com.bytecause.data.services.communication.ServiceEvent
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.CountryModel
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.RegionModel
-import com.bytecause.presentation.model.UiState
 import com.bytecause.domain.usecase.GetRegionsUseCase
 import com.bytecause.pois.data.repository.abstractions.ContinentRepository
 import com.bytecause.pois.data.repository.abstractions.CountryDataExtractSizeRepository
-import com.bytecause.domain.abstractions.RegionRepository
-import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.pois.ui.getKeyByIndex
 import com.bytecause.pois.ui.model.CountryParentItem
 import com.bytecause.pois.ui.model.RegionChildItem
+import com.bytecause.presentation.model.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,9 +39,7 @@ class DownloadPoiSelectCountryViewModel
 constructor(
     private val continentRepository: ContinentRepository,
     private val countryDataExtractSizeRepository: CountryDataExtractSizeRepository,
-    private val getRegionsUseCase: GetRegionsUseCase,
-    private val regionRepository: RegionRepository,
-    private val getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase,
+    private val getRegionsUseCase: GetRegionsUseCase
 ) : ViewModel() {
     private val _mapContent = MutableStateFlow(mapOf<String, CountryParentItem>())
     val mapContent: StateFlow<Map<String, CountryParentItem>> = _mapContent.asStateFlow()
@@ -59,11 +56,8 @@ constructor(
     private val _regionEntityUiStateLiveData = MutableLiveData<UiState<RegionModel>>(UiState())
     val regionEntityUiStateLiveData: LiveData<UiState<RegionModel>> get() = _regionEntityUiStateLiveData
 
-    private val _poiDownloadUiStateLiveData = MutableLiveData<UiState<Nothing>>(UiState())
-    val poiDownloadUiStateLiveData: LiveData<UiState<Nothing>> get() = _poiDownloadUiStateLiveData
-
-    var downloadJob: Job? = null
-        private set
+    private val _poiDownloadUiState = MutableStateFlow<UiState<Nothing>?>(null)
+    val poiDownloadUiState: StateFlow<UiState<Nothing>?> = _poiDownloadUiState.asStateFlow()
 
     var recyclerViewExpandedStateList = listOf<Boolean>()
         private set
@@ -73,9 +67,66 @@ constructor(
     }
 
     fun cancelDownloadJob() {
-        downloadJob?.cancel()
-        downloadJob = null
         showDownloadProgressBar(false)
+    }
+
+    init {
+        viewModelScope.launch {
+            ServiceApiResultListener.eventFlow.collect { event ->
+                when (event) {
+                    is ServiceEvent.RegionPoiDownload -> {
+                        when (val result = event.result) {
+                            is ApiResult.Success -> {
+                                updateRegionIsDownloaded()
+                                resetCheckedState()
+
+                                _poiDownloadUiState.emit(
+                                    UiState(
+                                        loading = Loading(false),
+                                        items = emptyList(),
+                                    )
+                                )
+                            }
+
+                            is ApiResult.Failure -> {
+                                _poiDownloadUiState.emit(
+                                    UiState(
+                                        loading = Loading(false),
+                                        error = result.exception,
+                                    )
+                                )
+                            }
+
+                            is ApiResult.Progress -> {
+                                result.progress?.let { progress ->
+                                    _poiDownloadUiState.emit(
+                                        UiState(
+                                            loading = Loading(
+                                                isLoading = true,
+                                                progress = progress
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    is ServiceEvent.RegionPoiDownloadStarted -> {
+                        _poiDownloadUiState.emit(UiState(loading = Loading(true)))
+                    }
+
+                    is ServiceEvent.RegionPoiDownloadCancelled -> {
+                        _poiDownloadUiState.emit(null)
+                        cancelDownloadJob()
+                    }
+
+                    else -> {
+                        // do nothing
+                    }
+                }
+            }
+        }
     }
 
     fun getRegions(
@@ -89,14 +140,14 @@ constructor(
                 is ApiResult.Success -> {
                     _regionEntityUiStateLiveData.postValue(
                         UiState(
-                        loading = Loading(false),
-                        items =
-                        data.data?.sortedBy {
-                            it.names["name:${Locale.getDefault().language}"]
-                                ?: it.names["name:en"]
-                                ?: it.names["name"]
-                        } ?: emptyList(),
-                    )
+                            loading = Loading(false),
+                            items =
+                            data.data?.sortedBy {
+                                it.names["name:${Locale.getDefault().language}"]
+                                    ?: it.names["name:en"]
+                                    ?: it.names["name"]
+                            } ?: emptyList(),
+                        )
                     )
                 }
 
@@ -141,83 +192,6 @@ constructor(
                 }
             }
         }
-    }
-
-    private fun addDownloadedRegionId(regionId: Int) {
-        viewModelScope.launch {
-            val regionEntity =
-                mapContent.value.entries
-                    .find { it.value.regionList.any { it.regionEntity.id == regionId } }?.value?.regionList
-                    ?.find { it.regionEntity.id == regionId }?.regionEntity?.copy(isDownloaded = true)
-
-            if (regionEntity != null) {
-                regionRepository.cacheRegions(listOf(regionEntity))
-            }
-        }
-    }
-
-    fun getPois(
-        regionId: Int,
-        query: String,
-    ) {
-        downloadJob =
-            viewModelScope.launch {
-                _poiDownloadUiStateLiveData.postValue(UiState(loading = Loading(true)))
-
-                getPoiResultByRegionUseCase(query = query, regionId = regionId).collect { result ->
-                    when (result) {
-                        is ApiResult.Success -> {
-                            // save downloaded region id into preferences datastore.
-                            getRegionIdList().forEach {
-                                addDownloadedRegionId(it)
-                            }.also {
-                                updateRegionIsDownloaded()
-                                resetCheckedState()
-                            }
-
-                            _poiDownloadUiStateLiveData.postValue(
-                                UiState(
-                                    loading = Loading(false),
-                                    items = emptyList(),
-                                )
-                            )
-                        }
-
-                        is ApiResult.Failure -> {
-                            _poiDownloadUiStateLiveData.postValue(
-                                UiState(
-                                    loading = Loading(false),
-                                    error = result.exception,
-                                )
-                            )
-                        }
-
-                        is ApiResult.Progress -> {
-                            result.progress?.let { progress ->
-                                _poiDownloadUiStateLiveData.postValue(
-                                    UiState(
-                                        loading = Loading(
-                                            isLoading = true,
-                                            progress = poiDownloadUiStateLiveData.value?.loading?.progress?.plus(
-                                                progress
-                                            ) ?: progress
-                                        )
-                                    )
-                                )
-                            }
-                        }
-
-                        else -> {
-                            _poiDownloadUiStateLiveData.postValue(
-                                UiState(
-                                    loading = Loading(false),
-                                    items = emptyList(),
-                                )
-                            )
-                        }
-                    }
-                }
-            }
     }
 
     fun addToDownloadQueue(
@@ -506,19 +480,6 @@ constructor(
             }
         }
         return regions
-    }
-
-    private fun getRegionIdList(): List<Int> {
-        val idList = mutableListOf<Int>()
-
-        for ((key, values) in downloadQueueMap) {
-            for (value in values) {
-                mapContent.value[mapContent.value.getKeyByIndex(key)]?.regionList?.get(value)?.regionEntity?.id?.let {
-                    idList.add(it)
-                }
-            }
-        }
-        return idList
     }
 
     fun getAssociatedCountries(

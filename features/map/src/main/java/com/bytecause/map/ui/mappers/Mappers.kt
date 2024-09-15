@@ -9,7 +9,6 @@ internal fun PoiCacheModel.asPoiUiModel(): PoiUiModel = PoiUiModel(
     id = placeId,
     name = tags["name"] ?: "",
     category = category,
-    drawableResourceName = drawableResourceName,
     latitude = latitude,
     longitude = longitude
 )

@@ -3,7 +3,7 @@ package com.bytecause.nautichart.overpassquerybuilder
 import com.bytecause.domain.model.LatLngModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.domain.util.SearchTypes
-import com.bytecause.util.poi.PoiUtil.searchTypesStringList
+import com.bytecause.domain.util.Util.searchTypesStringList
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

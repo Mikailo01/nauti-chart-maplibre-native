@@ -8,19 +8,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,9 +40,12 @@ import com.bytecause.core.resources.R
 import com.bytecause.domain.model.RegionModel
 import com.bytecause.features.first_run.databinding.SelectRegionDialogLayoutBinding
 import com.bytecause.first_run.ui.viewmodel.FirstRunSharedViewModel
+import com.bytecause.presentation.components.compose.Divider
 import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.util.delegates.viewBinding
 import java.util.Locale
+
+private const val HEIGHT_SCALE = 0.7f
 
 class SelectRegionComposedDialog : DialogFragment() {
 
@@ -105,16 +108,16 @@ fun SelectRegionComposedDialogContent(
     regions: List<RegionModel>,
     onRegionClick: (RegionModel) -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 10.dp, max = maxHeight * HEIGHT_SCALE)
                 .align(Alignment.Center),
-            colors = CardDefaults.cardColors()
-                .copy(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         ) {
             Column(
                 modifier = Modifier.padding(top = 15.dp),
@@ -122,11 +125,11 @@ fun SelectRegionComposedDialogContent(
             ) {
                 Text(text = "Select region", fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(
+                Divider(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 20.dp, end = 20.dp),
-                    thickness = 2.dp,
+                    thickness = 2,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
@@ -152,6 +155,7 @@ fun SelectRegionComposedDialogContent(
         }
     }
 }
+
 
 @Composable
 fun RegionItem(

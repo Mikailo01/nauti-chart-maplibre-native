@@ -7,8 +7,7 @@ import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OverpassRepository
-import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
-import com.bytecause.domain.abstractions.RegionPoiCacheRepository
+import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
@@ -47,22 +46,24 @@ object UseCaseModule {
     @Provides
     fun providesGetPoiResultByRegionUseCase(
         overpassRepository: OverpassRepository,
-        poiCacheRepository: RegionPoiCacheRepository,
-        osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository
+        poiCacheRepository: PoiCacheRepository,
+        osmRegionMetadataDatasetRepository: OsmRegionMetadataDatasetRepository,
+        regionRepository: RegionRepository
     ): GetPoiResultByRegionUseCase =
         GetPoiResultByRegionUseCase(
             overpassRepository = overpassRepository,
-            regionPoiCacheRepository = poiCacheRepository,
-            osmRegionMetadataDatasetRepository = osmRegionMetadataDatasetRepository
+            poiCacheRepository = poiCacheRepository,
+            osmRegionMetadataDatasetRepository = osmRegionMetadataDatasetRepository,
+            regionRepository = regionRepository
         )
 
     @Provides
     fun providesGetPoiResultByRadiusUseCase(
-        radiusPoiCacheRepository: RadiusPoiCacheRepository,
+        poiCacheRepository: PoiCacheRepository,
         overpassRepository: OverpassRepository
     ): GetPoiResultByRadiusUseCase =
         GetPoiResultByRadiusUseCase(
-            radiusPoiCacheRepository = radiusPoiCacheRepository,
+            poiCacheRepository = poiCacheRepository,
             overpassRepository = overpassRepository
         )
 

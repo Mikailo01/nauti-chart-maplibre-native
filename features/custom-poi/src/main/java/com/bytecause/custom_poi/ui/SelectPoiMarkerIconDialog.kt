@@ -2,7 +2,6 @@ package com.bytecause.custom_poi.ui
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -49,8 +48,6 @@ class SelectPoiMarkerIconDialog : DialogFragment(), SelectPoiMarkerIconInterface
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.getRecentUsedPoiMarkerIcons().collect {
                     it.iconDrawableResourceNameList.reversed().let { drawableResourceNameList ->
-
-                        Log.d("idk", drawableResourceNameList.joinToString())
 
                         // create recycler view with icons content.
                         viewModel.contentList.value?.let { newContent ->

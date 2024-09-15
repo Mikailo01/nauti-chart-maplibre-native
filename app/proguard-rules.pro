@@ -272,9 +272,3 @@
 -keepnames class com.bytecause.domain.model.** { *; }
 
 -keep class androidx.compose.** { *; }
-
-
-
-
-
-

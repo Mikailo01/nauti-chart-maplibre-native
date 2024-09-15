@@ -23,25 +23,17 @@ class App : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(updateExpiredDatasetsWorkerFactory).build()
 
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val workerScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
 
-        // TODO("Cancel scope properly")
-        scope.launch {
+        workerScope.launch {
             try {
-             updateExpiredDatasetsWorkerInitializer.initialize(this@App)
+                updateExpiredDatasetsWorkerInitializer.initialize(this@App)
             } finally {
-                scope.cancel()
+                workerScope.cancel()
             }
         }
-
-       /* CoroutineScope(Dispatchers.IO).launch {
-            while (true) {
-                Log.d("idk", scope.isActive.toString())
-                delay(1000)
-            }
-        }*/
     }
 }

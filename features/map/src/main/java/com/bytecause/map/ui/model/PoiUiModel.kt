@@ -4,7 +4,6 @@ data class PoiUiModel(
     val id: Long = 0,
     val name: String = "",
     val category: String = "",
-    val drawableResourceName: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0
 )

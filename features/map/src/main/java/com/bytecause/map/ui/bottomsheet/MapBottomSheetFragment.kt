@@ -1,7 +1,6 @@
 package com.bytecause.map.ui.bottomsheet
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
@@ -275,7 +274,7 @@ class MapBottomSheetFragment :
 
             LayerTypes.ADDITIONAL_OVERLAY -> {
                 when (position) {
-                    // TODO("Additional overlays are not implemented yet.")
+                    // TODO("Additional overlays")
                 }
             }
         }
@@ -321,10 +320,7 @@ class MapBottomSheetFragment :
                             }
                         }
 
-                        Log.d("idk", mapSharedViewModel.tileSource.replayCache.lastOrNull().toString())
-
                         mapSharedViewModel.tileSource.replayCache.lastOrNull()?.let { tilesource ->
-                            Log.d("idk", tilesource.toString())
                             if (
                                 (tilesource as? TileSources.Raster.Custom.Offline)?.name == deletedProvider.second ||
                                 (tilesource as? TileSources.Raster.Custom.Online)?.name == deletedProvider.second ||

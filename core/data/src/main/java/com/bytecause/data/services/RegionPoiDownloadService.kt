@@ -62,6 +62,7 @@ class RegionPoiDownloadService : LifecycleService() {
             }
 
             Actions.STOP.toString() -> {
+                ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadCancelled(regionId = regionId))
                 stopService()
             }
         }
@@ -124,25 +125,30 @@ class RegionPoiDownloadService : LifecycleService() {
                 )
                 .build()
 
-            ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiUpdateStarted(regionId))
+            ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadStarted(regionId))
 
             getPoiResultByRegionUseCase(query = query, regionId = regionId).collect { result ->
                 when (result) {
                     is ApiResult.Progress -> {
                         result.progress?.let { progress ->
+
+                            this@RegionPoiDownloadService.progress =
+                                this@RegionPoiDownloadService.progress.takeIf { it != -1 }
+                                    ?.plus(progress) ?: progress
+
                             ServiceApiResultListener.postEvent(
-                                ServiceEvent.RegionPoiUpdate(
+                                ServiceEvent.RegionPoiDownload(
                                     regionId,
-                                    result
+                                    ApiResult.Progress<Nothing>(progress = this@RegionPoiDownloadService.progress)
                                 )
                             )
-                            updateNotificationProgress(progress)
+                            updateNotificationProgress()
                         }
                     }
 
                     is ApiResult.Success -> {
                         ServiceApiResultListener.postEvent(
-                            ServiceEvent.RegionPoiUpdate(
+                            ServiceEvent.RegionPoiDownload(
                                 regionId,
                                 result
                             )
@@ -152,7 +158,7 @@ class RegionPoiDownloadService : LifecycleService() {
 
                     is ApiResult.Failure -> {
                         ServiceApiResultListener.postEvent(
-                            ServiceEvent.RegionPoiUpdate(
+                            ServiceEvent.RegionPoiDownload(
                                 regionId,
                                 result
                             )
@@ -164,9 +170,7 @@ class RegionPoiDownloadService : LifecycleService() {
         }
     }
 
-    private fun updateNotificationProgress(progress: Int) {
-        this.progress = this.progress.takeIf { it != -1 }?.plus(progress) ?: progress
-
+    private fun updateNotificationProgress() {
         notificationBuilder
             .setContentText(
                 getString(R.string.processed_count).format(this.progress)
@@ -175,7 +179,7 @@ class RegionPoiDownloadService : LifecycleService() {
     }
 
     private fun stopService() {
-        ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiUpdateCancelled(regionId))
+        ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadCancelled(regionId))
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

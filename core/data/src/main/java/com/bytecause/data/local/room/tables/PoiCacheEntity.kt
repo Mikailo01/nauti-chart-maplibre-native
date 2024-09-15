@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import com.bytecause.data.local.room.converter.MapTypeConverter
 
 @Entity(
-    tableName = "region_poi_cache",
+    tableName = "poi_cache",
     foreignKeys = [ForeignKey(
         entity = OsmRegionMetadataDatasetEntity::class,
         parentColumns = ["id"],
@@ -17,10 +17,9 @@ import com.bytecause.data.local.room.converter.MapTypeConverter
     )],
 )
 @TypeConverters(MapTypeConverter::class)
-data class RegionPoiCacheEntity(
+data class PoiCacheEntity(
     @PrimaryKey val placeId: Long = 0,
     val category: String = "",
-    val drawableResourceName: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val tags: Map<String, String> = emptyMap(),

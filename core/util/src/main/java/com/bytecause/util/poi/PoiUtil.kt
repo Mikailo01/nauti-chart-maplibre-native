@@ -35,6 +35,101 @@ object PoiUtil {
             }
     }
 
+    val poiIconDrawableMap: Map<String, Int> = mapOf(
+        "Bar" to R.drawable.bar,
+        "Pub" to R.drawable.pub,
+        "Accommodation" to R.drawable.accommodation,
+        "Toilets" to R.drawable.toilets,
+        "Shop" to R.drawable.shop,
+        "Vending machine" to R.drawable.vending_machine,
+        "Farm" to R.drawable.farm,
+        "Information" to R.drawable.information,
+        "Ice cream" to R.drawable.ice_cream,
+        "Theatre" to R.drawable.theatre,
+        "Bench" to R.drawable.bench,
+        "Restaurant" to R.drawable.restaurant,
+        "Fast food" to R.drawable.fast_food,
+        "Atm" to R.drawable.atm,
+        "Bank" to R.drawable.bank,
+        "Artwork" to R.drawable.artwork,
+        "Bowling alley" to R.drawable.bowling_alley,
+        "Bridge" to R.drawable.bridge,
+        "Boat rental" to R.drawable.boat_rent,
+        "Bus" to R.drawable.bus_station,
+        "Tram" to R.drawable.tram,
+        "Trolleybus" to R.drawable.trolleybus,
+        "Train" to R.drawable.train,
+        "Animal" to R.drawable.animal,
+        "Adult" to R.drawable.adult,
+        "Bureau de change" to R.drawable.bureau_de_change,
+        "Love hotel" to R.drawable.love_hotel,
+        "Dentist" to R.drawable.dentist,
+        "Pharmacy" to R.drawable.pharmacy,
+        "First aid" to R.drawable.first_aid,
+        "Hospital" to R.drawable.hospital,
+        "Clinic" to R.drawable.clinic,
+        "Doctors" to R.drawable.doctors,
+        "Veterinary" to R.drawable.veterinary,
+        "Golf" to R.drawable.golf,
+        "Drinking water" to R.drawable.drinking_water,
+        "Arts centre" to R.drawable.arts_centre,
+        "Swimming" to R.drawable.swimming_pool,
+        "Hunting stand" to R.drawable.hunting_stand,
+        "Ferry terminal" to R.drawable.ferry_terminal,
+        "Fire station" to R.drawable.fire_station,
+        "Nightclub" to R.drawable.nightclub,
+        "Cinema" to R.drawable.cinema,
+        "Charging station" to R.drawable.charging_station,
+        "Casino" to R.drawable.casino,
+        "Grave yard" to R.drawable.grave_yard,
+        "Horse riding" to R.drawable.horse_riding,
+        "Firepit" to R.drawable.firepit,
+        "Bicycle parking" to R.drawable.bicycle_parking,
+        "Viewpoint" to R.drawable.viewpoint,
+        "Cafe" to R.drawable.cafe,
+        "Camp site" to R.drawable.camping,
+        "Car rental" to R.drawable.car_rental,
+        "Car wash" to R.drawable.car_wash,
+        "Caravan site" to R.drawable.caravan_site,
+        "Chalet" to R.drawable.chalet,
+        "Care" to R.drawable.care,
+        "Compressed air" to R.drawable.compressed_air,
+        "Dog" to R.drawable.dog,
+        "Fishing" to R.drawable.fishing,
+        "Sport" to R.drawable.fitness,
+        "Fuel" to R.drawable.fuel_station,
+        "Zoo" to R.drawable.zoo,
+        "Wreck" to R.drawable.wreck,
+        "Vacuum cleaner" to R.drawable.vacuum_cleaner,
+        "Taxi" to R.drawable.taxi,
+        "Speed enforcement" to R.drawable.speed_enforcement,
+        "Shower" to R.drawable.shower,
+        "Shelter" to R.drawable.shelter,
+        "Sauna" to R.drawable.sauna,
+        "Police" to R.drawable.police,
+        "Playground" to R.drawable.playground,
+        "Place of worship" to R.drawable.place_of_worship,
+        "Picnic" to R.drawable.picnic_table,
+        "Parking" to R.drawable.parking,
+        "Museum" to R.drawable.museum,
+        "Library" to R.drawable.library,
+        "Public bookcase" to R.drawable.public_bookcase,
+        "Post office" to R.drawable.post_office,
+        "Post" to R.drawable.post_box,
+        "Nature" to R.drawable.nature,
+        "Park" to R.drawable.park,
+        "Ticket validator" to R.drawable.ticket_validator,
+        "Tourism" to R.drawable.tourist,
+        "Townhall" to R.drawable.townhall,
+        "Slipway" to R.drawable.slipway,
+        "Recycling" to R.drawable.recycling,
+        "Binoculars" to R.drawable.binoculars,
+        "Leisure" to R.drawable.leisure,
+        "Waste" to R.drawable.waste_basket,
+        "Mooring" to R.drawable.mooring,
+        "Marina" to R.drawable.anchor
+    )
+
     /** extracts category from overpass element's tags **/
     fun extractCategoryFromPoiEntity(tagsMap: Map<String, String>): String? {
         return when {
@@ -85,6 +180,7 @@ object PoiUtil {
                             "Pharmacy",
                             "First aid",
                             "Clinic",
+                            "Veterinary"
                         ),
                 "Finance" to listOf("Bank", "Bureau de change", "Atm"),
                 "Public transport" to
@@ -142,12 +238,101 @@ object PoiUtil {
     }
 
     // for category names listed in list will be used the same drawable resource.
-    private fun unifyPoiDrawables(categoryName: String): String {
+    fun unifyPoiDrawables(categoryName: String): String {
         val unifyCategoryMap =
             mapOf(
                 "Study" to listOf("School", "College", "University"),
-                "Accommodation" to listOf("Guest house", "Hotel", "Hostel"),
-                "Health" to listOf("Doctors", "Dentist", "Clinic"),
+                "Accommodation" to listOf(
+                    "Hostel",
+                    "Apartment",
+                    "Motel",
+                    "Guest house",
+                    "Hotel"
+                ),
+                "Golf" to listOf(
+                    "Miniature golf",
+                    "Golf course"
+                ),
+                "Animal" to listOf(
+                    "Animal boarding",
+                    "Animal breeding",
+                    "Animal shelter",
+                    "Animal training",
+                    "Wildlife feeding",
+                    "Fodder rack",
+                    "Feeding rack",
+                    "Bird hide"
+                ),
+                "Bus" to listOf(
+                    "Bus",
+                    "Bus station",
+                    "Bus stop"
+                ),
+                "Care" to listOf(
+                    "Childcare",
+                    "Nursing home"
+                ),
+                "Dog" to listOf(
+                    "Dog park",
+                    "Dog toilet"
+                ),
+                "Sport" to listOf(
+                    "Fitness centre",
+                    "Fitness station",
+                    "Sports hall",
+                    "Sport",
+                    "Sport centre"
+                ),
+                "Tram" to listOf(
+                    "Tram",
+                    "Tram stop"
+                ),
+                "Train" to listOf(
+                    "Train",
+                    "Train stop",
+                    "Train station",
+                    "Train halt",
+                ),
+                "Picnic" to listOf(
+                    "Picnic table",
+                    "Picnic site"
+                ),
+                "Parking" to listOf(
+                    "Parking",
+                    "Parking space",
+                    "Motorcycle parking"
+                ),
+                "Post" to listOf(
+                    "Post box",
+                    "Post depot",
+                    "Letter box"
+                ),
+                "Cafe" to listOf(
+                    "Cafe",
+                    "Internet cafe"
+                ),
+                "Nature" to listOf(
+                    "Nature",
+                    "Nature reserve",
+                ),
+                "Adult" to listOf(
+                    "Stripclub",
+                    "Brothel"
+                ),
+                "Swimming" to listOf(
+                    "Swimming pool",
+                    "Public bath",
+                    "Bathing place",
+                    "Water park"
+                ),
+                "Waste" to listOf(
+                    "Waste basket",
+                    "Waste disposal"
+                ),
+                "Drinking water" to listOf(
+                    "Drinking water",
+                    "Water point"
+                )
             )
 
         for (map in unifyCategoryMap) {
@@ -155,12 +340,6 @@ object PoiUtil {
         }
 
         return categoryName
-    }
-
-    fun extractRegionFromQuery(query: String): String? {
-        val regionRegex = """area\["name"="(.*?)"]->\.searchArea""".toRegex()
-        val matchResult = regionRegex.find(query)
-        return matchResult?.groupValues?.get(1)
     }
 
     // unify methods of payment listed in overpass element's tags

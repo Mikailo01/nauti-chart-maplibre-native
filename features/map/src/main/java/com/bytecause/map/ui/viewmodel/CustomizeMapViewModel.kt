@@ -2,14 +2,14 @@ package com.bytecause.map.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
-import com.bytecause.domain.abstractions.RegionPoiCacheRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
-import com.bytecause.presentation.model.UiState
 import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import com.bytecause.domain.usecase.UpdateVesselsUseCase
 import com.bytecause.map.ui.model.PoiCategory
+import com.bytecause.presentation.model.UiState
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import com.bytecause.util.poi.PoiUtil.getUnifiedPoiCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +27,7 @@ import javax.inject.Inject
 class CustomizeMapViewModel
 @Inject
 constructor(
-    private val regionPoiCacheRepository: RegionPoiCacheRepository,
+    private val poiCacheRepository: PoiCacheRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val updateVesselsUseCase: UpdateVesselsUseCase,
     private val updateHarboursUseCase: UpdateHarboursUseCase
@@ -59,7 +59,7 @@ constructor(
     }
 
     val getAllDistinctCategories: StateFlow<List<PoiCategory>> = combine(
-        regionPoiCacheRepository.getAllDistinctCategories(),
+        poiCacheRepository.getAllDistinctCategories(),
         userPreferencesRepository.getSelectedPoiCategories()
     ) { categories, selectedCategories ->
 
@@ -86,7 +86,7 @@ constructor(
 
     fun selectAllCategories() {
         viewModelScope.launch {
-            regionPoiCacheRepository.getAllDistinctCategories().firstOrNull()?.let { categories ->
+            poiCacheRepository.getAllDistinctCategories().firstOrNull()?.let { categories ->
                 selectedCategories = categories.toSet()
                 userPreferencesRepository.saveSelectedPoiCategories(selectedCategories)
             }

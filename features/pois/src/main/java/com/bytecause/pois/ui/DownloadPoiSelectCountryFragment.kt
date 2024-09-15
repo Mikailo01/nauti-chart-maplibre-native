@@ -1,5 +1,6 @@
 package com.bytecause.pois.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,9 +16,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bytecause.data.services.RegionPoiDownloadService
 import com.bytecause.domain.util.OverpassQueryBuilder
-import com.bytecause.domain.util.Util.excludeAmenityObjectsFilterList
-import com.bytecause.domain.util.Util.searchTypesStringList
 import com.bytecause.features.pois.R
 import com.bytecause.features.pois.databinding.DownloadPoiFragmentLayoutBinding
 import com.bytecause.pois.ui.model.CountryParentItem
@@ -68,6 +68,17 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
         super.onViewCreated(view, savedInstanceState)
 
         binding.downloadButton.apply {
+
+            if (viewModel.isDownloading()) {
+                text = getString(com.bytecause.core.resources.R.string.cancel)
+                setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        com.bytecause.core.resources.R.color.md_theme_error
+                    )
+                )
+            }
+
             visibility =
                 if (viewModel.downloadQueueMap.values.all { it.isEmpty() }) View.GONE else View.VISIBLE
 
@@ -119,7 +130,6 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                             ?.let { states ->
                                 recyclerViewParentAdapter.restoreExpandedStates(states)
                             }
-                        setDownloadUiState(viewModel.isDownloading())
                     } else recyclerViewParentAdapter.submitMap(content)
                 }
             }
@@ -143,7 +153,7 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                     viewModel.cancelRegionsLoadingState()
                     Toast.makeText(
                         requireContext(),
-                        "No element found",
+                        getString(com.bytecause.core.resources.R.string.no_element_found),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -164,38 +174,45 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
             }
         }
 
-        viewModel.poiDownloadUiStateLiveData.observe(viewLifecycleOwner) { uiState ->
-            if (viewModel.downloadJob == null) return@observe
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.poiDownloadUiState.collect { uiState ->
+                    uiState ?: run {
+                        setDownloadUiState(false)
+                        return@collect
+                    }
 
-            when (val exception = uiState.error) {
-                is IOException -> {
-                    setDownloadState(false)
-                    Toast.makeText(
-                        requireContext(),
-                        getString(
-                            if (exception is ConnectException) com.bytecause.core.resources.R.string.service_unavailable
-                            else com.bytecause.core.resources.R.string.no_network_available
-                        ),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
-                null -> {
-                    when {
-                        !uiState.loading.isLoading -> {
+                    when (val exception = uiState.error) {
+                        is IOException -> {
                             setDownloadState(false)
-
                             Toast.makeText(
                                 requireContext(),
-                                getString(com.bytecause.core.resources.R.string.download_success),
+                                getString(
+                                    if (exception is ConnectException) com.bytecause.core.resources.R.string.service_unavailable
+                                    else com.bytecause.core.resources.R.string.no_network_available
+                                ),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
 
-                        uiState.loading.isLoading -> viewModel.showDownloadProgressBar(
-                            true,
-                            uiState.loading.progress
-                        )
+                        null -> {
+                            when {
+                                !uiState.loading.isLoading -> {
+                                    setDownloadState(false)
+
+                                    Toast.makeText(
+                                        requireContext(),
+                                        getString(com.bytecause.core.resources.R.string.download_success),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                uiState.loading.isLoading -> viewModel.showDownloadProgressBar(
+                                    true,
+                                    uiState.loading.progress
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -224,30 +241,40 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
     private fun setDownloadState(isDownloading: Boolean) {
         when (isDownloading) {
             true -> {
-                viewModel.getPois(
-                    regionId = viewModel.getRegionFromQueue().first,
-                    query = OverpassQueryBuilder
-                        .format(OverpassQueryBuilder.FormatTypes.JSON)
-                        .timeout(240)
-                        .region(viewModel.getRegionFromQueue().second)
-                        .type(OverpassQueryBuilder.Type.Node)
-                        .search(
-                            com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)
-                                .filterNot(
-                                    emptyList(),
-                                    excludeAmenityObjectsFilterList,
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList(),
-                                    emptyList()
-                                )
-                        )
-                        .build()
-                )
+
+                val region = viewModel.getRegionFromQueue()
+
+                // Start service
+                Intent(
+                    activity,
+                    RegionPoiDownloadService::class.java
+                ).also {
+                    it.setAction(RegionPoiDownloadService.Actions.START.toString())
+                    it.putExtra(
+                        RegionPoiDownloadService.REGION_ID_PARAM,
+                        region.first
+                    )
+                    it.putExtra(
+                        RegionPoiDownloadService.REGION_NAME_PARAM,
+                        region.second
+                    )
+                    requireActivity().startService(it)
+                }
+
                 setDownloadUiState(true)
             }
 
             false -> {
+
+                // Stop service
+                Intent(
+                    activity,
+                    RegionPoiDownloadService::class.java
+                ).also {
+                    it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
+                    requireActivity().startService(it)
+                }
+
                 viewModel.cancelDownloadJob()
                 setDownloadUiState(false)
             }
@@ -338,7 +365,9 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
     }
 
     override fun onDestroyView() {
-        viewModel.saveRecyclerViewExpandedStates(recyclerViewParentAdapter.getExpandedStateList())
+        if (::recyclerViewParentAdapter.isInitialized) {
+            viewModel.saveRecyclerViewExpandedStates(recyclerViewParentAdapter.getExpandedStateList())
+        }
         super.onDestroyView()
     }
 }

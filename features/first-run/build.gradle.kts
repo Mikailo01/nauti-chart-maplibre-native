@@ -21,4 +21,5 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.google.material)
     implementation(libs.maplibre)
+    implementation(libs.androidx.compose.material3)
 }

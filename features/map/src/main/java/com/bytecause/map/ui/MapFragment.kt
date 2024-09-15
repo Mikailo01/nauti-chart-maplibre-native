@@ -34,6 +34,7 @@ import androidx.navigation.fragment.findNavController
 import coil.load
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
+import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
 import com.bytecause.domain.util.PoiTagsUtil.extractContactsFromTags
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.domain.util.PoiTagsUtil.getPoiType
@@ -67,7 +68,7 @@ import com.bytecause.map.util.MapFragmentConstants.MAP_MARKER
 import com.bytecause.map.util.MapFragmentConstants.PIN_ICON
 import com.bytecause.map.util.MapFragmentConstants.POIS_VISIBILITY_ZOOM_LEVEL
 import com.bytecause.map.util.MapFragmentConstants.POI_GEOJSON_SOURCE
-import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_DRAWABLE_KEY
+import com.bytecause.map.util.MapFragmentConstants.POI_CATEGORY_KEY
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_SIZE
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_NAME_KEY
@@ -104,9 +105,10 @@ import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.map.MapUtil.Companion.bearingTo
 import com.bytecause.util.map.TileSourceLoader
-import com.bytecause.util.mappers.asLatLng
+import com.bytecause.util.poi.PoiUtil
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
 import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
+import com.bytecause.util.poi.PoiUtil.poiIconDrawableMap
 import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -702,31 +704,19 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             ),
                                                         )
 
-                                                        // getIdentifier() is inefficient and because pois have mostly the same
-                                                        // drawable resource, I used Map to keep track of found drawables, so it won't
-                                                        // look up for same drawable again and again.
-                                                        drawableCache.getOrPut(poi.drawableResourceName) {
+                                                        drawableCache.getOrPut(poi.category) {
                                                             createLayerDrawable(
                                                                 context = requireContext(),
                                                                 category = poi.category,
-                                                                drawable =
-                                                                when (poi.drawableResourceName) {
-                                                                    "" ->
-                                                                        ContextCompat.getDrawable(
-                                                                            requireContext(),
-                                                                            com.bytecause.core.resources.R.drawable.circle,
-                                                                        )
-
-                                                                    else ->
-                                                                        ContextCompat.getDrawable(
-                                                                            requireContext(),
-                                                                            resources.getIdentifier(
-                                                                                poi.drawableResourceName,
-                                                                                "drawable",
-                                                                                requireContext().packageName,
-                                                                            ),
-                                                                        )
-                                                                },
+                                                                drawable = poiIconDrawableMap[poi.category]?.let {
+                                                                    ContextCompat.getDrawable(
+                                                                        requireContext(),
+                                                                        it
+                                                                    )
+                                                                } ?: ContextCompat.getDrawable(
+                                                                    requireContext(),
+                                                                    com.bytecause.core.resources.R.drawable.circle,
+                                                                )
                                                             )
                                                         }.let {
                                                             features.add(
@@ -760,8 +750,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                         FeatureTypeEnum.POIS.name
                                                                     )
                                                                     addStringProperty(
-                                                                        POI_SYMBOL_ICON_DRAWABLE_KEY,
-                                                                        poi.drawableResourceName,
+                                                                        POI_CATEGORY_KEY,
+                                                                        poi.category,
                                                                     )
                                                                     addStringProperty(
                                                                         POI_SYMBOL_NAME_KEY,
@@ -818,7 +808,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                                 ),
                                                                 iconImage(
                                                                     get(
-                                                                        POI_SYMBOL_ICON_DRAWABLE_KEY,
+                                                                        POI_CATEGORY_KEY,
                                                                     ),
                                                                 ),
                                                                 iconSize(POI_SYMBOL_ICON_SIZE),
@@ -897,28 +887,19 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                             // getIdentifier() is inefficient, so I used Map to keep track of
                                             // found drawables, so it won't look up for same drawable again and again.
-                                            drawableCache.getOrPut(poi.drawableResourceName) {
+                                            drawableCache.getOrPut(poi.category) {
                                                 createLayerDrawable(
                                                     context = requireContext(),
                                                     category = poi.category,
-                                                    drawable =
-                                                    when (poi.drawableResourceName) {
-                                                        "" ->
-                                                            ContextCompat.getDrawable(
-                                                                requireContext(),
-                                                                com.bytecause.core.resources.R.drawable.circle,
-                                                            )
-
-                                                        else ->
-                                                            ContextCompat.getDrawable(
-                                                                requireContext(),
-                                                                resources.getIdentifier(
-                                                                    poi.drawableResourceName,
-                                                                    "drawable",
-                                                                    requireContext().packageName,
-                                                                ),
-                                                            )
-                                                    },
+                                                    drawable = poiIconDrawableMap[PoiUtil.unifyPoiDrawables(poi.category)]?.let {
+                                                        ContextCompat.getDrawable(
+                                                            requireContext(),
+                                                            it
+                                                        )
+                                                    } ?: ContextCompat.getDrawable(
+                                                        requireContext(),
+                                                        com.bytecause.core.resources.R.drawable.circle,
+                                                    )
                                                 )
                                             }.let {
                                                 features.add(
@@ -950,8 +931,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             FeatureTypeEnum.POIS.name
                                                         )
                                                         addStringProperty(
-                                                            POI_SYMBOL_ICON_DRAWABLE_KEY,
-                                                            poi.drawableResourceName,
+                                                            POI_CATEGORY_KEY,
+                                                            poi.category,
                                                         )
                                                         addStringProperty(
                                                             POI_SYMBOL_NAME_KEY,
@@ -1005,7 +986,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                         textOffset(get(POI_SYMBOL_TEXT_OFFSET_KEY)),
                                                         iconImage(
                                                             get(
-                                                                POI_SYMBOL_ICON_DRAWABLE_KEY,
+                                                                POI_CATEGORY_KEY,
                                                             ),
                                                         ),
                                                         iconSize(POI_SYMBOL_ICON_SIZE),
@@ -2183,11 +2164,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             ?.let { "($it)" },
                         iconImage = null,
                         propImages = extractPropImagesFromTags(poi.tags),
-                        description = /*excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }*/poi.tags.entries.joinToString(
+                        description = excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }/*poi.tags.entries.joinToString(
                             separator = "\n"
                         ) { (key, value) ->
                             "${formatTagString(key)}: ${formatTagString(value)}"
-                        },
+                        }*/,
                         contacts = extractContactsFromTags(poi.tags).takeIf { it.isNotBlank() },
                         image = replaceHttpWithHttps(poi.tags["image"]),
                         position = LatLng(poi.latitude, poi.longitude)
@@ -2293,6 +2274,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    // when POI marker is hidden after bottom sheet expansion, camera will be adjusted.
     private fun adjustMapViewPositionIfNeeded(point: LatLng) {
         markerBottomSheetLayout.viewTreeObserver.addOnGlobalLayoutListener(
             object : ViewTreeObserver.OnGlobalLayoutListener {
@@ -2446,7 +2428,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     50
                 )
                 setImageResource(drawableId)
-                setColorFilter(com.bytecause.core.resources.R.color.md_theme_onPrimaryContainer)
+                setColorFilter(com.bytecause.core.resources.R.color.md_theme_onSurface)
             }
 
             val spacer = LinearLayout(requireContext()).apply {

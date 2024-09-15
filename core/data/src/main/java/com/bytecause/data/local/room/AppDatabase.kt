@@ -8,8 +8,7 @@ import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.dao.HarboursDao
 import com.bytecause.data.local.room.dao.HarboursMetadataDatasetDao
 import com.bytecause.data.local.room.dao.OsmRegionMetadataDatasetDao
-import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
-import com.bytecause.data.local.room.dao.RegionPoiCacheDao
+import com.bytecause.data.local.room.dao.PoiCacheDao
 import com.bytecause.data.local.room.dao.RegionDao
 import com.bytecause.data.local.room.dao.VesselInfoDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
@@ -20,8 +19,7 @@ import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.local.room.tables.HarboursEntity
 import com.bytecause.data.local.room.tables.HarboursMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.OsmRegionMetadataDatasetEntity
-import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
-import com.bytecause.data.local.room.tables.RegionPoiCacheEntity
+import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.RegionEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
@@ -35,8 +33,7 @@ import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
         OsmRegionMetadataDatasetEntity::class,
         HarboursMetadataDatasetEntity::class,
         VesselsMetadataDatasetEntity::class,
-        RegionPoiCacheEntity::class,
-        RadiusPoiCacheEntity::class,
+        PoiCacheEntity::class,
         CountryEntity::class,
         ContinentEntity::class,
         RegionEntity::class
@@ -53,9 +50,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun customPoiDao(): CustomPoiDao
 
-    abstract fun regionPoiCacheDao(): RegionPoiCacheDao
-
-    abstract fun radiusPoiCacheDao(): RadiusPoiCacheDao
+    abstract fun poiCacheDao(): PoiCacheDao
 
     abstract fun continentDao(): ContinentDao
 

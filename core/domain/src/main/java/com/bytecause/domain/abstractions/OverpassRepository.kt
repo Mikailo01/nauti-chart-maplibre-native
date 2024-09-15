@@ -5,10 +5,15 @@ import com.bytecause.domain.model.OverpassElement
 import kotlinx.coroutines.flow.Flow
 import kotlin.reflect.KClass
 
+
+/*
+We cannot define inline method in interface, so to be able to preserve object type after type erasure,
+this extension function takes query string along with receiver's object type and pass it to makeQuery method.
+*/
 /**
- * We cannot define inline method in interface, so to be able to preserve object type after type erasure,
- * this extension function takes query string along with receiver's object type and pass it to makeQuery method.
- * */
+ * @return [Flow] with [ApiResult] which holds [Pair] where [Pair.first] contains timestamp of last dataset
+ * update and [Pair.second] contains dataset batch returned by the [OverpassRepository].
+ */
 inline fun <reified T : OverpassElement> OverpassRepository.makeQuery(
     query: String,
     getTimestamp: Boolean = true

@@ -101,8 +101,19 @@ class HarboursUpdateService : LifecycleService() {
                 when (result) {
                     is ApiResult.Progress -> {
                         result.progress?.let { progress ->
-                            ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdate(result))
-                            updateNotificationProgress(progress)
+
+                            this@HarboursUpdateService.progress =
+                                this@HarboursUpdateService.progress.takeIf { it != -1 }
+                                    ?.plus(progress) ?: progress
+
+                            ServiceApiResultListener.postEvent(
+                                ServiceEvent.HarboursUpdate(
+                                    ApiResult.Progress<Nothing>(
+                                        progress = this@HarboursUpdateService.progress
+                                    )
+                                )
+                            )
+                            updateNotificationProgress()
                         }
                     }
 
@@ -120,9 +131,7 @@ class HarboursUpdateService : LifecycleService() {
         }
     }
 
-    private fun updateNotificationProgress(progress: Int) {
-        this.progress = this.progress.takeIf { it != -1 }?.plus(progress) ?: progress
-
+    private fun updateNotificationProgress() {
         notificationBuilder
             .setContentText(
                 getString(R.string.processed_count).format(this.progress)

@@ -80,7 +80,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/fetching_location_progress_bar_linear_layout"
+            android:id="@+id/horizontal_progress_bar_linear_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
@@ -117,7 +117,7 @@
         </LinearLayout>
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/download_button"
+            android:id="@+id/action_button"
             android:layout_width="wrap_content"
             android:layout_height="45dp"
             android:layout_marginTop="20dp"

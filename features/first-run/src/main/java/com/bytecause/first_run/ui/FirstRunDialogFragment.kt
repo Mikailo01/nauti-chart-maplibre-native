@@ -26,12 +26,18 @@ import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.maplibre.android.geometry.LatLng
 import java.io.IOException
 import java.net.ConnectException
 import java.util.Locale
+
+enum class ActionButtonState {
+    Download,
+    Cancel,
+    TryAgain
+}
 
 @AndroidEntryPoint
 class FirstRunDialogFragment : DialogFragment() {
@@ -45,6 +51,8 @@ class FirstRunDialogFragment : DialogFragment() {
     private val sharedViewModel: FirstRunSharedViewModel by activityViewModels()
 
     private val lastClick = com.bytecause.util.common.LastClick()
+
+    private lateinit var geocoder: Geocoder
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,11 +71,11 @@ class FirstRunDialogFragment : DialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 mapSharedViewModel.permissionGranted.collect {
                     if (it == null || !it) return@collect
-
+                    
                     showFetchingLocationLoading()
                 }
             }
-        }
+        }.takeIf { viewModel.region != null }?.cancel() // cancel scope if region is already fetched
 
         this.isCancelable = false
         return binding.root
@@ -75,6 +83,8 @@ class FirstRunDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        geocoder = Geocoder(requireContext(), Locale.getDefault())
 
         binding.selectRegionImageView.setOnClickListener {
             if (!lastClick.lastClick(500)) return@setOnClickListener
@@ -90,10 +100,11 @@ class FirstRunDialogFragment : DialogFragment() {
             }
         }
 
-        binding.downloadButton.setOnClickListener {
-            when (binding.downloadButton.text) {
-                getString(R.string.download) -> {
+        binding.actionButton.setOnClickListener {
+            when (binding.actionButton.tag) {
+                ActionButtonState.Download -> {
                     viewModel.region?.let { region ->
+
                         // Start service
                         Intent(
                             activity,
@@ -111,24 +122,33 @@ class FirstRunDialogFragment : DialogFragment() {
                             requireActivity().startService(it)
                         }
 
-                        Toast.makeText(
-                            requireContext(),
-                            getString(R.string.download_will_be_finished_in_the_background_),
-                            Toast.LENGTH_SHORT
-                        ).show()
-
                         viewLifecycleOwner.lifecycleScope.launch {
                             viewModel.saveFirstRunFlag(false)
-                            findNavController().popBackStack()
                         }
                     }
                 }
 
-                getString(R.string.cancel) -> {
-                    viewModel.cancelDownloadJob()
-                    viewModel.resetUiState()
+                ActionButtonState.Cancel -> {
+                    // Stop service
+                    Intent(
+                        activity,
+                        RegionPoiDownloadService::class.java
+                    ).also {
+                        it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
+                        requireActivity().startService(it)
+                    }
+
                     hideLoading()
-                    toggleDownloadButtonState()
+                    toggleDownloadButtonState(ActionButtonState.Download)
+                }
+
+                ActionButtonState.TryAgain -> {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        mapSharedViewModel.lastKnownPosition.replayCache.firstOrNull()
+                            ?.let { geoPoint ->
+                                getRegionsFromGeoPoint(geoPoint)
+                            }
+                    }
                 }
             }
         }
@@ -138,26 +158,17 @@ class FirstRunDialogFragment : DialogFragment() {
                 text = it
                 alpha = 1f
             }
-            toggleDownloadButtonState()
+            toggleDownloadButtonState(ActionButtonState.Download)
         } ?: viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                mapSharedViewModel.lastKnownPosition.take(1).collect { geoPoint ->
+                mapSharedViewModel.lastKnownPosition.collect { geoPoint ->
                     geoPoint ?: return@collect
                     // regions already fetched, return collect
                     if (viewModel.downloadRegionsUiState.value != null) return@collect
 
                     showFetchingLocationLoading()
 
-                    val geocoder = Geocoder(requireContext(), Locale.getDefault())
-
-                    withContext(Dispatchers.IO) {
-                        geocoder.getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
-                            ?.let {
-                                viewModel.getRegions(
-                                    isoCode = it.first().countryCode
-                                )
-                            }
-                    }
+                    getRegionsFromGeoPoint(geoPoint)
                 }
             }
         }
@@ -179,15 +190,22 @@ class FirstRunDialogFragment : DialogFragment() {
                                 ),
                                 Toast.LENGTH_SHORT
                             ).show()
+
+                            toggleDownloadButtonState(ActionButtonState.TryAgain)
                         }
 
                         null -> {
                             if (uiState.loading.isLoading) {
                                 showDownloadRegionsLoading()
+                                toggleDownloadButtonState(null)
                             } else {
                                 hideLoading()
 
-                                sharedViewModel.saveRegions(uiState.items)
+                                sharedViewModel.setRegions(uiState.items.sortedBy {
+                                    it.names["name:${Locale.getDefault().language}"]
+                                        ?: it.names["name:en"]
+                                        ?: it.names["name"]
+                                })
                                 findNavController().navigate(com.bytecause.features.first_run.R.id.selectRegionComposedDialog)
                             }
                         }
@@ -199,6 +217,8 @@ class FirstRunDialogFragment : DialogFragment() {
                                 getString(R.string.something_went_wrong),
                                 Toast.LENGTH_SHORT
                             ).show()
+
+                            toggleDownloadButtonState(ActionButtonState.TryAgain)
                         }
                     }
                 }
@@ -208,12 +228,17 @@ class FirstRunDialogFragment : DialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.downloadPoiUiState.collect { uiState ->
-                    uiState ?: return@collect
+                    uiState ?: run {
+                        if (binding.actionButton.tag == ActionButtonState.Cancel) {
+                            toggleDownloadButtonState(ActionButtonState.Download)
+                            hideLoading()
+                        }
+                        return@collect
+                    }
 
                     when (val exception = uiState.error) {
                         is IOException -> {
                             hideLoading()
-                            toggleDownloadButtonState()
                             Toast.makeText(
                                 requireContext(),
                                 getString(
@@ -222,33 +247,34 @@ class FirstRunDialogFragment : DialogFragment() {
                                 ),
                                 Toast.LENGTH_SHORT
                             ).show()
+
+                            toggleDownloadButtonState(ActionButtonState.Download)
                         }
 
                         null -> {
                             if (uiState.loading.isLoading) {
                                 showDownloadPoiLoading()
-                                toggleDownloadButtonState()
-                                uiState.loading.progress?.let {
-                                    binding.loadingTextView.text = getString(R.string.processing)
-                                    binding.progressTextView.text =
-                                        getString(R.string.processed_count).format(it)
+                                toggleDownloadButtonState(ActionButtonState.Cancel)
+
+                                uiState.loading.progress?.let { progress ->
+                                    binding.loadingTextView.text =
+                                        getString(R.string.processed_count).format(progress)
                                 }
                             } else {
-                                hideLoading()
-                                toggleDownloadButtonState()
-                                viewModel.saveFirstRunFlag(false)
-                                dismiss()
+                                // download successful, hide fullscreen dialog
+                                findNavController().popBackStack()
                             }
                         }
 
                         else -> {
                             hideLoading()
-                            toggleDownloadButtonState()
                             Toast.makeText(
                                 requireContext(),
                                 getString(R.string.something_went_wrong),
                                 Toast.LENGTH_SHORT
                             ).show()
+
+                            toggleDownloadButtonState(ActionButtonState.Download)
                         }
                     }
                 }
@@ -281,45 +307,91 @@ class FirstRunDialogFragment : DialogFragment() {
                         alpha = 1f
                     }
 
-                    toggleDownloadButtonState()
+                    toggleDownloadButtonState(ActionButtonState.Download)
                 }
             }
         }
     }
 
-    private fun toggleDownloadButtonState() {
-        if (binding.fetchingLocationProgressBarLinearLayout.visibility == View.VISIBLE) {
-            binding.downloadButton.apply {
-                text = getString(R.string.cancel)
-                visibility = View.VISIBLE
+    private fun toggleDownloadButtonState(actionState: ActionButtonState?) {
+        when (actionState) {
+            ActionButtonState.Download -> {
+                binding.actionButton.apply {
+                    text = getString(R.string.download)
+                    setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.md_theme_onSecondaryContainer
+                        )
+                    )
+                    tag = ActionButtonState.Download
+                    visibility = View.VISIBLE
+                }
             }
-        } else {
-            binding.downloadButton.apply {
-                text = getString(R.string.download)
-                visibility = View.VISIBLE
+
+            ActionButtonState.Cancel -> {
+                binding.actionButton.apply {
+                    text = getString(R.string.cancel)
+                    setTextColor(ContextCompat.getColor(requireContext(), R.color.md_theme_error))
+                    tag = ActionButtonState.Cancel
+                    visibility = View.VISIBLE
+                }
+            }
+
+            ActionButtonState.TryAgain -> {
+                binding.actionButton.apply {
+                    text = getString(R.string.try_again)
+                    setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.md_theme_onSecondaryContainer
+                        )
+                    )
+                    tag = ActionButtonState.TryAgain
+                    visibility = View.VISIBLE
+                }
+            }
+
+            null -> {
+                binding.actionButton.apply {
+                    text = null
+                    tag = null
+                    visibility = View.GONE
+                }
             }
         }
     }
 
     private fun showFetchingLocationLoading() {
         binding.loadingTextView.text = getString(R.string.fetching_location)
-        binding.fetchingLocationProgressBarLinearLayout.visibility = View.VISIBLE
+        binding.horizontalProgressBarLinearLayout.visibility = View.VISIBLE
     }
 
     private fun hideLoading() {
         binding.loadingTextView.text = null
         binding.progressTextView.text = null
-        binding.fetchingLocationProgressBarLinearLayout.visibility = View.GONE
+        binding.horizontalProgressBarLinearLayout.visibility = View.GONE
     }
 
     private fun showDownloadRegionsLoading() {
         binding.loadingTextView.text = getString(R.string.downloading_country_regions)
-        binding.fetchingLocationProgressBarLinearLayout.visibility = View.VISIBLE
+        binding.horizontalProgressBarLinearLayout.visibility = View.VISIBLE
     }
 
     private fun showDownloadPoiLoading() {
         binding.loadingTextView.text = getString(R.string.downloading)
-        binding.fetchingLocationProgressBarLinearLayout.visibility = View.VISIBLE
+        binding.horizontalProgressBarLinearLayout.visibility = View.VISIBLE
+    }
+
+    private suspend fun getRegionsFromGeoPoint(geoPoint: LatLng) {
+        withContext(Dispatchers.IO) {
+            geocoder.getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
+                ?.let {
+                    viewModel.getRegions(
+                        isoCode = it.first().countryCode
+                    )
+                }
+        }
     }
 
     override fun onStart() {

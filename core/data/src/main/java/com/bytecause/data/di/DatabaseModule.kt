@@ -8,7 +8,7 @@ import com.bytecause.data.local.room.tables.ContinentCountriesRelation
 import com.bytecause.data.local.room.tables.CustomPoiCategoryEntity
 import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.local.room.tables.HarboursEntity
-import com.bytecause.data.local.room.tables.RegionPoiCacheEntity
+import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.relations.CountryRegionsRelation
 import dagger.Module
@@ -57,7 +57,16 @@ object DatabaseModule {
     fun provideContinentDao(db: AppDatabase) = db.continentDao()
 
     @Provides
+    @Singleton
     fun provideOsmDatasetDao(db: AppDatabase) = db.osmRegionMetadataDatasetDao()
+
+    @Provides
+    @Singleton
+    fun provideHarboursMetadataDatasetDao(db: AppDatabase) = db.harboursMetadataDatasetDao()
+
+    @Provides
+    @Singleton
+    fun provideVesselsMetadataDatasetDao(db: AppDatabase) = db.vesselsMetadataDatasetDao()
 
     @Provides
     @Singleton
@@ -69,11 +78,7 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideRegionPoiCacheDao(db: AppDatabase) = db.regionPoiCacheDao()
-
-    @Provides
-    @Singleton
-    fun provideRadiusPoiCacheDao(db: AppDatabase) = db.radiusPoiCacheDao()
+    fun providePoiCacheDao(db: AppDatabase) = db.poiCacheDao()
 
     // Provide entities.
     @Provides
@@ -89,7 +94,7 @@ object DatabaseModule {
     fun provideCustomPoiCategoryEntity() = CustomPoiCategoryEntity()
 
     @Provides
-    fun providePoiCacheEntity() = RegionPoiCacheEntity()
+    fun providePoiCacheEntity() = PoiCacheEntity()
 
     @Provides
     fun provideContinentCountries() = ContinentCountriesRelation()

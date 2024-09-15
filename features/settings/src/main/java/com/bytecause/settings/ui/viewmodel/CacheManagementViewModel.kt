@@ -21,6 +21,7 @@ import com.bytecause.settings.ui.model.RegionUiModel
 import com.bytecause.settings.ui.state.CacheManagementState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +52,8 @@ class CacheManagementViewModel @Inject constructor(
     private val _effect = Channel<CacheManagementEffect>(capacity = Channel.CONFLATED)
     val effect = _effect.receiveAsFlow()
 
+    private var uiReadyFlag: Boolean = false
+
     init {
         // get regions datasets and their last update timestamps
         combine(
@@ -75,6 +78,8 @@ class CacheManagementViewModel @Inject constructor(
                     }
                 )
             }
+
+            uiReadyFlag = true
         }
             .launchIn(viewModelScope)
 
@@ -99,7 +104,6 @@ class CacheManagementViewModel @Inject constructor(
         // get vessels dataset and last update timestamp
         viewModelScope.launch {
             vesselsMetadataDatasetRepository.getDataset().collect { dataset ->
-
                 _uiState.update {
                     it.copy(
                         vesselsTimestamp = dataset?.timestamp?.let { timestamp ->
@@ -154,6 +158,11 @@ class CacheManagementViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            // wait until the UI is ready
+            while (!uiReadyFlag) {
+                delay(20)
+            }
+
             ServiceApiResultListener.eventFlow.collect { event ->
                 when (event) {
                     is ServiceEvent.HarboursUpdate -> {
@@ -176,8 +185,7 @@ class CacheManagementViewModel @Inject constructor(
                                     _uiState.update {
                                         it.copy(
                                             harboursModel = it.harboursModel.copy(
-                                                progress = it.harboursModel.progress.takeIf { it != -1 }
-                                                    ?.plus(progress) ?: progress
+                                                progress = progress
                                             )
                                         )
                                     }
@@ -199,10 +207,9 @@ class CacheManagementViewModel @Inject constructor(
                         }
                     }
 
-                    is ServiceEvent.RegionPoiUpdate -> {
+                    is ServiceEvent.RegionPoiDownload -> {
                         when (event.result) {
                             is ApiResult.Success -> {
-
                                 _uiState.update {
                                     it.copy(
                                         downloadedRegions = it.downloadedRegions.toMutableMap()
@@ -243,7 +250,6 @@ class CacheManagementViewModel @Inject constructor(
 
                             is ApiResult.Progress -> {
                                 event.result.progress?.let { progress ->
-
                                     _uiState.update {
                                         it.copy(
                                             downloadedRegions = it.downloadedRegions.toMutableMap()
@@ -251,8 +257,10 @@ class CacheManagementViewModel @Inject constructor(
                                                     it.downloadedRegions[event.regionId]?.let { region ->
                                                         replace(
                                                             event.regionId,
-                                                            region.copy(progress = region.progress.takeIf { it != -1 }
-                                                                ?.plus(progress) ?: progress)
+                                                            region.copy(
+                                                                isUpdating = true,
+                                                                progress = progress
+                                                            )
                                                         )
                                                     }
                                                 })
@@ -262,7 +270,7 @@ class CacheManagementViewModel @Inject constructor(
                         }
                     }
 
-                    is ServiceEvent.RegionPoiUpdateStarted -> {
+                    is ServiceEvent.RegionPoiDownloadStarted -> {
                         _uiState.update {
                             it.copy(downloadedRegions = it.downloadedRegions.toMutableMap().apply {
                                 it.downloadedRegions[event.regionId]?.let { region ->
@@ -272,7 +280,7 @@ class CacheManagementViewModel @Inject constructor(
                         }
                     }
 
-                    is ServiceEvent.RegionPoiUpdateCancelled -> {
+                    is ServiceEvent.RegionPoiDownloadCancelled -> {
                         _uiState.update {
                             it.copy(
                                 downloadedRegions = it.downloadedRegions.toMutableMap()

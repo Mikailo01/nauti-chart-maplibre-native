@@ -99,6 +99,13 @@ class CustomizeMapDialog : DialogFragment() {
                                 }
                             }
                             colorAnimation.start()
+
+                            innerImageView.setColorFilter(
+                                ContextCompat.getColor(
+                                    requireContext(),
+                                    com.bytecause.core.resources.R.color.md_theme_onPrimary
+                                )
+                            )
                         } else {
                             val color = ContextCompat.getColor(
                                 requireContext(),
@@ -106,6 +113,12 @@ class CustomizeMapDialog : DialogFragment() {
                             )
 
                             outerImageView.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+                            innerImageView.setColorFilter(
+                                ContextCompat.getColor(
+                                    requireContext(),
+                                    com.bytecause.core.resources.R.color.md_theme_onSurface
+                                )
+                            )
                         }
                     }
 

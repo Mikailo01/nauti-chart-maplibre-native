@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
-import com.bytecause.domain.abstractions.RegionPoiCacheRepository
+import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.domain.model.HarboursModel
@@ -52,7 +52,7 @@ class MapViewModel
 @Inject
 constructor(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
-    private val regionPoiCacheRepository: RegionPoiCacheRepository,
+    private val poiCacheRepository: PoiCacheRepository,
     private val customPoiRepository: CustomPoiRepository,
     getVesselsUseCase: GetVesselsUseCase,
     getHarboursUseCase: GetHarboursUseCase,
@@ -191,11 +191,11 @@ constructor(
         vesselsDatabaseRepository.searchVesselById(id)
 
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiUiModel>> =
-        regionPoiCacheRepository.searchInCache(placeIds)
+        poiCacheRepository.searchInCache(placeIds)
             .map { originalList -> mapList(originalList) { it.asPoiUiModel() } }
 
     fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
-        regionPoiCacheRepository.searchPoiWithInfoById(id)
+        poiCacheRepository.searchPoiWithInfoById(id)
 
     val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi()
 
@@ -212,7 +212,7 @@ constructor(
     ) { bbox, selectedCategories ->
 
         bbox.takeIf { it != null }?.let {
-            regionPoiCacheRepository.loadPoiCacheByBoundingBox(
+            poiCacheRepository.loadPoiCacheByBoundingBox(
                 minLat = it.latitudeSouth,
                 maxLat = it.latitudeNorth,
                 minLon = it.longitudeWest,
@@ -231,6 +231,7 @@ constructor(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private inline fun <reified T> filterVisible(
         latLngBounds: LatLngBounds,
         list: List<T>

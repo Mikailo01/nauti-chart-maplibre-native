@@ -3,6 +3,8 @@ package com.bytecause.first_run.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.CountryRepository
+import com.bytecause.data.services.communication.ServiceApiResultListener
+import com.bytecause.data.services.communication.ServiceEvent
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
@@ -26,7 +28,8 @@ constructor(
     private val getRegionsUseCase: GetRegionsUseCase,
     private val countryRepository: CountryRepository
 ) : ViewModel() {
-    private val _downloadPoiUiState = MutableStateFlow<UiState<String>?>(null)
+
+    private val _downloadPoiUiState = MutableStateFlow<UiState<Nothing>?>(null)
     val downloadPoiUiState = _downloadPoiUiState.asStateFlow()
 
     private val _downloadRegionsUiState = MutableStateFlow<UiState<RegionModel>?>(null)
@@ -39,8 +42,57 @@ constructor(
         this.region = region
     }
 
-    fun resetUiState() {
-        _downloadPoiUiState.value = null
+    init {
+        viewModelScope.launch {
+            ServiceApiResultListener.eventFlow.collect { event ->
+                when (event) {
+                    is ServiceEvent.RegionPoiDownloadStarted -> {
+                        _downloadPoiUiState.emit(
+                            UiState(
+                                loading = Loading(true)
+                            )
+                        )
+                    }
+
+                    is ServiceEvent.RegionPoiDownload -> {
+                        when (val result = event.result) {
+                            is ApiResult.Failure -> {
+                                _downloadPoiUiState.emit(UiState(error = result.exception))
+                            }
+
+                            is ApiResult.Progress -> {
+                                result.progress?.let { progress ->
+                                    _downloadPoiUiState.emit(
+                                        UiState(
+                                            loading = Loading(
+                                                isLoading = true,
+                                                progress = progress
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+
+                            is ApiResult.Success -> {
+                                _downloadPoiUiState.emit(
+                                    UiState(
+                                        loading = Loading(false)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    is ServiceEvent.RegionPoiDownloadCancelled -> {
+                        _downloadPoiUiState.emit(null)
+                    }
+
+                    else -> {
+                        // do nothing
+                    }
+                }
+            }
+        }
     }
 
     fun getRegions(isoCode: String) {

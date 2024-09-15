@@ -22,7 +22,7 @@ class UpdateExpiredDatasetsWorkerInitializer @Inject constructor(
             when (userPreferencesRepository.getAutoUpdatesNetworkPreference().first()) {
                 NetworkType.WIFI_ONLY -> androidx.work.NetworkType.UNMETERED
                 NetworkType.WIFI_AND_MOBILE_DATA -> androidx.work.NetworkType.NOT_ROAMING
-                NetworkType.DISABLED -> return// auto updates disabled, don't start worker
+                NetworkType.DISABLED -> return // auto updates disabled, don't start worker
             }
 
         val networkConstraints = Constraints.Builder()

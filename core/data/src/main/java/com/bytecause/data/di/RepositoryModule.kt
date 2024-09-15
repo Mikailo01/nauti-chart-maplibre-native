@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.bytecause.data.local.room.AppDatabase
+import com.bytecause.data.local.room.dao.CountryDao
 import com.bytecause.data.local.room.dao.CustomPoiDao
-import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
-import com.bytecause.data.local.room.dao.RegionPoiCacheDao
+import com.bytecause.data.local.room.dao.HarboursMetadataDatasetDao
+import com.bytecause.data.local.room.dao.OsmRegionMetadataDatasetDao
+import com.bytecause.data.local.room.dao.PoiCacheDao
+import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
 import com.bytecause.data.repository.CountryRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineRasterTileSourceRepositoryImpl
@@ -17,21 +19,19 @@ import com.bytecause.data.repository.CustomPoiRepositoryImpl
 import com.bytecause.data.repository.HarboursMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.OsmRegionMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.OverpassRepositoryImpl
-import com.bytecause.data.repository.RadiusPoiCacheRepositoryImpl
-import com.bytecause.data.repository.RegionPoiCacheRepositoryImpl
+import com.bytecause.data.repository.PoiCacheRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OverpassRepository
-import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
-import com.bytecause.domain.abstractions.RegionPoiCacheRepository
+import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import dagger.Module
 import dagger.Provides
@@ -76,28 +76,24 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun providesRegionPoiCacheRepository(regionPoiCacheDao: RegionPoiCacheDao): RegionPoiCacheRepository =
-        RegionPoiCacheRepositoryImpl(regionPoiCacheDao)
+    fun providesPoiCacheRepository(
+        poiCacheDao: PoiCacheDao
+    ): PoiCacheRepository = PoiCacheRepositoryImpl(poiCacheDao)
 
     @Provides
     @Singleton
-    fun providesRadiusPoiCacheRepository(radiusPoiCacheDao: RadiusPoiCacheDao): RadiusPoiCacheRepository =
-        RadiusPoiCacheRepositoryImpl(radiusPoiCacheDao)
+    fun providesOsmRegionMetadataDatasetRepository(osmRegionMetadataDatasetDao: OsmRegionMetadataDatasetDao): OsmRegionMetadataDatasetRepository =
+        OsmRegionMetadataDatasetRepositoryImpl(osmRegionMetadataDatasetDao)
 
     @Provides
     @Singleton
-    fun providesOsmRegionMetadataDatasetRepository(db: AppDatabase): OsmRegionMetadataDatasetRepository =
-        OsmRegionMetadataDatasetRepositoryImpl(db.osmRegionMetadataDatasetDao())
+    fun providesHarboursMetadataDatasetRepository(harboursMetadataDatasetDao: HarboursMetadataDatasetDao): HarboursMetadataDatasetRepository =
+        HarboursMetadataDatasetRepositoryImpl(harboursMetadataDatasetDao)
 
     @Provides
     @Singleton
-    fun providesHarboursMetadataDatasetRepository(db: AppDatabase): HarboursMetadataDatasetRepository =
-        HarboursMetadataDatasetRepositoryImpl(db.harboursMetadataDatasetDao())
-
-    @Provides
-    @Singleton
-    fun providesVesselsMetadataDatasetRepository(db: AppDatabase): VesselsMetadataDatasetRepository =
-        VesselsMetadataDatasetRepositoryImpl(db.vesselsMetadataDatasetDao())
+    fun providesVesselsMetadataDatasetRepository(vesselsMetadataDatasetDao: VesselsMetadataDatasetDao): VesselsMetadataDatasetRepository =
+        VesselsMetadataDatasetRepositoryImpl(vesselsMetadataDatasetDao)
 
     @Provides
     @Singleton
@@ -108,6 +104,6 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun providesCountryRepository(appDatabase: AppDatabase): CountryRepository =
-        CountryRepositoryImpl(appDatabase.countryDao())
+    fun providesCountryRepository(countryDao: CountryDao): CountryRepository =
+        CountryRepositoryImpl(countryDao)
 }

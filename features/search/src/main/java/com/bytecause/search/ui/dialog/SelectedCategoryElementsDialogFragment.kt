@@ -2,7 +2,6 @@ package com.bytecause.search.ui.dialog
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -383,7 +382,7 @@ class SelectedCategoryElementsDialogFragment :
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
             viewModel.getPoiResult(
                 PoiQueryModel(
-                    category = getCategoriesUnderUnifiedCategory(args.poiCategory.name) ?: listOf(
+                    categoryList = getCategoriesUnderUnifiedCategory(args.poiCategory.name) ?: listOf(
                         getString(args.poiCategory.name)
                     ),
                     radius = viewModel.radius,
@@ -397,7 +396,7 @@ class SelectedCategoryElementsDialogFragment :
                             args.poiCategory.search
                         )
                         .area(viewModel.radius, latLng.asLatLngModel())
-                        .build().also { Log.d("idk", it) },
+                        .build(),
                     appliedFilters = sharedViewModel.filteredTagsStateFlow.value,
                 ),
             )
