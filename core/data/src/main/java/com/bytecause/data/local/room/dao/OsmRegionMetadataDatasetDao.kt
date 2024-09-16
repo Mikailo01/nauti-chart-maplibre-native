@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface OsmRegionMetadataDatasetDao {
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDataset(dataset: OsmRegionMetadataDatasetEntity): Long
 

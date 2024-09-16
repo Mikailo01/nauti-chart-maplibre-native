@@ -8,6 +8,8 @@ import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OverpassRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
+import com.bytecause.domain.abstractions.RadiusPoiMetadataDatasetRepository
 import com.bytecause.domain.abstractions.RegionRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
@@ -60,11 +62,15 @@ object UseCaseModule {
     @Provides
     fun providesGetPoiResultByRadiusUseCase(
         poiCacheRepository: PoiCacheRepository,
-        overpassRepository: OverpassRepository
+        overpassRepository: OverpassRepository,
+        radiusPoiCacheRepository: RadiusPoiCacheRepository,
+        radiusPoiMetadataDatasetRepository: RadiusPoiMetadataDatasetRepository
     ): GetPoiResultByRadiusUseCase =
         GetPoiResultByRadiusUseCase(
             poiCacheRepository = poiCacheRepository,
-            overpassRepository = overpassRepository
+            overpassRepository = overpassRepository,
+            radiusPoiCacheRepository = radiusPoiCacheRepository,
+            radiusPoiMetadataDatasetRepository = radiusPoiMetadataDatasetRepository
         )
 
     @Provides
@@ -123,7 +129,7 @@ object UseCaseModule {
         updateHarboursUseCase: UpdateHarboursUseCase
     ): GetHarboursUseCase =
         GetHarboursUseCase(
-           harboursDatabaseRepository =  harboursDatabaseRepository,
+            harboursDatabaseRepository = harboursDatabaseRepository,
             updateHarboursUseCase = updateHarboursUseCase
         )
 

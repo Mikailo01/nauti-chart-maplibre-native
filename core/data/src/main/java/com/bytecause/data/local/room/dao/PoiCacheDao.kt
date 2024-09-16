@@ -23,7 +23,7 @@ interface PoiCacheDao {
     fun searchInCache(placeIds: List<Long>): Flow<List<PoiCacheEntity>>
 
     @Query("SELECT * FROM poi_cache WHERE placeId = :id")
-    fun searchPoiWithInfoById(id: Long): Flow<PoiCacheEntity>
+    fun searchPoiWithInfoById(id: Long): Flow<PoiCacheEntity?>
 
     @Query("SELECT EXISTS(SELECT 1 FROM poi_cache WHERE placeId = :placeId LIMIT 1)")
     fun isPlaceCached(placeId: Long): Flow<Boolean>

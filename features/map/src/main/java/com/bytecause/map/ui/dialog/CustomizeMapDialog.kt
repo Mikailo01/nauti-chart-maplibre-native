@@ -32,7 +32,7 @@ import com.bytecause.presentation.components.views.recyclerview.decorations.Adap
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.bindings.RecyclerViewBindingInterface
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.poi.PoiUtil.getDrawableForPoiCategory
+import com.bytecause.util.poi.PoiUtil.getDrawableForUnifiedPoiCategory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -131,7 +131,7 @@ class CustomizeMapDialog : DialogFragment() {
                         isSelected = true
                     }
 
-                    getDrawableForPoiCategory(name, requireContext())?.let {
+                    getDrawableForUnifiedPoiCategory(name, requireContext())?.let {
                         innerImageView.setImageDrawable(
                             ContextCompat.getDrawable(
                                 requireContext(),

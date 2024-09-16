@@ -1,6 +1,6 @@
 package com.bytecause.domain.model
 
-data class SearchedPlace(
+data class SearchedPlaceModel(
     val placeId: Long = 0L,
     val latitude: Double,
     val longitude: Double,

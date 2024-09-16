@@ -99,6 +99,8 @@ import com.bytecause.map.util.navigateToFirstRunNavigation
 import com.bytecause.map.util.navigateToSearchNavigation
 import com.bytecause.presentation.components.views.CustomTextInputEditText
 import com.bytecause.presentation.interfaces.DrawerController
+import com.bytecause.presentation.model.PlaceType
+import com.bytecause.presentation.model.PointType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.common.LastClick
 import com.bytecause.util.context.isLocationPermissionGranted
@@ -108,7 +110,7 @@ import com.bytecause.util.map.TileSourceLoader
 import com.bytecause.util.poi.PoiUtil
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
 import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
-import com.bytecause.util.poi.PoiUtil.poiIconDrawableMap
+import com.bytecause.util.poi.PoiUtil.poiSymbolDrawableMap
 import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -380,6 +382,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 )
                                             )
                                         }
+
+                                        null -> {
+                                            mapSharedViewModel.setPlaceToFind(null)
+                                            if (mapSharedViewModel.latLngFlow.value is PointType.Poi) {
+                                                mapSharedViewModel.setLatLng(null)
+                                                setSearchBoxText(null)
+                                            }
+                                        }
                                     }
                                 }
 
@@ -499,7 +509,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             if (lineManager != null) {
                                                 lineManager?.deleteAll()
                                                 symbolManager?.deleteAll()
-                                                mapSharedViewModel.setLatLng(points.first())
+                                                mapSharedViewModel.setLatLng(PointType.Marker(points.first()))
                                                 mapLibreMap.animateCamera(
                                                     CameraUpdateFactory.newLatLng(
                                                         points.first(),
@@ -581,11 +591,13 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             symbolManager?.delete(markerSymbol)
                                             markerSymbol = null
 
-                                            mapView?.invalidate()
-
                                             return@collect
                                         }
                                         if (viewModel.isMeasuring) return@collect
+
+                                        if (markerBottomSheetBehavior.state == STATE_EXPANDED) {
+                                            closeMarkerBottomSheetLayout()
+                                        }
 
                                         if (symbolManager == null) {
                                             symbolManager =
@@ -608,56 +620,86 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                         boundaryManager?.deleteAll()
 
-                                        val latLng = LatLng(place.latitude, place.longitude)
+                                        when (place) {
+                                            is PlaceType.Poi -> {
+                                                val latLng = LatLng(
+                                                    latitude = place.latitude,
+                                                    longitude = place.longitude
+                                                )
 
-                                        place.polygonCoordinates.takeIf { coordinates -> coordinates.isNotEmpty() }
-                                            ?.let { encodedPolygon ->
-                                                com.bytecause.util.algorithms.PolylineAlgorithms()
-                                                    .decode(encodedPolygon)
-                                                    .let { polylineList ->
+                                                mapLibreMap.animateCamera(
+                                                    CameraUpdateFactory.newLatLngZoom(
+                                                        latLng,
+                                                        13.0
+                                                    )
+                                                )
 
-                                                        boundaryManager =
-                                                            LineManager(
-                                                                mapView!!,
-                                                                mapLibreMap,
-                                                                mapStyle
-                                                            ).apply {
-                                                                drawLine(
-                                                                    polylineList = polylineList,
-                                                                    lineManager = this,
-                                                                    lineColor = requireContext().getColor(
-                                                                        com.bytecause.core.resources.R.color.black
-                                                                    ),
-                                                                    lineWidth = LINE_WIDTH,
+                                                mapSharedViewModel.setLatLng(
+                                                    PointType.Poi(
+                                                        latLng = latLng,
+                                                        id = place.id
+                                                    )
+                                                )
+
+                                                setSearchBoxText(place.name)
+                                            }
+
+                                            is PlaceType.Address -> {
+                                                val latLng = LatLng(
+                                                    place.placeModel.latitude,
+                                                    place.placeModel.longitude
+                                                )
+
+                                                place.placeModel.polygonCoordinates.takeIf { coordinates -> coordinates.isNotEmpty() }
+                                                    ?.let { encodedPolygon ->
+                                                        com.bytecause.util.algorithms.PolylineAlgorithms()
+                                                            .decode(encodedPolygon)
+                                                            .let { polylineList ->
+
+                                                                boundaryManager =
+                                                                    LineManager(
+                                                                        mapView!!,
+                                                                        mapLibreMap,
+                                                                        mapStyle
+                                                                    ).apply {
+                                                                        drawLine(
+                                                                            polylineList = polylineList,
+                                                                            lineManager = this,
+                                                                            lineColor = requireContext().getColor(
+                                                                                com.bytecause.core.resources.R.color.black
+                                                                            ),
+                                                                            lineWidth = LINE_WIDTH,
+                                                                        )
+                                                                    }
+
+                                                                mapLibreMap.animateCamera(
+                                                                    CameraUpdateFactory.newLatLngBounds(
+                                                                        bounds =
+                                                                        LatLngBounds.fromLatLngs(
+                                                                            polylineList.map {
+                                                                                LatLng(
+                                                                                    it.latitude,
+                                                                                    it.longitude
+                                                                                )
+                                                                            }
+                                                                        ),
+                                                                        padding = 50
+                                                                    )
                                                                 )
                                                             }
-
-                                                        mapLibreMap.animateCamera(
-                                                            CameraUpdateFactory.newLatLngBounds(
-                                                                bounds =
-                                                                LatLngBounds.fromLatLngs(
-                                                                    polylineList.map {
-                                                                        LatLng(
-                                                                            it.latitude,
-                                                                            it.longitude
-                                                                        )
-                                                                    },
-                                                                ),
-                                                                padding = 50,
-                                                            ),
+                                                    } ?: run {
+                                                    mapLibreMap.animateCamera(
+                                                        CameraUpdateFactory.newLatLngZoom(
+                                                            latLng,
+                                                            13.0
                                                         )
-                                                    }
-                                            } ?: run {
-                                            mapLibreMap.animateCamera(
-                                                CameraUpdateFactory.newLatLngZoom(
-                                                    latLng,
-                                                    13.0,
-                                                ),
-                                            )
-                                        }
+                                                    )
+                                                }
 
-                                        mapSharedViewModel.setLatLng(latLng)
-                                        setSearchBoxText(place.name)
+                                                mapSharedViewModel.setLatLng(PointType.Marker(latLng))
+                                                setSearchBoxText(place.placeModel.name)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -681,165 +723,165 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         if (poiMap.isNullOrEmpty()) return@collect
 
                                         // poiMap holds category name and List of IDs which are used for search in database.
-                                        viewModel.searchInCache(poiMap.values.flatten())
-                                            .let { flow ->
-                                                flow.firstOrNull()?.let { poiEntityList ->
+                                        viewModel.searchInPoiCache(poiMap.values.flatten())
+                                            .firstOrNull()?.let { poiUiModelList ->
+                                                if (poiUiModelList.isEmpty()) return@collect
 
-                                                    // Cache drawable resources
-                                                    val drawableCache =
-                                                        mutableMapOf<String, Drawable>()
+                                                // Cache drawable resources
+                                                val drawableCache =
+                                                    mutableMapOf<String, Drawable>()
 
-                                                    setSearchBoxText(
-                                                        poiMap.keys.toList().firstOrNull()
-                                                    )
+                                                setSearchBoxText(
+                                                    poiMap.keys.firstOrNull()
+                                                )
 
-                                                    val points = mutableListOf<LatLng>()
-                                                    val features = mutableListOf<Feature>()
+                                                val points = mutableListOf<LatLng>()
+                                                val features = mutableListOf<Feature>()
 
-                                                    for (poi in poiEntityList) {
-                                                        points.add(
-                                                            LatLng(
-                                                                latitude = poi.latitude,
-                                                                longitude = poi.longitude,
-                                                            ),
-                                                        )
-
-                                                        drawableCache.getOrPut(poi.category) {
-                                                            createLayerDrawable(
-                                                                context = requireContext(),
-                                                                category = poi.category,
-                                                                drawable = poiIconDrawableMap[poi.category]?.let {
-                                                                    ContextCompat.getDrawable(
-                                                                        requireContext(),
-                                                                        it
-                                                                    )
-                                                                } ?: ContextCompat.getDrawable(
-                                                                    requireContext(),
-                                                                    com.bytecause.core.resources.R.drawable.circle,
-                                                                )
-                                                            )
-                                                        }.let {
-                                                            features.add(
-                                                                Feature.fromGeometry(
-                                                                    Point.fromLngLat(
-                                                                        poi.longitude,
-                                                                        poi.latitude,
-                                                                    ),
-                                                                ).apply {
-                                                                    val splittedNames =
-                                                                        poi.name.split(" ")
-
-                                                                    val textOffsetArray =
-                                                                        JsonArray().apply {
-                                                                            add(when {
-                                                                                splittedNames.all { name -> name.length <= 4 } -> -2f
-                                                                                splittedNames.all { name -> name.length <= 5 } -> -2.5f
-                                                                                splittedNames.any { name -> name.length == 9 } -> -3.5f
-                                                                                splittedNames.any { name -> name.length >= 10 } -> -4f
-                                                                                else -> -3f
-                                                                            })
-                                                                            add(-1f)
-                                                                        }
-
-                                                                    addProperty(
-                                                                        POI_SYMBOL_TEXT_OFFSET_KEY,
-                                                                        textOffsetArray
-                                                                    )
-                                                                    addStringProperty(
-                                                                        SYMBOL_TYPE,
-                                                                        FeatureTypeEnum.POIS.name
-                                                                    )
-                                                                    addStringProperty(
-                                                                        POI_CATEGORY_KEY,
-                                                                        poi.category,
-                                                                    )
-                                                                    addStringProperty(
-                                                                        POI_SYMBOL_NAME_KEY,
-                                                                        poi.name
-                                                                    )
-                                                                    addNumberProperty(
-                                                                        POI_SYMBOL_PROPERTY_ID_KEY,
-                                                                        poi.id
-                                                                    )
-
-                                                                    if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
-                                                                        // start pulsing animation
-                                                                        updatePulsingCircle(
-                                                                            style,
-                                                                            geometry() as Point
-                                                                        )
-                                                                    }
-                                                                },
-                                                            )
-                                                        }
-                                                    }
-
-                                                    poisFeatureCollection =
-                                                        FeatureCollection.fromFeatures(
-                                                            features
-                                                        )
-
-                                                    val geoJsonSource =
-                                                        GeoJsonSource(
-                                                            POI_GEOJSON_SOURCE,
-                                                            poisFeatureCollection
-                                                        )
-
-                                                    val symbolLayer =
-                                                        SymbolLayer(
-                                                            POI_SYMBOL_LAYER,
-                                                            POI_GEOJSON_SOURCE
-                                                        )
-                                                            .withProperties(
-                                                                textField(
-                                                                    get(
-                                                                        POI_SYMBOL_NAME_KEY,
-                                                                    )
-                                                                ),
-                                                                textMaxWidth(1f),
-                                                                textSize(12f),
-                                                                // font must be included in json style
-                                                                // e.g.: "glyphs": "asset://glyphs/{fontstack}/{range}.pbf"
-                                                                textFont(arrayOf("Open Sans Semibold")),
-                                                                textOffset(
-                                                                    get(
-                                                                        POI_SYMBOL_TEXT_OFFSET_KEY
-                                                                    )
-                                                                ),
-                                                                iconImage(
-                                                                    get(
-                                                                        POI_CATEGORY_KEY,
-                                                                    ),
-                                                                ),
-                                                                iconSize(POI_SYMBOL_ICON_SIZE),
-                                                                iconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
-                                                            )
-
-                                                    mapStyle.apply {
-                                                        // iterate over drawable map entries and add it's values into
-                                                        // maplibre's style
-                                                        drawableCache.entries.forEach { entry ->
-                                                            addImage(entry.key, entry.value)
-                                                        }
-                                                        style.getSourceAs<GeoJsonSource>(
-                                                            POI_GEOJSON_SOURCE
-                                                        )?.let {
-                                                            removeLayer(POI_SYMBOL_LAYER)
-                                                            removeSource(it)
-                                                        }
-                                                        addSource(geoJsonSource)
-                                                        addLayer(symbolLayer)
-                                                    }
-
-                                                    val bounds =
-                                                        LatLngBounds.fromLatLngs(points)
-                                                    mapLibreMap.animateCamera(
-                                                        CameraUpdateFactory.newLatLngBounds(
-                                                            bounds,
-                                                            50,
+                                                for (poi in poiUiModelList) {
+                                                    points.add(
+                                                        LatLng(
+                                                            latitude = poi.latitude,
+                                                            longitude = poi.longitude,
                                                         ),
                                                     )
+
+                                                    drawableCache.getOrPut(poi.category) {
+                                                        createLayerDrawable(
+                                                            context = requireContext(),
+                                                            category = poi.category,
+                                                            drawable = poiSymbolDrawableMap[poi.category]?.let {
+                                                                ContextCompat.getDrawable(
+                                                                    requireContext(),
+                                                                    it
+                                                                )
+                                                            } ?: ContextCompat.getDrawable(
+                                                                requireContext(),
+                                                                com.bytecause.core.resources.R.drawable.circle,
+                                                            )
+                                                        )
+                                                    }.let {
+                                                        features.add(
+                                                            Feature.fromGeometry(
+                                                                Point.fromLngLat(
+                                                                    poi.longitude,
+                                                                    poi.latitude,
+                                                                ),
+                                                            ).apply {
+                                                                val splittedNames =
+                                                                    poi.name.split(" ")
+
+                                                                val textOffsetArray =
+                                                                    JsonArray().apply {
+                                                                        add(when {
+                                                                            splittedNames.all { name -> name.length <= 4 } -> -2f
+                                                                            splittedNames.all { name -> name.length <= 5 } -> -2.5f
+                                                                            splittedNames.any { name -> name.length == 9 } -> -3.5f
+                                                                            splittedNames.any { name -> name.length >= 10 } -> -4f
+                                                                            else -> -3f
+                                                                        })
+                                                                        add(-1f)
+                                                                    }
+
+                                                                addProperty(
+                                                                    POI_SYMBOL_TEXT_OFFSET_KEY,
+                                                                    textOffsetArray
+                                                                )
+                                                                addStringProperty(
+                                                                    SYMBOL_TYPE,
+                                                                    FeatureTypeEnum.POIS.name
+                                                                )
+                                                                addStringProperty(
+                                                                    POI_CATEGORY_KEY,
+                                                                    poi.category,
+                                                                )
+                                                                addStringProperty(
+                                                                    POI_SYMBOL_NAME_KEY,
+                                                                    poi.name
+                                                                )
+                                                                addNumberProperty(
+                                                                    POI_SYMBOL_PROPERTY_ID_KEY,
+                                                                    poi.id
+                                                                )
+
+                                                                if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
+                                                                    // start pulsing animation
+                                                                    updatePulsingCircle(
+                                                                        style,
+                                                                        geometry() as Point
+                                                                    )
+                                                                }
+                                                            },
+                                                        )
+                                                    }
                                                 }
+
+                                                poisFeatureCollection =
+                                                    FeatureCollection.fromFeatures(
+                                                        features
+                                                    )
+
+                                                val geoJsonSource =
+                                                    GeoJsonSource(
+                                                        POI_GEOJSON_SOURCE,
+                                                        poisFeatureCollection
+                                                    )
+
+                                                val symbolLayer =
+                                                    SymbolLayer(
+                                                        POI_SYMBOL_LAYER,
+                                                        POI_GEOJSON_SOURCE
+                                                    )
+                                                        .withProperties(
+                                                            textField(
+                                                                get(
+                                                                    POI_SYMBOL_NAME_KEY,
+                                                                )
+                                                            ),
+                                                            textMaxWidth(1f),
+                                                            textSize(12f),
+                                                            // font must be included in json style
+                                                            // e.g.: "glyphs": "asset://glyphs/{fontstack}/{range}.pbf"
+                                                            textFont(arrayOf("Open Sans Semibold")),
+                                                            textOffset(
+                                                                get(
+                                                                    POI_SYMBOL_TEXT_OFFSET_KEY
+                                                                )
+                                                            ),
+                                                            iconImage(
+                                                                get(
+                                                                    POI_CATEGORY_KEY,
+                                                                ),
+                                                            ),
+                                                            iconSize(POI_SYMBOL_ICON_SIZE),
+                                                            iconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
+                                                        )
+
+                                                mapStyle.apply {
+                                                    // iterate over drawable map entries and add it's values into
+                                                    // maplibre's style
+                                                    drawableCache.entries.forEach { entry ->
+                                                        addImage(entry.key, entry.value)
+                                                    }
+                                                    style.getSourceAs<GeoJsonSource>(
+                                                        POI_GEOJSON_SOURCE
+                                                    )?.let {
+                                                        removeLayer(POI_SYMBOL_LAYER)
+                                                        removeSource(it)
+                                                    }
+                                                    addSource(geoJsonSource)
+                                                    addLayer(symbolLayer)
+                                                }
+
+                                                val bounds =
+                                                    LatLngBounds.fromLatLngs(points)
+
+                                                mapLibreMap.animateCamera(
+                                                    CameraUpdateFactory.newLatLngBounds(
+                                                        bounds,
+                                                        50
+                                                    )
+                                                )
                                             }
                                     }
                                 }
@@ -891,7 +933,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 createLayerDrawable(
                                                     context = requireContext(),
                                                     category = poi.category,
-                                                    drawable = poiIconDrawableMap[PoiUtil.unifyPoiDrawables(poi.category)]?.let {
+                                                    drawable = poiSymbolDrawableMap[PoiUtil.unifyPoiDrawables(
+                                                        poi.category
+                                                    )]?.let {
                                                         ContextCompat.getDrawable(
                                                             requireContext(),
                                                             it
@@ -1462,6 +1506,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.selectedFeatureIdFlow.collect { featureType ->
+                                        featureType ?: return@collect
 
                                         when (featureType) {
                                             is FeatureType.Vessel -> {
@@ -1673,7 +1718,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         intentMap ?: return@collect
 
                                         intentMap.first.let { latLng ->
-                                            mapSharedViewModel.setLatLng(latLng)
+                                            mapSharedViewModel.setLatLng(PointType.Marker(latLng))
                                             intentMap.second.let { zoom ->
                                                 mapLibreMap.cameraPosition =
                                                     CameraPosition.Builder().target(latLng)
@@ -1732,7 +1777,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         )
 
                         addOnMapLongClickListener {
-                            mapSharedViewModel.setLatLng(it)
+                            mapSharedViewModel.setLatLng(PointType.Marker(it))
                             true
                         }
 
@@ -1910,12 +1955,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         binding.bottomSheetId.shareLocationButton.setOnClickListener {
             if (!lastClick.lastClick(1000)) return@setOnClickListener
 
-            mapSharedViewModel.latLngFlow.value?.let { latLng ->
+            mapSharedViewModel.latLngFlow.value?.let { pointType ->
+                val point = pointType as PointType.Marker
+
                 val action =
                     MapFragmentDirections.actionMapFragmentToMapShareBottomSheetDialog(
                         floatArrayOf(
-                            latLng.latitude.toFloat(),
-                            latLng.longitude.toFloat(),
+                            point.latLng.latitude.toFloat(),
+                            point.latLng.longitude.toFloat(),
                         ),
                     )
                 findNavController().navigate(action)
@@ -2122,7 +2169,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Gets information about custom poi from the database and pass this state into showMarkerBottomSheet,
-    // which will render this state.
+// which will render this state.
     private fun showCustomPoiInfo(customPoiId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchCustomPoiById(customPoiId).firstOrNull()?.let { customPoi ->
@@ -2179,7 +2226,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Gets information about vessel from the database and pass this state into showMarkerBottomSheet,
-    // which will render this state.
+// which will render this state.
     private fun showVesselInfo(vesselId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchVesselById(vesselId).firstOrNull()?.let { vesselInfoEntity ->
@@ -2255,7 +2302,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Gets information about harbour from the database and pass this state into showMarkerBottomSheet,
-    // which will render this state.
+// which will render this state.
     private fun showHarbourInfo(harbourId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchHarbourById(harbourId).firstOrNull()?.let { harbour ->
@@ -2575,8 +2622,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
         showTargetOverlay()
         mapSharedViewModel.latLngFlow.value?.let {
-            viewModel.addMeasurePoint(it)
-            mapLibre.animateCamera(CameraUpdateFactory.newLatLng(it))
+            val point = (it as PointType.Marker).latLng
+
+            viewModel.addMeasurePoint(point)
+            mapLibre.animateCamera(CameraUpdateFactory.newLatLng((point)))
             mapSharedViewModel.setLatLng(null)
         }
     }
@@ -2594,7 +2643,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private fun leaveMeasureDistanceMode() {
         viewModel.setIsMeasuring(false)
         mapSharedViewModel.latLngFlow.value?.let {
-            mapLibre.animateCamera(CameraUpdateFactory.newLatLng(it))
+            mapLibre.animateCamera(CameraUpdateFactory.newLatLng((it as PointType.Marker).latLng))
         }
 
         binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility = View.GONE
@@ -2611,7 +2660,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         // latLngFlow.
         viewModel.clearMeasurePoints()
 
-        binding.measureDistanceBottomSheet.distanceTextview.text = ""
+        binding.measureDistanceBottomSheet.distanceTextview.text = null
         hideTargetOverlay()
     }
 
@@ -2620,13 +2669,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     /**
-     * Don't use directly!!!
+     * DON'T USE DIRECTLY
      * To add marker on map, call setLatLng() function with LatLng argument inside MapSharedViewModel
      * */
-    private fun addMarker(latLng: LatLng) {
+    private fun addMarker(point: PointType) {
         if (markerSymbol != null) {
             symbolManager?.delete(markerSymbol)
         }
+
+        val latLng = (point as? PointType.Marker)?.latLng ?: (point as? PointType.Poi)!!.latLng
 
         // Add a new symbol at specified lat/lon.
         markerSymbol =
@@ -2637,6 +2688,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     .withIconSize(SYMBOL_ICON_SIZE)
                     .withIconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
             )
+
         // Disable symbol collisions and update symbol
         symbolManager?.apply {
             iconAllowOverlap = true
@@ -2644,7 +2696,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             update(markerSymbol)
         }
 
-        openBottomSheetLayout(latLng)
+        if (point is PointType.Marker) {
+            openBottomSheetLayout(latLng)
+        } else {
+            showPoiInfo(poiId = (point as PointType.Poi).id)
+        }
     }
 
     private fun addMeasurePoint() {
@@ -2794,6 +2850,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         locationComponent?.onStart()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onLowMemory() {
         super.onLowMemory()
         mapView?.onLowMemory()

@@ -23,13 +23,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SelectedCategoryElementsFragmentLayoutBinding
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
+import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
+import com.bytecause.search.ui.model.PoiUiModel
 import com.bytecause.search.ui.viewmodel.SearchElementsSharedViewModel
 import com.bytecause.search.ui.viewmodel.SelectedCategoryElementsViewModel
 import com.bytecause.util.delegates.viewBinding
@@ -59,11 +60,9 @@ class SelectedCategoryElementsDialogFragment :
     private val args: SelectedCategoryElementsDialogFragmentArgs by navArgs()
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<OverpassNodeModel>
+    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<PoiUiModel>
 
     private var filterJob: Job? = null
-
-    private var searchBiggerRadiusJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,9 +70,9 @@ class SelectedCategoryElementsDialogFragment :
         savedInstanceState: Bundle?,
     ): View {
         val bindingInterface =
-            object : com.bytecause.util.bindings.RecyclerViewBindingInterface<OverpassNodeModel> {
+            object : com.bytecause.util.bindings.RecyclerViewBindingInterface<PoiUiModel> {
                 override fun bindData(
-                    item: OverpassNodeModel,
+                    item: PoiUiModel,
                     itemView: View,
                     itemPosition: Int,
                 ) {
@@ -88,12 +87,12 @@ class SelectedCategoryElementsDialogFragment :
 
                     innerItemView.setOnClickListener {
                         mapSharedViewModel.setPlaceToFind(
-                            com.bytecause.data.local.room.tables.SearchPlaceCacheEntity(
-                                placeId = item.id.toString(),
+                            PlaceType.Poi(
+                                id = item.id,
                                 latitude = item.lat,
                                 longitude = item.lon,
                                 name = innerItemView.findViewById<TextView>(com.bytecause.core.presentation.R.id.place_name_text_view).text.toString()
-                            ),
+                            )
                         )
                         // Set filter StateFlow to null to reset it's state.
                         sharedViewModel.setFilter(null)
@@ -159,9 +158,8 @@ class SelectedCategoryElementsDialogFragment :
 
         binding.extendSearchRadiusLayout.extendSearchRadiusClickableTextView.setOnClickListener {
             if (viewModel.radius >= 960000) return@setOnClickListener
-            if (searchBiggerRadiusJob?.isCompleted == false) return@setOnClickListener
 
-            viewModel.modifySearchRadius(viewModel.radius * 2)
+            viewModel.doubleSearchRadius()
             // Update text views
             updateExtendSearchRadiusLayout()
             populateRecyclerView()
@@ -169,9 +167,9 @@ class SelectedCategoryElementsDialogFragment :
 
         binding.showResultsOnTheMapRelativeLayout.setOnClickListener {
             mapSharedViewModel.setPoiToShow(
-                viewModel.elementList.value
-                    .groupBy { getString(args.poiCategory.name) }
-                    .mapValues { entry -> entry.value.map { it.id } },
+                viewModel.elementList.value.let { elementSet ->
+                    mapOf(getString(args.poiCategory.name) to elementSet.map { it.id })
+                }
             )
 
             sharedViewModel.setFilter(null)
@@ -218,7 +216,7 @@ class SelectedCategoryElementsDialogFragment :
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.elementList.collect { elements ->
                     genericRecyclerViewAdapter.updateContent(elements.toList())
 
@@ -329,7 +327,7 @@ class SelectedCategoryElementsDialogFragment :
                     filterTags ?: return@collect
 
                     // This list will supply recyclerView with filtered elements.
-                    val filteredList = mutableListOf<OverpassNodeModel>()
+                    val filteredList = mutableListOf<PoiUiModel>()
 
                     if (filterTags.isEmpty()) {
                         // If no filter applied update drawable.
@@ -382,9 +380,10 @@ class SelectedCategoryElementsDialogFragment :
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
             viewModel.getPoiResult(
                 PoiQueryModel(
-                    categoryList = getCategoriesUnderUnifiedCategory(args.poiCategory.name) ?: listOf(
-                        getString(args.poiCategory.name)
-                    ),
+                    categoryList = getCategoriesUnderUnifiedCategory(args.poiCategory.name)
+                        ?: listOf(
+                            getString(args.poiCategory.name)
+                        ),
                     radius = viewModel.radius,
                     position = latLng.asLatLngModel(),
                     query = OverpassQueryBuilder
@@ -398,7 +397,7 @@ class SelectedCategoryElementsDialogFragment :
                         .area(viewModel.radius, latLng.asLatLngModel())
                         .build(),
                     appliedFilters = sharedViewModel.filteredTagsStateFlow.value,
-                ),
+                )
             )
         }
     }

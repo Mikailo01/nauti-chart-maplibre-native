@@ -2,10 +2,9 @@ package com.bytecause.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.data.local.room.tables.SearchPlaceCacheEntity
 import com.bytecause.domain.tilesources.TileSources
-import com.bytecause.util.mappers.asLatLngModel
-import kotlinx.coroutines.Dispatchers
+import com.bytecause.presentation.model.PlaceType
+import com.bytecause.presentation.model.PointType
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,6 +16,7 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 
+
 class MapSharedViewModel : ViewModel() {
     private val _permissionGranted = MutableStateFlow<Boolean?>(null)
     val permissionGranted: StateFlow<Boolean?> get() = _permissionGranted.asStateFlow()
@@ -24,7 +24,7 @@ class MapSharedViewModel : ViewModel() {
     private val _tileSource = MutableSharedFlow<TileSources?>(1)
     val tileSource: SharedFlow<TileSources?> = _tileSource.asSharedFlow()
 
-    private val _placeToFindStateFlow = MutableStateFlow<SearchPlaceCacheEntity?>(null)
+    private val _placeToFindStateFlow = MutableStateFlow<PlaceType?>(null)
     val placeToFindStateFlow get() = _placeToFindStateFlow.asStateFlow()
 
     private val _showPoiStateFlow = MutableStateFlow<Map<String, List<Long>>?>(null)
@@ -42,7 +42,7 @@ class MapSharedViewModel : ViewModel() {
     var cameraPosition: CameraPosition? = null
         private set
 
-    private val _latLngFlow = MutableStateFlow<LatLng?>(null)
+    private val _latLngFlow = MutableStateFlow<PointType?>(null)
     val latLngFlow = _latLngFlow.asStateFlow()
 
     private val _lastKnownPosition = MutableSharedFlow<LatLng?>(1)
@@ -57,12 +57,12 @@ class MapSharedViewModel : ViewModel() {
     }
 
     fun setLastKnownPosition(position: LatLng) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             _lastKnownPosition.emit(position)
         }
     }
 
-    fun setPlaceToFind(entity: SearchPlaceCacheEntity?) {
+    fun setPlaceToFind(entity: PlaceType?) {
         _placeToFindStateFlow.value = entity
     }
 
@@ -99,9 +99,7 @@ class MapSharedViewModel : ViewModel() {
         }
     }
 
-    fun setLatLng(latLng: LatLng?) {
-        _latLngFlow.update {
-            latLng
-        }
+    fun setLatLng(latLng: PointType?) {
+        _latLngFlow.update { latLng }
     }
 }

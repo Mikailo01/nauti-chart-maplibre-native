@@ -10,6 +10,9 @@ import androidx.appsearch.localstorage.LocalStorage
 import com.bytecause.data.repository.abstractions.SearchManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class SearchManagerImpl(
@@ -45,25 +48,30 @@ class SearchManagerImpl(
         }
     }
 
-    override suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> {
-        return withContext(coroutineDispatcher) {
+    override fun searchCachedResult(query: String): Flow<List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>> =
+        flow {
             val searchSpec = SearchSpec.Builder()
                 .setRankingStrategy(RANKING_STRATEGY_RELEVANCE_SCORE)
                 .build()
+
             val result = session?.search(
                 query,
                 searchSpec
-            ) ?: return@withContext emptyList()
+            ) ?: run {
+                emit(emptyList())
+                return@flow
+            }
 
             val page = result.nextPageAsync.get()
 
-            page.mapNotNull {
+            emit(page.mapNotNull {
                 if (it.genericDocument.schemaType == com.bytecause.data.local.room.tables.SearchPlaceCacheEntity::class.java.simpleName) {
                     it.getDocument(com.bytecause.data.local.room.tables.SearchPlaceCacheEntity::class.java)
                 } else null
             }
+            )
         }
-    }
+            .flowOn(coroutineDispatcher)
 
     override fun closeSession() {
         session?.close()

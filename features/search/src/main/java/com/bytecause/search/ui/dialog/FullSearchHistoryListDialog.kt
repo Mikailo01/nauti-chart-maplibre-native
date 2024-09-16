@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.FullSearchHistoryListDialogBinding
 import com.bytecause.nautichart.RecentlySearchedPlace
+import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.recyclerview.adapter.FullSearchHistoryListParentAdapter
 import com.bytecause.search.ui.recyclerview.interfaces.SearchHistoryAdapterListener
@@ -50,7 +51,8 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
             navBack.setOnClickListener {
                 findNavController().popBackStack()
             }
-            destNameTextView.text = getString(com.bytecause.core.resources.R.string.search_history_list)
+            destNameTextView.text =
+                getString(com.bytecause.core.resources.R.string.search_history_list)
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -92,17 +94,18 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
                     viewModel.updateRecentlySearchedPlaces(it)
                 }
 
-                mapSharedViewModel.apply {
-                    // Make query to get needed element using AppSearch API.
-                    viewModel.searchCachedResult(recentlySearchedPlace.name.takeIf { it.isNotEmpty() }
-                        ?: recentlySearchedPlace.displayName).first {
-                        it.placeId.toLong() == recentlySearchedPlace.placeId
-                    }.let {
-                        mapSharedViewModel.setPlaceToFind(it)
+                // Make query to get needed element using AppSearch API.
+                viewModel.searchCachedResult(
+                    recentlySearchedPlace.name.takeIf { it.isNotEmpty() }
+                        ?: recentlySearchedPlace.displayName)
+                    .firstOrNull()
+                    ?.first {
+                        it.placeId == recentlySearchedPlace.placeId
+                    }?.let {
+                        mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
                     }
-                    setDismissSearchMapDialogState(true)
-                    findNavController().popBackStack()
-                }
+                mapSharedViewModel.setDismissSearchMapDialogState(true)
+                findNavController().popBackStack()
             }
         }
     }

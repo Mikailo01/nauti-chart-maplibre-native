@@ -6,11 +6,11 @@ import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.domain.model.HarboursModel
-import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.model.VesselInfoModel
 import com.bytecause.domain.model.VesselModel
 import com.bytecause.domain.tilesources.DefaultTileSources
@@ -20,13 +20,16 @@ import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
+import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
+import com.bytecause.map.ui.model.PoiUiModelWithTags
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.mappers.asLatLng
 import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,7 +40,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -53,6 +58,7 @@ class MapViewModel
 constructor(
     private val harboursDatabaseRepository: HarboursDatabaseRepository,
     private val poiCacheRepository: PoiCacheRepository,
+    private val radiusPoiCacheRepository: RadiusPoiCacheRepository,
     private val customPoiRepository: CustomPoiRepository,
     getVesselsUseCase: GetVesselsUseCase,
     getHarboursUseCase: GetHarboursUseCase,
@@ -68,9 +74,7 @@ constructor(
     private val harboursBbox = Channel<LatLngBounds>(Channel.CONFLATED)
     private val poisBbox = MutableStateFlow<LatLngBounds?>(null)
 
-    private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType>(
-        com.bytecause.map.ui.FeatureType.CustomPoi(null)
-    )
+    private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType?>(null)
     val selectedFeatureIdFlow = _selectedFeatureIdFlow.asStateFlow()
 
     val isAisActivated: StateFlow<Boolean> = userPreferencesRepository.getIsAisActivated()
@@ -155,7 +159,7 @@ constructor(
         viewModelScope.launch {
             _measurePointsSharedFlow.emit(
                 _measurePointsSharedFlow.replayCache.lastOrNull()
-                    ?.plus(latLng) ?: listOf(latLng),
+                    ?.plus(latLng) ?: listOf(latLng)
             )
         }
     }
@@ -190,12 +194,36 @@ constructor(
     fun searchVesselById(id: Int): Flow<VesselInfoModel> =
         vesselsDatabaseRepository.searchVesselById(id)
 
-    fun searchInCache(placeIds: List<Long>): Flow<List<PoiUiModel>> =
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun searchInPoiCache(placeIds: List<Long>): Flow<List<PoiUiModel>> =
         poiCacheRepository.searchInCache(placeIds)
-            .map { originalList -> mapList(originalList) { it.asPoiUiModel() } }
+            .flatMapLatest { originalList ->
+                if (originalList.size == placeIds.size) {
+                    // If the size matches, emit content from poi cache table
+                    flowOf(mapList(originalList) { it.asPoiUiModel() })
+                } else {
+                    // If size does not match, fallback to the radius cache table
+                    radiusPoiCacheRepository.searchInCache(placeIds)
+                        .map { radiusPoiCacheList ->
+                            mapList(radiusPoiCacheList) { it.asPoiUiModel() }
+                        }
+                }
+            }
 
-    fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun searchPoiWithInfoById(id: Long): Flow<PoiUiModelWithTags?> =
         poiCacheRepository.searchPoiWithInfoById(id)
+            .flatMapLatest { poi ->
+                if (poi != null) {
+                    // if poi with given id has been found in poi cache table return it
+                    flowOf(poi.asPoiUiModelWithTags())
+                } else {
+                    // if poi hasn't been found, fallback to the radius cache table
+                    radiusPoiCacheRepository.searchPoiWithInfoById(id)
+                        .map { it?.asPoiUiModelWithTags() }
+                }
+            }
 
     val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi()
 

@@ -1,8 +1,10 @@
 package com.bytecause.data.repository.abstractions
 
+import kotlinx.coroutines.flow.Flow
+
 interface SearchManager {
     suspend fun openSession()
     suspend fun putResults(results: List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>): Boolean
-    suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>
+    fun searchCachedResult(query: String): Flow<List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>>
     fun closeSession()
 }

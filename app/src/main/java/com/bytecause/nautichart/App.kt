@@ -23,16 +23,16 @@ class App : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(updateExpiredDatasetsWorkerFactory).build()
 
-    private val workerScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
 
-        workerScope.launch {
+        coroutineScope.launch {
             try {
                 updateExpiredDatasetsWorkerInitializer.initialize(this@App)
             } finally {
-                workerScope.cancel()
+                coroutineScope.cancel()
             }
         }
     }

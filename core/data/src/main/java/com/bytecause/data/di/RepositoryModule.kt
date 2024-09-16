@@ -9,6 +9,8 @@ import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.dao.HarboursMetadataDatasetDao
 import com.bytecause.data.local.room.dao.OsmRegionMetadataDatasetDao
 import com.bytecause.data.local.room.dao.PoiCacheDao
+import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
+import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
 import com.bytecause.data.repository.CountryRepositoryImpl
@@ -20,6 +22,8 @@ import com.bytecause.data.repository.HarboursMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.OsmRegionMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.OverpassRepositoryImpl
 import com.bytecause.data.repository.PoiCacheRepositoryImpl
+import com.bytecause.data.repository.RadiusPoiCacheRepositoryImpl
+import com.bytecause.data.repository.RadiusPoiMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.abstractions.CountryRepository
@@ -31,6 +35,8 @@ import com.bytecause.domain.abstractions.HarboursMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OsmRegionMetadataDatasetRepository
 import com.bytecause.domain.abstractions.OverpassRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
+import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
+import com.bytecause.domain.abstractions.RadiusPoiMetadataDatasetRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
 import dagger.Module
@@ -82,8 +88,18 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun providesRadiusPoiCacheRepository(radiusPoiCacheDao: RadiusPoiCacheDao): RadiusPoiCacheRepository =
+        RadiusPoiCacheRepositoryImpl(radiusPoiCacheDao)
+
+    @Provides
+    @Singleton
     fun providesOsmRegionMetadataDatasetRepository(osmRegionMetadataDatasetDao: OsmRegionMetadataDatasetDao): OsmRegionMetadataDatasetRepository =
         OsmRegionMetadataDatasetRepositoryImpl(osmRegionMetadataDatasetDao)
+
+    @Provides
+    @Singleton
+    fun providesRadiusPoiMetadataDatasetRepository(radiusPoiMetadataDatasetDao: RadiusPoiMetadataDatasetDao): RadiusPoiMetadataDatasetRepository =
+        RadiusPoiMetadataDatasetRepositoryImpl(radiusPoiMetadataDatasetDao = radiusPoiMetadataDatasetDao)
 
     @Provides
     @Singleton

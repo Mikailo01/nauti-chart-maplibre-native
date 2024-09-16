@@ -2,17 +2,19 @@ package com.bytecause.search.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
-import com.bytecause.domain.model.SearchedPlace
-import com.bytecause.presentation.model.UiState
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.presentation.model.SearchedPlaceUiModel
+import com.bytecause.presentation.model.UiState
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
+import com.bytecause.search.mapper.asSearchedPlaceUiModel
+import com.bytecause.util.mappers.mapList
+import com.bytecause.util.mappers.mapNullInputList
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import javax.inject.Inject
@@ -36,42 +39,34 @@ constructor(
         private set
 
     private var _uiSearchState =
-        MutableStateFlow<UiState<SearchedPlace>?>(null)
+        MutableStateFlow<UiState<SearchedPlaceUiModel>?>(null)
     val uiSearchState get() = _uiSearchState.asStateFlow()
 
     // place that should be shown on map
-    private val _searchPlace =
-        MutableSharedFlow<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>(1)
-    val searchPlace: SharedFlow<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> =
-        _searchPlace.asSharedFlow()
+    private val _searchPlace = MutableSharedFlow<SearchedPlaceUiModel>(1)
+    val searchPlace: SharedFlow<SearchedPlaceUiModel> = _searchPlace.asSharedFlow()
 
     // search place in cache database or make api call
     fun searchPlaces(query: String) {
         viewModelScope.launch {
             _uiSearchState.value = UiState(loading = Loading(true))
             isLoading = true
-            val searchCache = searchCachedResult(query)
-            if (searchCache.isEmpty()) {
-                when (val data =
-                    searchMapRepositoryImpl.searchPlaces(query).firstOrNull()) {
+            val searchCache = searchCachedResult(query).firstOrNull()
+            if (searchCache.isNullOrEmpty()) {
+                when (val result = searchMapRepositoryImpl.searchPlaces(query).firstOrNull()) {
                     is ApiResult.Success -> {
                         val polylineAlgorithms =
                             com.bytecause.util.algorithms.PolylineAlgorithms()
-                        data.data?.filterNot { searchedPlace ->
-                            val searchedPlaceList =
+
+                        result.data?.filter { searchedPlace ->
+                            val searchedPlaceModelList =
                                 searchCachedResult(
                                     searchedPlace.name.takeIf { it.isNotEmpty() }
                                         ?: searchedPlace.displayName,
-                                ).map { cachedEntity ->
-                                    // Map only necessary properties.
-                                    SearchedPlace(
-                                        placeId = cachedEntity.placeId.toLong(),
-                                        latitude = cachedEntity.latitude,
-                                        longitude = cachedEntity.longitude,
-                                    )
-                                }
+                                )
+                                    .firstOrNull()
 
-                            searchedPlaceList.any { element -> element.placeId == searchedPlace.placeId }
+                            searchedPlaceModelList?.any { element -> element.placeId == searchedPlace.placeId } == false
                         }?.map { searchedPlace ->
 
                             com.bytecause.data.local.room.tables.SearchPlaceCacheEntity(
@@ -105,7 +100,7 @@ constructor(
                             _uiSearchState.emit(
                                 UiState(
                                     loading = Loading(false),
-                                    items = data.data ?: emptyList(),
+                                    items = mapNullInputList(result.data) { it.asSearchedPlaceUiModel() }
                                 ),
                             )
                         }
@@ -113,13 +108,13 @@ constructor(
                         _uiSearchState.emit(
                             UiState(
                                 loading = Loading(false),
-                                items = data.data ?: emptyList(),
-                            ),
+                                items = mapNullInputList(result.data) { it.asSearchedPlaceUiModel() }
+                            )
                         )
                     }
 
                     is ApiResult.Failure -> {
-                        _uiSearchState.emit(UiState(error = data.exception))
+                        _uiSearchState.emit(UiState(error = result.exception))
                     }
 
                     else -> _uiSearchState.emit(UiState(loading = Loading(false)))
@@ -128,18 +123,8 @@ constructor(
                 _uiSearchState.emit(
                     UiState(
                         loading = Loading(false),
-                        items =
-                        searchCache.map {
-                            SearchedPlace(
-                                it.placeId.toLong(),
-                                it.latitude,
-                                it.longitude,
-                                it.addressType,
-                                it.name,
-                                it.displayName,
-                            )
-                        },
-                    ),
+                        items = searchCache
+                    )
                 )
             }
             isLoading = false
@@ -147,23 +132,11 @@ constructor(
     }
 
     // save selected place to the proto datastore.
-    fun saveAndShowSearchedPlace(element: SearchedPlace) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun saveAndShowSearchedPlace(element: SearchedPlaceUiModel) {
+        viewModelScope.launch {
             element.let { searchedPlace ->
                 getRecentlySearchedPlaceList.firstOrNull().let { savedPlaces ->
                     savedPlaces ?: return@launch
-                    /* if (searchedPlace.placeId == 0L) {
-                         mapSharedViewModel.setPlaceToFind(
-                             SearchPlaceCacheEntities(
-                                 latitude = searchedPlace.latitude,
-                                 longitude = searchedPlace.longitude
-                             )
-                         )
-                         withContext(Dispatchers.Main) {
-                             findNavController().popBackStack(R.id.map_dest, false)
-                         }
-                         return@launch
-                     }*/
 
                     val entity: RecentlySearchedPlace =
                         RecentlySearchedPlace.newBuilder().setPlaceId(searchedPlace.placeId)
@@ -197,20 +170,22 @@ constructor(
 
                 searchCachedResult(
                     searchedPlace.name.takeIf { it.isNotEmpty() }
-                        ?: searchedPlace.displayName,
-                ).first {
-                    it.placeId.toLong() == searchedPlace.placeId
-                }.let {
-                    _searchPlace.emit(it)
-                }
+                        ?: searchedPlace.displayName
+                )
+                    .firstOrNull()
+                    ?.first {
+                        it.placeId == searchedPlace.placeId
+                    }?.let {
+                        _searchPlace.emit(it)
+                    }
             }
         }
     }
 
     fun sortListByDistance(
-        list: List<SearchedPlace>,
+        list: List<SearchedPlaceUiModel>,
         position: LatLng?,
-    ): List<SearchedPlace> {
+    ): List<SearchedPlaceUiModel> {
         position ?: return list
 
         return list.sortedBy {
@@ -223,21 +198,22 @@ constructor(
 
     // AppSearch API operations.
     fun initSession() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             searchManager.openSession()
         }
     }
 
     // cache result returned from api
     private fun cacheResult(result: List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity>) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             searchManager.putResults(result)
         }
     }
 
     // search cached results in database
-    private suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> =
+    private fun searchCachedResult(query: String): Flow<List<SearchedPlaceUiModel>> =
         searchManager.searchCachedResult(query)
+            .map { originalList -> mapList(originalList) { it.asSearchedPlaceUiModel() } }
 
     // History DataStore operations.
     override fun onCleared() {

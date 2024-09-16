@@ -1,15 +1,12 @@
 package com.bytecause.data.repository
 
-import com.bytecause.util.mappers.mapList
 import com.bytecause.data.di.IoDispatcher
 import com.bytecause.data.local.room.dao.PoiCacheDao
 import com.bytecause.data.mappers.asPoiCacheModel
 import com.bytecause.data.mappers.asRegionPoiCacheEntity
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.model.PoiCacheModel
-import com.bytecause.domain.util.PoiTagsUtil.formatTagString
-import com.bytecause.util.poi.PoiUtil
-import com.bytecause.util.poi.PoiUtil.getResourceName
+import com.bytecause.util.mappers.mapList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -40,9 +37,9 @@ class PoiCacheRepositoryImpl @Inject constructor(
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
             .flowOn(coroutineDispatcher)
 
-    override fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel> =
+    override fun searchPoiWithInfoById(id: Long): Flow<PoiCacheModel?> =
         poiCacheDao.searchPoiWithInfoById(id)
-            .map { it.asPoiCacheModel() }
+            .map { it?.asPoiCacheModel() }
             .flowOn(coroutineDispatcher)
 
     override fun isPlaceCached(placeId: Long): Flow<Boolean> =
@@ -64,19 +61,15 @@ class PoiCacheRepositoryImpl @Inject constructor(
             selectedCategories
         )
             .map { entityList -> entityList.map { entity -> entity.asPoiCacheModel() } }
+            .flowOn(coroutineDispatcher)
 
 
     override suspend fun cacheResult(result: List<PoiCacheModel>) =
         withContext(coroutineDispatcher) {
-            result.map {
-                it.asRegionPoiCacheEntity(
-                    // Extracts drawable resource name from poi's tags
-                    getResourceName(PoiUtil.extractCategoryFromPoiEntity(it.tags)
-                        .takeIf { category -> !category.isNullOrEmpty() }
-                        .let { tagValue -> formatTagString(tagValue) })
-                )
-            }.let {
-                poiCacheDao.cacheResult(it)
-            }
+            result
+                .map { it.asRegionPoiCacheEntity() }
+                .let {
+                    poiCacheDao.cacheResult(it)
+                }
         }
 }

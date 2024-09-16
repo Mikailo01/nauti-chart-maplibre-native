@@ -2,16 +2,17 @@ package com.bytecause.search.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.data.local.room.tables.SearchPlaceCacheEntity
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.presentation.model.SearchedPlaceUiModel
+import com.bytecause.search.mapper.asSearchedPlaceUiModel
+import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,7 +24,6 @@ class SearchHistoryViewModel @Inject constructor(
     val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> =
         historyRepository.getRecentlySearchedPlaces()
 
-    // History DataStore operations.
     fun deleteRecentlySearchedPlace(index: Int) {
         viewModelScope.launch {
             historyRepository.deleteRecentlySearchedPlace(index)
@@ -36,10 +36,7 @@ class SearchHistoryViewModel @Inject constructor(
         }
     }
 
-    // AppSearch Api operations.
-    suspend fun searchCachedResult(query: String): List<SearchPlaceCacheEntity> {
-        return withContext(Dispatchers.IO) {
-            searchManager.searchCachedResult(query)
-        }
-    }
+    fun searchCachedResult(query: String): Flow<List<SearchedPlaceUiModel>> =
+        searchManager.searchCachedResult(query)
+            .map { originalList -> mapList(originalList) { it.asSearchedPlaceUiModel() } }
 }

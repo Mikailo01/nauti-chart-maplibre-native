@@ -17,25 +17,24 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bytecause.domain.model.ArgsObjectTypeArray
-import com.bytecause.domain.model.SearchedPlace
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SearchHistoryFragmentBinding
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
+import com.bytecause.presentation.model.PlaceType
+import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.viewmodel.SearchHistoryViewModel
 import com.bytecause.util.KeyboardUtils
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.poi.PoiUtil.assignDrawableToAddressType
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import kotlin.properties.Delegates
-
 
 
 // TODO("Refactor - Fragment takes too much responsibility")
@@ -49,9 +48,9 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
     private lateinit var recyclerView: FullyExpandedRecyclerView
-    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlace>
+    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlaceUiModel>
 
-    private val historyList = mutableListOf<SearchedPlace>()
+    private val historyList = mutableListOf<SearchedPlaceUiModel>()
 
     /* Because historyList is limited to 7 elements and datastore is not,
        then we have to know the total count of elements in datastore during removing process. */
@@ -66,8 +65,8 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
     ): View? {
 
         val bindingInterface = object :
-            com.bytecause.util.bindings.RecyclerViewBindingInterface<SearchedPlace> {
-            override fun bindData(item: SearchedPlace, itemView: View, itemPosition: Int) {
+            com.bytecause.util.bindings.RecyclerViewBindingInterface<SearchedPlaceUiModel> {
+            override fun bindData(item: SearchedPlaceUiModel, itemView: View, itemPosition: Int) {
                 val innerItemView: LinearLayout =
                     itemView.findViewById(com.bytecause.core.presentation.R.id.recycler_view_inner_item_view)
                 val placeImage: ImageView =
@@ -90,18 +89,18 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
                                 .setTimeStamp(System.currentTimeMillis())
                                 .build()
                         )
-                        mapSharedViewModel.apply {
-                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                                // Make query to get needed element using AppSearch API.
-                                viewModel.searchCachedResult(searchedPlace.name.takeIf { it.isNotEmpty() }
-                                    ?: searchedPlace.displayName).first {
-                                    it.placeId.toLong() == searchedPlace.placeId
-                                }.let {
-                                    mapSharedViewModel.setPlaceToFind(it)
-                                    setDismissSearchMapDialogState(true)
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            // Make query to get needed element using AppSearch API.
+                            viewModel.searchCachedResult(
+                                searchedPlace.name.takeIf { it.isNotEmpty() }
+                                    ?: searchedPlace.displayName
+                            ).firstOrNull()
+                                ?.first { it.placeId == searchedPlace.placeId }
+                                ?.let {
+                                    mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
+                                    mapSharedViewModel.setDismissSearchMapDialogState(true)
                                 }
 
-                            }
                         }
                     }
                 }
@@ -149,7 +148,7 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
                         dataStoreSize = it.placeCount
                         it.placeList.sortedByDescending { element -> element.timeStamp }
                             .forEach { place ->
-                                val element = SearchedPlace(
+                                val element = SearchedPlaceUiModel(
                                     placeId = place.placeId,
                                     latitude = place.latitude,
                                     longitude = place.longitude,

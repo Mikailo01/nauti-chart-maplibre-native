@@ -25,11 +25,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.widget.ViewPager2
 import com.bytecause.core.resources.R
-import com.bytecause.domain.model.SearchedPlace
 import com.bytecause.features.search.databinding.SearchMapFragmentDialogBinding
 import com.bytecause.presentation.components.views.CustomTextInputEditText
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
+import com.bytecause.presentation.model.PlaceType
+import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.model.UiState
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.SearchHistoryFragment
@@ -62,7 +63,7 @@ class SearchMapFragmentDialog : DialogFragment() {
     private val viewModel: SearchMapViewModel by viewModels()
 
     private lateinit var recyclerView: FullyExpandedRecyclerView
-    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlace>
+    private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlaceUiModel>
 
     private lateinit var viewPager2: ViewPager2
     private lateinit var viewPagerAdapter: SearchMapViewPagerAdapter
@@ -86,8 +87,8 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
 
         val bindingInterface = object :
-            com.bytecause.util.bindings.RecyclerViewBindingInterface<SearchedPlace> {
-            override fun bindData(item: SearchedPlace, itemView: View, itemPosition: Int) {
+            com.bytecause.util.bindings.RecyclerViewBindingInterface<SearchedPlaceUiModel> {
+            override fun bindData(item: SearchedPlaceUiModel, itemView: View, itemPosition: Int) {
                 val innerItemView: LinearLayout =
                     itemView.findViewById(com.bytecause.core.presentation.R.id.recycler_view_inner_item_view)
                 val placeImage: ImageView =
@@ -169,7 +170,12 @@ class SearchMapFragmentDialog : DialogFragment() {
 
         val clearTextDrawable =
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_close_24)?.apply {
-                setTint(ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer))
+                setTint(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.md_theme_onPrimaryContainer
+                    )
+                )
             }
         val progressDrawable = requireContext().getProgressBarDrawable().apply {
             setTint(ContextCompat.getColor(requireContext(), R.color.black))
@@ -179,7 +185,12 @@ class SearchMapFragmentDialog : DialogFragment() {
 
             // Set navigate back arrow in custom edit text view.
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_arrow_back_24)?.apply {
-                setTint(ContextCompat.getColor(requireContext(), R.color.md_theme_onPrimaryContainer))
+                setTint(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.md_theme_onPrimaryContainer
+                    )
+                )
                 setDrawables(this, null)
             }
 
@@ -254,7 +265,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                     binding.searchMapBox.searchMapEditText.let {
                         it.text ?: return
                         if (viewModel.isLoading) return
-                        it.setText("")
+                        it.text = null
                     }
                 }
             })
@@ -309,9 +320,8 @@ class SearchMapFragmentDialog : DialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
                 viewModel.searchPlace.collect {
-                    mapSharedViewModel.setPlaceToFind(it)
+                    mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
                     withContext(Dispatchers.Main) {
-                        // findNavController().popBackStack(R.id.map_dest, false)
                         findNavController().popBackStack()
                     }
                 }
@@ -351,7 +361,7 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
     }*/
 
-    private fun populateRecyclerView(places: UiState<SearchedPlace>) {
+    private fun populateRecyclerView(places: UiState<SearchedPlaceUiModel>) {
         when (val exception = places.error) {
 
             is IOException -> {

@@ -40,6 +40,7 @@ import com.bytecause.features.custom_poi.databinding.AddCustomMarkerBinding
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
+import com.bytecause.presentation.model.PointType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.delegates.viewBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -342,11 +343,14 @@ class CustomMarkerDialog :
                         categoryRecyclerView.layoutManager?.findViewByPosition(viewModel.selectedItemViewPosition.value)
                             ?.findViewById<TextView>(R.id.categoryName)
 
+                    val latLng =
+                        ((mapSharedViewModel.latLngFlow.value) as? PointType.Marker)?.latLng
+
                     viewModel.insertCustomPoi(
                         CustomPoiEntity(
                             poiName = binding.markerNameInput.text.toString(),
-                            latitude = mapSharedViewModel.latLngFlow.value?.latitude ?: 0.0,
-                            longitude = mapSharedViewModel.latLngFlow.value?.longitude ?: 0.0,
+                            latitude = latLng?.latitude ?: 0.0,
+                            longitude = latLng?.longitude ?: 0.0,
                             description =
                             when (!binding.markerDescriptionInput.text.isNullOrEmpty()) {
                                 true -> binding.markerDescriptionInput.text.toString()
@@ -366,12 +370,14 @@ class CustomMarkerDialog :
             }
         }
 
-        mapSharedViewModel.latLngFlow.value?.let { latLng ->
+        mapSharedViewModel.latLngFlow.value?.let { point ->
+            val latLng = (point as PointType.Marker).latLng
+
             binding.coordinatesTextview.text =
                 resources.getString(com.bytecause.core.resources.R.string.split_two_strings_formatter)
                     .format(
                         com.bytecause.util.map.MapUtil.latitudeToDMS(latLng.latitude),
-                        com.bytecause.util.map.MapUtil.longitudeToDMS(latLng.longitude),
+                        com.bytecause.util.map.MapUtil.longitudeToDMS(latLng.longitude)
                     )
         }
 
@@ -393,7 +399,7 @@ class CustomMarkerDialog :
                 else -> {
                     binding.markerDescriptionLayout.visibility = View.GONE
                     viewModel.isMarkerDescriptionVisible(false)
-                    binding.markerDescriptionInput.setText("")
+                    binding.markerDescriptionInput.text = null
                     binding.addDescriptionTextview.text =
                         resources.getString(com.bytecause.core.resources.R.string.add_description)
                     binding.addDescriptionImageview.setImageDrawable(

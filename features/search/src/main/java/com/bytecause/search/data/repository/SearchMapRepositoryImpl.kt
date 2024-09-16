@@ -1,7 +1,7 @@
 package com.bytecause.search.data.repository
 
 import com.bytecause.domain.model.ApiResult
-import com.bytecause.domain.model.SearchedPlace
+import com.bytecause.domain.model.SearchedPlaceModel
 import com.bytecause.search.data.remote.retrofit.NominatimRestApiService
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
 import com.bytecause.search.mapper.asSearchedPlace
@@ -18,7 +18,7 @@ class SearchMapRepositoryImpl @Inject constructor(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SearchMapRepository {
 
-    override suspend fun searchPlaces(query: String): Flow<ApiResult<List<SearchedPlace>>> = flow {
+    override suspend fun searchPlaces(query: String): Flow<ApiResult<List<SearchedPlaceModel>>> = flow {
         try {
             val response = nominatimRestApiService.search(query)
             if (response.isSuccessful) {

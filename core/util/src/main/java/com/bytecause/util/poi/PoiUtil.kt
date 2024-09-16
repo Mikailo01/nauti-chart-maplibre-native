@@ -6,7 +6,6 @@ import android.graphics.drawable.LayerDrawable
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import com.bytecause.core.resources.R
-import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 
 object PoiUtil {
     fun createLayerDrawable(
@@ -35,7 +34,7 @@ object PoiUtil {
             }
     }
 
-    val poiIconDrawableMap: Map<String, Int> = mapOf(
+    val poiSymbolDrawableMap: Map<String, Int> = mapOf(
         "Bar" to R.drawable.bar,
         "Pub" to R.drawable.pub,
         "Accommodation" to R.drawable.accommodation,
@@ -342,58 +341,6 @@ object PoiUtil {
         return categoryName
     }
 
-    // unify methods of payment listed in overpass element's tags
-    fun generalizeTagKeys(elementList: List<com.bytecause.domain.model.OverpassNodeModel>?): List<com.bytecause.domain.model.OverpassNodeModel> {
-        val stringMap =
-            mapOf(
-                "payment" to
-                        mapOf(
-                            "Credit cards" to
-                                    listOf(
-                                        "card",
-                                        "cards",
-                                        "contactless",
-                                        "credit_cards",
-                                        "debit_cards",
-                                        "maestro",
-                                        "mastercard",
-                                        "visa",
-                                        "visa_debit",
-                                        "visa_electron",
-                                        "american_express",
-                                        "diners_club",
-                                        "discover_card",
-                                        "jcb",
-                                    ),
-                            "Crypto payment" to
-                                    listOf(
-                                        "lightning",
-                                        "lightning_contactless",
-                                        "onchain",
-                                    ),
-                            "QR payment" to listOf("qerko"),
-                        ),
-            )
-
-        return elementList?.map { element ->
-            val modifiedTags = mutableMapOf<String, String>()
-            element.tags.forEach { (key, value) ->
-                val parts = key.split(':')
-                if (parts.size >= 2 && parts[0] in stringMap.keys) {
-                    stringMap[parts[0]]?.forEach innerForEach@{
-                        if (it.value.contains(parts[1])) {
-                            modifiedTags[it.key] = value
-                            return@innerForEach
-                        }
-                    }
-                } else {
-                    modifiedTags[key] = value
-                }
-            }
-            element.copy(tags = modifiedTags)
-        } ?: listOf()
-    }
-
     fun extractPropImagesFromTags(tags: Map<String, String>): List<Int> {
         val imageList = mutableListOf<Int>()
 
@@ -417,21 +364,6 @@ object PoiUtil {
         }
     }
 
-    fun getResourceName(categoryName: String?): String? {
-        categoryName ?: return null
-
-        val fields = R.drawable::class.java.declaredFields
-        for (field in fields) {
-            if (formatTagString(field.name)
-                    ?.lowercase() == unifyPoiDrawables(categoryName).lowercase() ||
-                categoryName.split(" ").contains(formatTagString(field.name))
-            ) {
-                return field.name
-            }
-        }
-        return null
-    }
-
     private fun assignDrawableColorToPoiCategory(category: String): Int {
         return when (category) {
             "Cafe", "Restaurant", "Fast food" -> R.color.poi_yellow
@@ -447,6 +379,7 @@ object PoiUtil {
         }
     }
 
+    // map of drawables for each unified category
     private val poiCategoryDrawableMap = mapOf(
         R.string.art to R.drawable.arts_centre,
         R.string.animals to R.drawable.animal,
@@ -503,7 +436,7 @@ object PoiUtil {
         R.string.other to R.drawable.question_mark_24
     )
 
-    fun getDrawableForPoiCategory(categoryName: String, context: Context): Int? {
+    fun getDrawableForUnifiedPoiCategory(categoryName: String, context: Context): Int? {
         val stringResId = poiCategoryDrawableMap.keys.find { context.getString(it) == categoryName }
         return stringResId?.let { poiCategoryDrawableMap[it] }
     }

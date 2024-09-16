@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.ElementTagModel
 import com.bytecause.domain.model.Loading
-import com.bytecause.domain.model.OverpassNodeModel
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.presentation.model.UiState
-import com.bytecause.util.poi.PoiUtil
+import com.bytecause.search.ui.model.PoiUiModel
+import com.bytecause.search.util.PoiTagsUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,17 +64,17 @@ constructor(
         )
 
     private var _uiSearchCategoryState =
-        MutableStateFlow<UiState<OverpassNodeModel>?>(
+        MutableStateFlow<UiState<PoiUiModel>?>(
             null
         )
     val uiSearchCategoryState get() = _uiSearchCategoryState.asStateFlow()
 
-    private val _categoryElementsList = mutableSetOf<OverpassNodeModel>()
+    private val _categoryElementsList = mutableSetOf<PoiUiModel>()
     val categoryElementsList get() = _categoryElementsList.toList()
 
     private val _elementList =
-        MutableStateFlow<Set<OverpassNodeModel>>(setOf())
-    val elementList: StateFlow<Set<OverpassNodeModel>> get() = _elementList.asStateFlow()
+        MutableStateFlow<Set<PoiUiModel>>(setOf())
+    val elementList: StateFlow<Set<PoiUiModel>> get() = _elementList.asStateFlow()
 
     // Holds unmodified init map key value pairs.
     private val _allTagsMap = mutableMapOf<String, List<ElementTagModel>>()
@@ -83,14 +83,8 @@ constructor(
     var radius: Int = INIT_SEARCH_RADIUS
         private set
 
-    fun addElements(elements: List<OverpassNodeModel>) {
+    fun addElements(elements: List<PoiUiModel>) {
         _elementList.value = elements.toSet()
-    }
-
-    fun addElement(element: OverpassNodeModel) {
-        _elementList.update {
-            it + element
-        }
     }
 
     fun clearElements() {
@@ -101,12 +95,12 @@ constructor(
         radius = INIT_SEARCH_RADIUS
     }
 
-    fun addAllToCategoryElementsList(element: List<OverpassNodeModel>) {
+    fun addAllToCategoryElementsList(element: List<PoiUiModel>) {
         _categoryElementsList.addAll(element)
     }
 
-    fun modifySearchRadius(radius: Int) {
-        this.radius = radius
+    fun doubleSearchRadius() {
+        radius *= 2
     }
 
     fun extractAllTags() {
@@ -122,7 +116,7 @@ constructor(
 
     // gets place name from tags.keys values
     fun getItemName(
-        item: OverpassNodeModel,
+        item: PoiUiModel,
         defaultName: String,
     ): String? {
         // ordered by precedence
@@ -146,14 +140,13 @@ constructor(
             getPoiResultByRadiusUseCase(entity).collect { result ->
                 when (result) {
                     is ApiResult.Success -> {
-                        val itemsWithUnifiedTags = PoiUtil.generalizeTagKeys(
+                        val itemsWithUnifiedTags = PoiTagsUtil.generalizeTagKeys(
                             result.data?.map {
-                                OverpassNodeModel(
-                                    "",
-                                    it.placeId,
-                                    it.latitude,
-                                    it.longitude,
-                                    it.tags,
+                                PoiUiModel(
+                                    id = it.placeId,
+                                    lat = it.latitude,
+                                    lon = it.longitude,
+                                    tags = it.tags
                                 )
                             } ?: emptyList()
                         )
@@ -180,10 +173,10 @@ constructor(
         }
     }
 
-    fun filterAlgorithm(filterTags: Map<String, List<String>>): List<OverpassNodeModel> {
+    fun filterAlgorithm(filterTags: Map<String, List<String>>): List<PoiUiModel> {
         if (filterTags.isEmpty()) return categoryElementsList
 
-        val filteredList = mutableListOf<OverpassNodeModel>()
+        val filteredList = mutableListOf<PoiUiModel>()
         for (element in categoryElementsList) {
             for ((key, value) in filterTags) {
                 if (element.tags.keys.contains(key)) {
@@ -226,7 +219,7 @@ constructor(
     }
 
     // Extracts values from each element of the list and save them as keys, values pairs.
-    private fun extractValuesToMap(list: Set<OverpassNodeModel>): Map<String, List<ElementTagModel>> {
+    private fun extractValuesToMap(list: Set<PoiUiModel>): Map<String, List<ElementTagModel>> {
         val tagTypeToTagsMap = mutableMapOf<String, MutableSet<ElementTagModel>>()
 
         for (listElement in list) {

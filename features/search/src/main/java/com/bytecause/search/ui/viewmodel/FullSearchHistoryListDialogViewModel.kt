@@ -6,7 +6,10 @@ import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
+import com.bytecause.presentation.model.SearchedPlaceUiModel
+import com.bytecause.search.mapper.asSearchedPlaceUiModel
 import com.bytecause.search.ui.model.SearchHistoryParentItem
+import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.sql.Date
 import java.sql.Timestamp
@@ -33,7 +37,7 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
     val parentList: StateFlow<List<SearchHistoryParentItem>> = _parentList.asStateFlow()
 
     fun loadSearchHistory(cache: Flow<RecentlySearchedPlaceList?>, stringArray: Array<String>) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             cache.firstOrNull().let { entity ->
                 entity ?: return@launch
 
@@ -96,7 +100,6 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
         }
     }
 
-    // DataStore operations.
     val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> =
         historyRepository.getRecentlySearchedPlaces()
 
@@ -106,12 +109,12 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
         }
     }
 
-    // AppSearch API operations.
-    suspend fun searchCachedResult(query: String): List<com.bytecause.data.local.room.tables.SearchPlaceCacheEntity> =
+    fun searchCachedResult(query: String): Flow<List<SearchedPlaceUiModel>> =
         searchManager.searchCachedResult(query)
+            .map { originalList -> mapList(originalList) { it.asSearchedPlaceUiModel() } }
 
     override fun onCleared() {
-        searchManager.closeSession()
         super.onCleared()
+        searchManager.closeSession()
     }
 }
