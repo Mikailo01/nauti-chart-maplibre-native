@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.bytecause.core.resources.R
 import com.bytecause.domain.util.PoiTagsUtil.unformatTagString
 import com.bytecause.domain.util.SearchTypes
-import com.bytecause.search.ui.model.parcelable.PoiCategoryModel
+import com.bytecause.search.ui.model.serializable.PoiCategoryModel
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import com.bytecause.util.string.UiText
 

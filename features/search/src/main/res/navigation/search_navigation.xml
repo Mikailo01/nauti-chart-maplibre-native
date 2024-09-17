@@ -25,7 +25,7 @@
         tools:layout="@layout/selected_category_elements_fragment_layout">
         <argument
             android:name="poiCategory"
-            app:argType="com.bytecause.search.ui.model.parcelable.PoiCategoryModel" />
+            app:argType="com.bytecause.search.ui.model.serializable.PoiCategoryModel" />
         <action
             android:id="@+id/action_selectedCategoryElementsDialogFragment_to_selectedCategoryElementsListFilterDialog"
             app:destination="@id/selectedCategoryElementsListFilterDialog" />
@@ -39,5 +39,5 @@
         android:id="@+id/fullSearchHistoryListDialog"
         android:name="com.bytecause.search.ui.dialog.FullSearchHistoryListDialog"
         android:label="FullSearchHistoryListDialog"
-        tools:layout="@layout/full_search_history_list_dialog"/>
+        tools:layout="@layout/full_search_history_list_dialog" />
 </navigation>

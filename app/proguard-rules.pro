@@ -260,10 +260,10 @@
 -keepnames class org.osmdroid.** { *; }
 
 # keep everything in this package from being removed or renamed
--keep class com.bytecause.search.ui.model.parcelable.** { *; }
+-keep class com.bytecause.search.ui.model.serializable.** { *; }
 
 # keep everything in this package from being renamed only
--keepnames class com.bytecause.search.ui.model.parcelable.** { *; }
+-keepnames class com.bytecause.search.ui.model.serializable.** { *; }
 
 # keep everything in this package from being removed or renamed
 -keep class com.bytecause.domain.model.** { *; }

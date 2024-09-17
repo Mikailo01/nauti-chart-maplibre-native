@@ -10,10 +10,10 @@ import javax.inject.Inject
 @HiltViewModel
 class AddCustomMarkerCategoryViewModel @Inject constructor(
     private val repository: CustomPoiRepositoryImpl
-): ViewModel() {
+) : ViewModel() {
 
-    suspend fun insertCategory(category: CustomPoiCategoryEntity) = repository.insertCategory(category)
+    suspend fun insertCategory(category: CustomPoiCategoryEntity) =
+        repository.insertCategory(category)
 
-    fun isCategoryNamePresent(name: String): Flow<Boolean> =
-        repository.isCategoryNamePresent(name)
+    fun isCategoryNamePresent(name: String): Flow<Boolean> = repository.isCategoryNamePresent(name)
 }

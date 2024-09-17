@@ -13,6 +13,7 @@ import com.bytecause.presentation.model.UiState
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import com.bytecause.util.poi.PoiUtil.getUnifiedPoiCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +46,8 @@ constructor(
 
     val areHarboursVisible: StateFlow<Boolean> = userPreferencesRepository.getAreHarboursVisible()
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private var fetchHarboursJob: Job? = null
 
     fun toggleAisActivation() {
         viewModelScope.launch {
@@ -147,7 +150,10 @@ constructor(
     }
 
     fun fetchHarbours() {
-        viewModelScope.launch {
+        // we need to cancel current active collector explicitly or additional collector will be created
+        fetchHarboursJob?.cancel()
+
+        fetchHarboursJob = viewModelScope.launch {
             _harboursFetchingState.emit(UiState(loading = Loading(true)))
 
             updateHarboursUseCase().collect { result ->

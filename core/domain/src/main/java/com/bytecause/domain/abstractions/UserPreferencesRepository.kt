@@ -35,4 +35,7 @@ interface UserPreferencesRepository {
 
     suspend fun saveAutoUpdateNetworkPreference(networkType: NetworkType)
     fun getAutoUpdatesNetworkPreference(): Flow<NetworkType>
+
+    suspend fun saveShouldRequestNotificationPermission(boolean: Boolean)
+    fun getShouldRequestNotificationPermission(): Flow<Boolean>
 }

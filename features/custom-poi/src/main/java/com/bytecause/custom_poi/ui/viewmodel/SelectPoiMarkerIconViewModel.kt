@@ -1,5 +1,6 @@
 package com.bytecause.custom_poi.ui.viewmodel
 
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import com.bytecause.core.resources.R
 import com.bytecause.custom_poi.data.repository.abstraction.RecentlyUsedIconsRepository
@@ -17,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SelectPoiMarkerIconViewModel @Inject constructor(
-    private val repository: RecentlyUsedIconsRepository
+    private val recentlyUsedIconsRepository: RecentlyUsedIconsRepository
 ) : ViewModel() {
 
     private val _contentList = MutableStateFlow<List<IconsParentItem>?>(null)
@@ -74,15 +75,16 @@ class SelectPoiMarkerIconViewModel @Inject constructor(
         return null
     }
 
+    @RequiresApi(35)
     suspend fun saveRecentlyUsedPoiMarkerIcon(drawableResourceName: String) {
-        repository.getRecentUsedPoiMarkerIcons().firstOrNull().let {
+        recentlyUsedIconsRepository.getRecentUsedPoiMarkerIcons().firstOrNull().let {
             it ?: return
 
             if (it.iconDrawableResourceNameList.isNullOrEmpty()) {
                 RecentlyUsedPoiMarkerIcon.newBuilder()
                     .setDrawableResourceName(drawableResourceName).build()
                     .let { newValue ->
-                        repository.addRecentUsedPoiMarkerIconList(
+                        recentlyUsedIconsRepository.addRecentUsedPoiMarkerIconList(
                             listOf(newValue)
                         )
                     }
@@ -97,7 +99,7 @@ class SelectPoiMarkerIconViewModel @Inject constructor(
                         ) {
                             val updatedList =
                                 (it.iconDrawableResourceNameList.filter { drawable -> drawable != newValue } + newValue).toList()
-                            repository.updateRecentUsedPoiMarkerIconList(updatedList)
+                            recentlyUsedIconsRepository.updateRecentUsedPoiMarkerIconList(updatedList)
                         } else {
                             if (recentlyUsedIcons.size >= 24) {
                                 val updatedList =
@@ -105,11 +107,11 @@ class SelectPoiMarkerIconViewModel @Inject constructor(
                                         removeFirst()
                                         add(newValue)
                                     }
-                                repository.updateRecentUsedPoiMarkerIconList(
+                                recentlyUsedIconsRepository.updateRecentUsedPoiMarkerIconList(
                                     updatedList
                                 )
                             } else {
-                                repository.addRecentUsedPoiMarkerIconList(
+                                recentlyUsedIconsRepository.addRecentUsedPoiMarkerIconList(
                                     listOf(newValue)
                                 )
                             }
@@ -120,5 +122,5 @@ class SelectPoiMarkerIconViewModel @Inject constructor(
     }
 
     fun getRecentUsedPoiMarkerIcons(): Flow<RecentlyUsedPoiMarkerIconList> =
-        repository.getRecentUsedPoiMarkerIcons()
+        recentlyUsedIconsRepository.getRecentUsedPoiMarkerIcons()
 }

@@ -12,4 +12,6 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
 }
 
+extra["appVersionCode"] = 1
+extra["appVersionName"] = "1.0.0"
 

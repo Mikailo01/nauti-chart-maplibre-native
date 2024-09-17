@@ -17,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -109,18 +110,20 @@ constructor(
 
             _downloadRegionsUiState.value = UiState(loading = Loading(true))
 
-            when (val result = getRegionsUseCase(countryId, isoCode, query).first()) {
+            when (val result = getRegionsUseCase(countryId, isoCode, query).firstOrNull()) {
                 is ApiResult.Failure -> {
                     _downloadRegionsUiState.emit(UiState(error = result.exception))
                 }
 
                 is ApiResult.Progress -> {
-
+                    // nothing
                 }
 
                 is ApiResult.Success -> {
                     _downloadRegionsUiState.emit(UiState(items = result.data ?: emptyList()))
                 }
+
+                else -> _downloadRegionsUiState.value = UiState(loading = Loading(false))
             }
         }
     }

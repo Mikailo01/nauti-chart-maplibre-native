@@ -13,10 +13,10 @@ import com.bytecause.presentation.model.UiState
 import com.bytecause.search.ui.model.PoiUiModel
 import com.bytecause.search.util.PoiTagsUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -73,7 +73,7 @@ constructor(
     val categoryElementsList get() = _categoryElementsList.toList()
 
     private val _elementList =
-        MutableStateFlow<Set<PoiUiModel>>(setOf())
+        MutableStateFlow<Set<PoiUiModel>>(emptySet())
     val elementList: StateFlow<Set<PoiUiModel>> get() = _elementList.asStateFlow()
 
     // Holds unmodified init map key value pairs.
@@ -82,6 +82,8 @@ constructor(
 
     var radius: Int = INIT_SEARCH_RADIUS
         private set
+
+    private var getPoiJob: Job? = null
 
     fun addElements(elements: List<PoiUiModel>) {
         _elementList.value = elements.toSet()
@@ -95,6 +97,10 @@ constructor(
         radius = INIT_SEARCH_RADIUS
     }
 
+    // Via this function we save all items for given category, elementList holds content which will be
+    // shown to the user and can be modified using filters, categoryElementsList serves as holder
+    // for all elements, so when user clear all filters, elementList's content is replaced by
+    // categoryElementsList's content
     fun addAllToCategoryElementsList(element: List<PoiUiModel>) {
         _categoryElementsList.addAll(element)
     }
@@ -133,7 +139,10 @@ constructor(
     }
 
     fun getPoiResult(entity: PoiQueryModel) {
-        viewModelScope.launch {
+        // we need to cancel current active collector explicitly or additional collector will be created
+        getPoiJob?.cancel()
+
+        getPoiJob = viewModelScope.launch {
             _uiSearchCategoryState.value =
                 UiState(loading = Loading(true))
 
@@ -173,6 +182,7 @@ constructor(
         }
     }
 
+    // filter algorithm which will filter POIs based on selected tags
     fun filterAlgorithm(filterTags: Map<String, List<String>>): List<PoiUiModel> {
         if (filterTags.isEmpty()) return categoryElementsList
 

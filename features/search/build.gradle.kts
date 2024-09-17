@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kapt)
     alias(libs.plugins.navigation.safeargs)
     id("com.google.protobuf")
-    id ("kotlin-parcelize")
 }
 
 android {

@@ -1,7 +1,6 @@
-package com.bytecause.nautichart.activity
+package com.bytecause.nautichart.ui.activity
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -13,22 +12,28 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.bytecause.nautichart.R
+import com.bytecause.nautichart.ui.dialog.NotificationPermissionDeniedAlertDialog
+import com.bytecause.nautichart.ui.viewmodel.MainViewModel
 import com.bytecause.presentation.interfaces.DrawerController
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 
 
 private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
+private const val PERMISSION_REQUESTED_BUNDLE_TAG = "isPermissionRequested"
+private const val NOTIFICATION_PERMISSION_DENIED_ALERT_DIALOG_TAG =
+    "NotificationPermissionDeniedDialog"
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), DrawerController {
@@ -36,8 +41,10 @@ class MainActivity : AppCompatActivity(), DrawerController {
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
     private val mapSharedViewModel: MapSharedViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private var isPermissionRequested = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -83,14 +90,13 @@ class MainActivity : AppCompatActivity(), DrawerController {
 
         setupNavigationMenu(navController)
 
-        window.statusBarColor = ResourcesCompat.getColor(resources, com.bytecause.core.resources.R.color.md_theme_primary, null)
-
         drawerLayout?.addDrawerListener(
             object : DrawerLayout.DrawerListener {
                 override fun onDrawerSlide(
                     drawerView: View,
                     slideOffset: Float,
-                ) {}
+                ) {
+                }
 
                 override fun onDrawerOpened(drawerView: View) {}
 
@@ -134,19 +140,44 @@ class MainActivity : AppCompatActivity(), DrawerController {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            checkNotificationPermission()
+            lifecycleScope.launch {
+                viewModel.shouldRequestNotificationPermission.collect { shouldRequest ->
+                    if (shouldRequest) {
+                        savedInstanceState?.let {
+                            isPermissionRequested =
+                                it.getBoolean(PERMISSION_REQUESTED_BUNDLE_TAG, false)
+                        }
+
+                        if (isPermissionRequested.not()) {
+                            checkNotificationPermission()
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Save the state to avoid redundant requests
+        outState.putBoolean(PERMISSION_REQUESTED_BUNDLE_TAG, isPermissionRequested)
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkNotificationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             // Request notification permission
             ActivityCompat.requestPermissions(
-                (this as? Activity) ?: return, // Ensure context is an Activity
+                this,
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                 NOTIFICATION_PERMISSION_REQUEST_CODE
             )
+
+            isPermissionRequested = true
         }
     }
 
@@ -156,12 +187,19 @@ class MainActivity : AppCompatActivity(), DrawerController {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted
-            } else {
-                TODO("Show alert dialog")
-                // Permission denied
+            if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+
+                val dialogFragment = NotificationPermissionDeniedAlertDialog()
+                dialogFragment.show(
+                    supportFragmentManager,
+                    NOTIFICATION_PERMISSION_DENIED_ALERT_DIALOG_TAG
+                )
+
+                // user has decided not to allow notification permission, store this decision in the
+                // preferences datastore, so it won't be requested again on every activity creation/re-creation
+                viewModel.saveShouldRequestNotificationPermission(false)
             }
         }
     }

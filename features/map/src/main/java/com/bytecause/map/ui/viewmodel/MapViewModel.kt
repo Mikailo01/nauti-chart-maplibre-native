@@ -298,9 +298,9 @@ constructor(
                     com.bytecause.domain.tilesources.TileSourceId.OPEN_TOPO_MAP_SOURCE_ID.name -> DefaultTileSources.OPEN_TOPO
                     else -> {
                         customTileSourcesUseCase().firstOrNull()?.let {
-                            it.values.map {
-                                it.find {
-                                    when (val type = it.type) {
+                            it.values.map { customTileProviderList ->
+                                customTileProviderList.find { customTileProvider ->
+                                    when (val type = customTileProvider.type) {
                                         is CustomTileProviderType.Raster.Online -> {
                                             type.name
                                         }
@@ -353,10 +353,9 @@ constructor(
     fun getUserLocation(): Flow<LatLng?> = userPreferencesRepository.getUserPosition()
         .map { it?.asLatLng() }
 
-    fun getCachedTileSourceType(): Flow<TileSources?> =
-        flow {
-            userPreferencesRepository.getCachedTileSource().firstOrNull()?.let {
-                emit(getCachedTileSourceType(it).firstOrNull())
-            }
+    fun getCachedTileSourceType(): Flow<TileSources?> = flow {
+        userPreferencesRepository.getCachedTileSource().firstOrNull()?.let {
+            emit(getCachedTileSourceType(it).firstOrNull())
         }
+    }
 }

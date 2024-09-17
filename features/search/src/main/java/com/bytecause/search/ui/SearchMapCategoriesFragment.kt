@@ -14,7 +14,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bytecause.search.ui.model.parcelable.PoiCategoryModel
+import com.bytecause.search.ui.model.serializable.PoiCategoryModel
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SearchMapCategoriesFragmentLayoutBinding
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter

@@ -23,12 +23,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SelectedCategoryElementsFragmentLayoutBinding
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.model.PlaceType
+import com.bytecause.presentation.model.UiState
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.model.PoiUiModel
 import com.bytecause.search.ui.viewmodel.SearchElementsSharedViewModel
@@ -134,7 +136,7 @@ class SelectedCategoryElementsDialogFragment :
                 bindingInterface,
             )
 
-        this.isCancelable = false
+        isCancelable = false
 
         return binding.root
     }
@@ -221,6 +223,14 @@ class SelectedCategoryElementsDialogFragment :
                     genericRecyclerViewAdapter.updateContent(elements.toList())
 
                     updateCount(elements.size)
+                    if (viewModel.uiSearchCategoryState.value != UiState<PoiUiModel>(
+                            loading = Loading(
+                                isLoading = true
+                            )
+                        )
+                    ) {
+                        toggleExtendSearchRadiusLayout()
+                    }
                     toggleShowResultsOnTheMapLayout()
                 }
             }
@@ -253,7 +263,6 @@ class SelectedCategoryElementsDialogFragment :
                     }
 
                     when (val exception = state.error) {
-
                         is IOException -> {
                             binding.errorLayout.apply {
                                 errorImageView.apply {
@@ -269,6 +278,11 @@ class SelectedCategoryElementsDialogFragment :
                                     )
                             }
                             showErrorLayout()
+                        }
+
+                        // Handle empty API response
+                        is NoSuchElementException -> {
+                            toggleExtendSearchRadiusLayout()
                         }
 
                         null -> {
@@ -297,12 +311,12 @@ class SelectedCategoryElementsDialogFragment :
                                                     )
                                                 } ?: run {
                                                 viewModel.addElements(sortedList)
-                                                toggleExtendSearchRadiusLayout()
                                             }
                                         }
                                     }
                             } ?: run {
                                 if (state.loading.isLoading) return@run
+
                                 binding.categoryElementsRecyclerView.visibility = View.GONE
                                 toggleExtendSearchRadiusLayout()
                             }
@@ -415,7 +429,10 @@ class SelectedCategoryElementsDialogFragment :
     }
 
     private fun toggleExtendSearchRadiusLayout() {
-        if (binding.progressLayout.visibility == View.VISIBLE) return
+        if (binding.progressLayout.visibility == View.VISIBLE
+            || binding.locationUnknownLayout.locationUnknownLinearLayout.visibility == View.VISIBLE
+        ) return
+
         if (viewModel.elementList.value.size < 15) {
             binding.extendSearchRadiusLayout.extendSearchRadiusLinearLayout.visibility =
                 View.VISIBLE

@@ -73,11 +73,9 @@ class GetPoiResultByRadiusUseCase(
         }
             .firstOrNull()
 
-        // TODO("Fix extend radius search, radius cache returns entire dataset, filter out elements
-        //  that are not present in current radius")
-        // if radius is bigger than default value (30_000 in meters) make new API call
-        if (radiusCache == null || entity.radius > 30000) {
-            queryAndProcessResult(entity, datasetCategoryName, poiCache)
+        // if current search radius is bigger than in the dataset make new API call
+        if (radiusCache == null || entity.radius > radiusCache.radius) {
+            queryAndProcessResult(entity, datasetCategoryName, poiCache, radiusCache)
         } else {
             val isPositionInThreshold =
                 LatLngModel(
@@ -86,15 +84,22 @@ class GetPoiResultByRadiusUseCase(
                 ).distanceTo(entity.position) <= DISTANCE_THRESHOLD
 
             if (isPositionInThreshold) {
-                radiusPoiCacheRepository.getPoiByCategory(entity.categoryList).firstOrNull()
-                    ?.let {
-                        emit(ApiResult.Success(it))
+                radiusPoiCacheRepository.getPoiByCategory(entity.categoryList)
+                    .firstOrNull()
+                    ?.let { poiList ->
+
+                        // filter POIs that are in current radius
+                        val poiInRadius = poiList.filter {
+                            LatLngModel(
+                                it.latitude,
+                                it.longitude
+                            ).distanceTo(entity.position) <= entity.radius
+                        }
+
+                        emit(ApiResult.Success(poiInRadius))
                     }
             } else {
-                // current position out of threshold, therefore remove old dataset
-                radiusPoiMetadataDatasetRepository.deleteDataset(datasetCategoryName)
-
-                queryAndProcessResult(entity, datasetCategoryName, poiCache)
+                queryAndProcessResult(entity, datasetCategoryName, poiCache, radiusCache)
             }
         }
     }
@@ -103,8 +108,16 @@ class GetPoiResultByRadiusUseCase(
     private suspend fun FlowCollector<ApiResult<List<RadiusPoiCacheModel>>>.queryAndProcessResult(
         entity: PoiQueryModel,
         datasetCategoryName: String,
-        poiCache: List<PoiCacheModel>?
+        poiCache: List<PoiCacheModel>?,
+        radiusCache: RadiusPoiMetadataDatasetModel?
     ) {
+        if (radiusCache != null) {
+            // Since one-to-many relationship using foreign key is used, we have to delete this
+            // dataset explicitly, because if we just replace this dataset then it's children
+            // won't be deleted and there is no point of holding POIs that are out of our radius.
+            radiusPoiMetadataDatasetRepository.deleteDataset(datasetCategoryName)
+        }
+
         // this is flag which checks if dataset for given categories has been created
         var datasetCreated = false
 
@@ -141,6 +154,7 @@ class GetPoiResultByRadiusUseCase(
                                     category = datasetCategoryName,
                                     latitude = entity.position.latitude,
                                     longitude = entity.position.longitude,
+                                    radius = entity.radius,
                                     timestamp = System.currentTimeMillis()
                                 )
                             )

@@ -42,7 +42,7 @@
             android:foregroundServiceType="dataSync" />
 
         <activity
-            android:name="com.bytecause.nautichart.activity.MainActivity"
+            android:name="com.bytecause.nautichart.ui.activity.MainActivity"
             android:exported="true"
             android:theme="@style/Base.Theme.NautiChart">
             <intent-filter>

@@ -28,7 +28,7 @@ import javax.inject.Inject
 class MapBottomSheetViewModel
 @Inject
 constructor(
-    private val repository: dagger.Lazy<UserPreferencesRepository>,
+    private val userPreferencesRepository: dagger.Lazy<UserPreferencesRepository>,
     private val customOfflineRasterTileSourceRepository: CustomOfflineRasterTileSourceRepository,
     private val customOnlineRasterTileSourceRepository: CustomOnlineRasterTileSourceRepository,
     private val customOfflineVectorTileSourceRepository: CustomOfflineVectorTileSourceRepository,
@@ -46,7 +46,7 @@ constructor(
 
     fun cacheSelectedTileSource(tileSourceName: String) {
         viewModelScope.launch {
-            repository.get().cacheSelectedTileSource(tileSourceName)
+            userPreferencesRepository.get().cacheSelectedTileSource(tileSourceName)
         }
     }
 
@@ -134,13 +134,13 @@ constructor(
                                 resource = MapBottomSheetResources.Custom(name),
                             )
                         }
-                    }.let {
+                    }.let { layersList ->
                         val onlineRasterTileSources =
-                            it.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE }
+                            layersList.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE }
                         val offlineRasterTileSources =
-                            it.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE }
+                            layersList.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE }
                         val vectorTileSources =
-                            it.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE }
+                            layersList.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE }
 
                         _contentMapStateFlow.value =
                             _contentMapStateFlow.value.toMutableMap().apply {

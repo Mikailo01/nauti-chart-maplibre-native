@@ -187,6 +187,7 @@ fun RadiusPoiMetadataDatasetEntity.asRadiusPoiMetadataDatasetModel(): RadiusPoiM
         category = category,
         latitude = latitude,
         longitude = longitude,
+        radius = radius,
         timestamp = timestamp
     )
 
@@ -195,5 +196,6 @@ fun RadiusPoiMetadataDatasetModel.asRadiusPoiMetadataDatasetEntity(): RadiusPoiM
         category = category,
         latitude = latitude,
         longitude = longitude,
+        radius = radius,
         timestamp = timestamp
     )

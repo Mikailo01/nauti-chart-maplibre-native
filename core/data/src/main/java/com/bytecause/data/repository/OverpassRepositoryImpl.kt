@@ -27,6 +27,7 @@ class OverpassRepositoryImpl @Inject constructor(
     // type argument.
     // To avoid OutOfMemoryException I introduced incremental parsing, so each 1000 parsed objects
     // are emitted, collected and cached in the database. It is slower but safer.
+    @Suppress("UNCHECKED_CAST")
     override fun <T : OverpassElement> makeQuery(
         query: String,
         clazz: KClass<T>,
@@ -43,7 +44,6 @@ class OverpassRepositoryImpl @Inject constructor(
 
                 reader.beginObject()
                 while (reader.hasNext()) {
-
                     when (reader.nextName()) {
                         "osm3s" -> {
                             if (getTimestamp) {
@@ -61,6 +61,12 @@ class OverpassRepositoryImpl @Inject constructor(
 
                         "elements" -> {
                             reader.beginArray()
+
+                            // Handle empty response
+                            if (!reader.hasNext()) {
+                                emit(ApiResult.Failure(exception = NoSuchElementException()))
+                            }
+
                             while (reader.hasNext()) {
                                 val element = OverpassElementTypeAdapter().read(reader)
                                 if (element != null && clazz.isInstance(element)) {

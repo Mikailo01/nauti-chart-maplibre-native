@@ -3,6 +3,7 @@ import com.bytecause.convention.implementation
 plugins {
     alias(libs.plugins.nautichart.android.application)
     alias(libs.plugins.nautichart.android.hilt)
+    alias(libs.plugins.nautichart.android.application.compose)
 }
 
 android {
@@ -12,7 +13,16 @@ android {
         }
     }
 
+    defaultConfig {
+        versionCode = rootProject.extra["appVersionCode"] as Int
+        versionName = rootProject.extra["appVersionName"] as String
+    }
+
     namespace = "com.bytecause.nautichart"
+
+    buildFeatures {
+        viewBinding = true
+    }
 
     buildTypes {
         release {
@@ -72,4 +82,5 @@ dependencies {
 
     // Testing
     testImplementation(libs.androidx.junit)
+
 }

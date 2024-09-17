@@ -2,23 +2,21 @@ package com.bytecause.search.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.data.repository.abstractions.SearchManager
 import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.nautichart.RecentlySearchedPlaceList
-import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.search.mapper.asSearchedPlaceUiModel
 import com.bytecause.search.ui.model.SearchHistoryParentItem
 import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.sql.Date
@@ -45,7 +43,9 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
                     .groupBy { getParentTitle(it.timeStamp, stringArray) }
                     .map { (title, childList) ->
                         listOf(SearchHistoryParentItem(title, childList))
-                    }.flatten().let {
+                    }
+                    .flatten()
+                    .let {
                         _parentList.value = it
                     }
             }
@@ -64,7 +64,7 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
                     emit(updatedList)
                 }
         }
-    }.flowOn(Dispatchers.IO)
+    }
 
     private fun getParentTitle(timestamp: Long, stringArray: Array<String>): String {
         val currentTimestamp = Timestamp(System.currentTimeMillis())

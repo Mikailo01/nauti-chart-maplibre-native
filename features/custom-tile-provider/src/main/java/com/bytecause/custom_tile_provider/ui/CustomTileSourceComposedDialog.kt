@@ -118,9 +118,7 @@ class CustomTileSourceComposedDialog : Fragment(com.bytecause.nautichart.feature
     }
 }
 
-@OptIn(
-    ExperimentalMaterial3Api::class
-)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomTileSourceComposedDialogScreen(
     viewModel: CustomTileSourceDialogViewModel = hiltViewModel(),

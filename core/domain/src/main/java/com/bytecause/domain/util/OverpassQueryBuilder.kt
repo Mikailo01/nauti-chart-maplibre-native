@@ -339,7 +339,7 @@ class OverpassQueryBuilder {
 /**
  * A sealed class representing different types of search parameters.
  */
-sealed class SearchTypes {
+sealed class SearchTypes: java.io.Serializable {
 
     /**
      * A class representing a search type for amenities.

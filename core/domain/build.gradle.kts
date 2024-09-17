@@ -9,9 +9,6 @@ java {
 }
 
 dependencies {
-    // Serialization
-    implementation(libs.kotlinx.serialization)
-
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.core)
 }

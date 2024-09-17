@@ -222,6 +222,25 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             }
             .flowOn(coroutineDispatcher)
 
+    override suspend fun saveShouldRequestNotificationPermission(boolean: Boolean) {
+        withContext(coroutineDispatcher) {
+            userDataStorePreferences.edit { preferences ->
+                preferences[SHOULD_REQUEST_NOTIFICATION_PERMISSION] = boolean
+            }
+        }
+    }
+
+    override fun getShouldRequestNotificationPermission(): Flow<Boolean> =
+        userDataStorePreferences.data
+            .map { preferences ->
+                preferences[SHOULD_REQUEST_NOTIFICATION_PERMISSION] ?: true
+            }
+            .catch { exception ->
+                if (exception is IOException) emit(true)
+                else throw exception
+            }
+            .flowOn(coroutineDispatcher)
+
     private companion object {
         // Default interval set to 2 weeks
         private const val DEFAULT_UPDATE_INTERVAL = 1_209_600_000L
@@ -237,5 +256,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         private val HARBOURS_UPDATE_INTERVAL = longPreferencesKey("harbours_update_interval")
         private val AUTO_UPDATE_NETWORK_TYPE_PREFERENCE =
             stringPreferencesKey("auto_update_network_type_preference")
+        private val SHOULD_REQUEST_NOTIFICATION_PERMISSION =
+            booleanPreferencesKey("should_request_notification_permission")
     }
 }
