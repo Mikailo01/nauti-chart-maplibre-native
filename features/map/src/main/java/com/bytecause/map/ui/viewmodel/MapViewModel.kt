@@ -24,6 +24,7 @@ import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
+import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.mappers.asLatLng
 import com.bytecause.util.mappers.asLatLngModel
@@ -52,6 +53,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import javax.inject.Inject
 
+
 @HiltViewModel
 class MapViewModel
 @Inject
@@ -76,6 +78,11 @@ constructor(
 
     private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType?>(null)
     val selectedFeatureIdFlow = _selectedFeatureIdFlow.asStateFlow()
+
+    private var _searchBoxTextPlaceholder: MutableStateFlow<List<SearchBoxTextType>> =
+        MutableStateFlow(emptyList())
+    val searchBoxTextPlaceholder: StateFlow<List<SearchBoxTextType>> =
+        _searchBoxTextPlaceholder.asStateFlow()
 
     val isAisActivated: StateFlow<Boolean> = userPreferencesRepository.getIsAisActivated()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
@@ -130,6 +137,41 @@ constructor(
                  filterVisible(bbox, harboursList.map { it.asHarbourUiModel() })
              } ?: emptyList()*/
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun insertTextIntoSearchBoxTextPlaceholder(text: SearchBoxTextType) {
+        viewModelScope.launch {
+
+            when (text) {
+                is SearchBoxTextType.PoiName -> {
+                    _searchBoxTextPlaceholder.emit(searchBoxTextPlaceholder.value.filterIsInstance<SearchBoxTextType.Coordinates>() + text)
+                }
+
+                is SearchBoxTextType.Coordinates -> {
+                    _searchBoxTextPlaceholder.emit(searchBoxTextPlaceholder.value.filterIsInstance<SearchBoxTextType.PoiName>() + text)
+                }
+            }
+
+            _searchBoxTextPlaceholder.emit(
+                searchBoxTextPlaceholder.value + text
+            )
+        }
+    }
+
+    fun removeTextFromSearchBoxTextPlaceholder(text: SearchBoxTextType) {
+        if (searchBoxTextPlaceholder.value.isEmpty()) return
+
+        viewModelScope.launch {
+            when (text) {
+                is SearchBoxTextType.PoiName -> {
+                    _searchBoxTextPlaceholder.emit(searchBoxTextPlaceholder.value.filterIsInstance<SearchBoxTextType.Coordinates>())
+                }
+
+                is SearchBoxTextType.Coordinates -> {
+                    _searchBoxTextPlaceholder.emit(searchBoxTextPlaceholder.value.filterIsInstance<SearchBoxTextType.PoiName>())
+                }
+            }
+        }
+    }
 
     fun setSelectedFeatureId(featureType: com.bytecause.map.ui.FeatureType) {
         _selectedFeatureIdFlow.update { featureType }

@@ -19,13 +19,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bytecause.domain.model.ArgsObjectTypeArray
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.SearchHistoryFragmentBinding
-import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
+import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
 import com.bytecause.search.ui.viewmodel.SearchHistoryViewModel
 import com.bytecause.util.KeyboardUtils
 import com.bytecause.util.delegates.viewBinding
@@ -34,10 +34,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
-import kotlin.properties.Delegates
 
 
-// TODO("Refactor - Fragment takes too much responsibility")
 @AndroidEntryPoint
 class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
     ConfirmationDialog.ConfirmationDialogListener {
@@ -49,12 +47,6 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
 
     private lateinit var recyclerView: FullyExpandedRecyclerView
     private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlaceUiModel>
-
-    private val historyList = mutableListOf<SearchedPlaceUiModel>()
-
-    /* Because historyList is limited to 7 elements and datastore is not,
-       then we have to know the total count of elements in datastore during removing process. */
-    private var dataStoreSize by Delegates.notNull<Int>()
 
     private var isKeyboardVisible: Boolean = false
 
@@ -78,17 +70,11 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
 
                 innerItemView.setOnClickListener {
                     item.let { searchedPlace ->
-                        updateRecentlySearchedPlaces(
-                            RecentlySearchedPlace.newBuilder()
-                                .setPlaceId(searchedPlace.placeId)
-                                .setLatitude(searchedPlace.latitude)
-                                .setLongitude(searchedPlace.longitude)
-                                .setName(searchedPlace.name)
-                                .setDisplayName(searchedPlace.displayName)
-                                .setType(searchedPlace.addressType)
-                                .setTimeStamp(System.currentTimeMillis())
-                                .build()
+
+                        viewModel.saveRecentlySearchedPlace(
+                            searchedPlace.asRecentlySearchedPlaceUiModel()
                         )
+
                         viewLifecycleOwner.lifecycleScope.launch {
                             // Make query to get needed element using AppSearch API.
                             viewModel.searchCachedResult(
@@ -97,8 +83,12 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
                             ).firstOrNull()
                                 ?.first { it.placeId == searchedPlace.placeId }
                                 ?.let {
-                                    mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
-                                    mapSharedViewModel.setDismissSearchMapDialogState(true)
+                                    mapSharedViewModel.setSearchPlace(PlaceType.Address(it))
+
+                                    findNavController().popBackStack(
+                                        R.id.search_navigation,
+                                        true
+                                    )
                                 }
 
                         }
@@ -132,40 +122,40 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
         }
 
         genericRecyclerViewAdapter = GenericRecyclerViewAdapter(
-            historyList,
+            emptyList(),
             com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
             bindingInterface
         )
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.getRecentlySearchedPlaceList.collect {
-                    it ?: return@collect
+                viewModel.getRecentlySearchedPlaceList.collect { searchedPlaces ->
 
-                    historyList.clear()
-
-                    if (!it.placeList.isNullOrEmpty()) {
-                        dataStoreSize = it.placeCount
-                        it.placeList.sortedByDescending { element -> element.timeStamp }
-                            .forEach { place ->
-                                val element = SearchedPlaceUiModel(
-                                    placeId = place.placeId,
-                                    latitude = place.latitude,
-                                    longitude = place.longitude,
-                                    addressType = place.type,
-                                    name = place.name,
-                                    displayName = place.displayName
-                                )
-                                if (historyList.size < 7) {
-                                    if (binding.showAllPlacesTextView.visibility == View.VISIBLE) binding.showAllPlacesTextView.visibility =
-                                        View.GONE
-                                    historyList.add(element)
-                                } else {
-                                    binding.showAllPlacesTextView.visibility = View.VISIBLE
-                                }
+                    searchedPlaces
+                        .sortedByDescending { element -> element.timestamp }
+                        .map { searchedPlace ->
+                            SearchedPlaceUiModel(
+                                placeId = searchedPlace.placeId,
+                                latitude = searchedPlace.latitude,
+                                longitude = searchedPlace.longitude,
+                                addressType = searchedPlace.type,
+                                name = searchedPlace.name,
+                                displayName = searchedPlace.displayName
+                            )
+                        }
+                        .take(8)
+                        .toList()
+                        .let { list ->
+                            // if sequence has more than 7 elements, show TextView and drop last element
+                            // because only 7 elements should be rendered in the recycler view
+                            if (list.size > 7) {
+                                binding.showAllPlacesTextView.visibility = View.VISIBLE
+                                genericRecyclerViewAdapter.updateContent(list.dropLast(1))
+                            } else {
+                                binding.showAllPlacesTextView.visibility = View.GONE
+                                genericRecyclerViewAdapter.updateContent(list)
                             }
-                        genericRecyclerViewAdapter.notifyItemRangeChanged(0, historyList.size)
-                    } else return@collect
+                        }
                 }
             }
         }
@@ -206,28 +196,11 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
         }
     }
 
-    private fun updateRecentlySearchedPlaces(element: RecentlySearchedPlace) {
-        element.let {
-            viewLifecycleOwner.lifecycleScope.launch {
-                viewModel.getRecentlySearchedPlaceList.firstOrNull()
-                    .let { savedPlaces ->
-                        savedPlaces ?: return@launch
-
-                        val updatedList =
-                            (savedPlaces.placeList.filter { place -> place.placeId != it.placeId } + it)
-                        viewModel.updateRecentlySearchedPlaces(updatedList)
-                    }
-            }
-        }
-    }
-
     override fun onDialogPositiveClick(dialogId: String, additionalData: Any?) {
         (additionalData as? ArgsObjectTypeArray.IntType)?.value.let { position ->
             position ?: return
 
-            viewModel.deleteRecentlySearchedPlace((dataStoreSize - 1) - position)
-            historyList.removeAt((genericRecyclerViewAdapter.itemCount - 1) - position)
-            genericRecyclerViewAdapter.notifyItemRemoved(position)
+            viewModel.deleteRecentlySearchedPlace((viewModel.dataStoreSize - 1) - position)
         }
     }
 

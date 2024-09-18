@@ -18,4 +18,7 @@ interface RadiusPoiMetadataDatasetDao {
 
     @Query("SELECT * FROM radius_poi_metadata_dataset WHERE category = :categoryName")
     fun getDatasetByName(categoryName: String): Flow<RadiusPoiMetadataDatasetEntity?>
+
+    @Query("SELECT * FROM radius_poi_metadata_dataset")
+    fun getAllDatasets(): Flow<List<RadiusPoiMetadataDatasetEntity>>
 }

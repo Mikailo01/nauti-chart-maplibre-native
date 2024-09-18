@@ -41,6 +41,7 @@ import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
+import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
@@ -67,8 +68,8 @@ import com.bytecause.map.util.MapFragmentConstants.LINE_WIDTH
 import com.bytecause.map.util.MapFragmentConstants.MAP_MARKER
 import com.bytecause.map.util.MapFragmentConstants.PIN_ICON
 import com.bytecause.map.util.MapFragmentConstants.POIS_VISIBILITY_ZOOM_LEVEL
-import com.bytecause.map.util.MapFragmentConstants.POI_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.POI_CATEGORY_KEY
+import com.bytecause.map.util.MapFragmentConstants.POI_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_SIZE
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_NAME_KEY
@@ -325,27 +326,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         mapSharedViewModel.resetGeoIntentFlow()
                                     }
 
-                                    // Removes marker placed by the user
-                                    mapSharedViewModel.setLatLng(null)
-                                    setSearchBoxText(null)
+                                    removeMarker()
 
-                                    // Removes place boundaries if rendered
-                                    if (mapSharedViewModel.placeToFindStateFlow.value != null) {
-                                        if (boundaryManager != null) {
-                                            boundaryManager?.deleteAll()
-                                            boundaryManager = null
-                                        }
-
-                                        // Removes searched poi marker
-                                        mapSharedViewModel.setPlaceToFind(null)
-                                    }
-
-                                    // Removes all poi markers of given category if rendered
+                                    /*// Removes all poi markers of given category if rendered
                                     if (mapSharedViewModel.showPoiStateFlow.value != null) {
                                         mapSharedViewModel.setPoiToShow(
                                             null,
                                         )
-                                    }
+                                    }*/
                                 }
 
                                 markerBottomSheetLayout.id -> {
@@ -384,11 +372,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         }
 
                                         null -> {
-                                            mapSharedViewModel.setPlaceToFind(null)
                                             if (mapSharedViewModel.latLngFlow.value is PointType.Poi) {
                                                 mapSharedViewModel.setLatLng(null)
-                                                setSearchBoxText(null)
                                             }
+                                            mapSharedViewModel.setSearchPlace(null)
+                                            removeSearchBoxText(SearchBoxTextType.PoiName())
                                         }
                                     }
                                 }
@@ -615,7 +603,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    mapSharedViewModel.placeToFindStateFlow.collect { place ->
+                                    mapSharedViewModel.searchPlace.collect { place ->
                                         place ?: return@collect
 
                                         boundaryManager?.deleteAll()
@@ -641,7 +629,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     )
                                                 )
 
-                                                setSearchBoxText(place.name)
+                                                setSearchBoxText(SearchBoxTextType.PoiName(place.name))
                                             }
 
                                             is PlaceType.Address -> {
@@ -696,8 +684,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     )
                                                 }
 
-                                                mapSharedViewModel.setLatLng(PointType.Marker(latLng))
-                                                setSearchBoxText(place.placeModel.name)
+                                                mapSharedViewModel.setLatLng(
+                                                    PointType.Address(
+                                                        latLng
+                                                    )
+                                                )
+                                                setSearchBoxText(SearchBoxTextType.PoiName(place.placeModel.name))
                                             }
                                         }
                                     }
@@ -708,7 +700,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     mapSharedViewModel.showPoiStateFlow.collect { poiMap ->
-
                                         mapStyle.apply {
                                             if (getSourceAs<GeoJsonSource>(
                                                     POI_GEOJSON_SOURCE
@@ -716,11 +707,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             ) {
                                                 removeLayer(POI_SYMBOL_LAYER)
                                                 removeSource(POI_GEOJSON_SOURCE)
-                                                setSearchBoxText(null)
+                                                removeSearchBoxText(SearchBoxTextType.PoiName())
                                             }
                                         }
 
                                         if (poiMap.isNullOrEmpty()) return@collect
+
+                                        if (bottomSheetBehavior.state == STATE_EXPANDED) {
+                                            closeBottomSheetLayout()
+                                        }
 
                                         // poiMap holds category name and List of IDs which are used for search in database.
                                         viewModel.searchInPoiCache(poiMap.values.flatten())
@@ -732,7 +727,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     mutableMapOf<String, Drawable>()
 
                                                 setSearchBoxText(
-                                                    poiMap.keys.firstOrNull()
+                                                    SearchBoxTextType.PoiName(poiMap.keys.first())
                                                 )
 
                                                 val points = mutableListOf<LatLng>()
@@ -1817,6 +1812,19 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.searchBoxTextPlaceholder.collect { textList ->
+                    val last = textList.takeIf { it.isNotEmpty() }?.last()
+
+                    binding.searchMapBox.searchMapEditText.setText(
+                        (last as? SearchBoxTextType.Coordinates)?.text
+                            ?: (last as? SearchBoxTextType.PoiName)?.text
+                    )
+                }
+            }
+        }
+
         // Search box settings.
         binding.searchMapBox.searchMapEditText.apply {
             setOnClickListener {
@@ -1860,6 +1868,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         if (mapSharedViewModel.showPoiStateFlow.value != null) {
                             mapSharedViewModel.setPoiToShow(null)
                         }
+
+                        removeMarker()
+                        removeSearchPlace()
+
                         when {
                             bottomSheetBehavior.state == STATE_EXPANDED -> {
                                 closeBottomSheetLayout()
@@ -2677,7 +2689,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             symbolManager?.delete(markerSymbol)
         }
 
-        val latLng = (point as? PointType.Marker)?.latLng ?: (point as? PointType.Poi)!!.latLng
+        val latLng = (point as? PointType.Marker)?.latLng
+            ?: (point as? PointType.Poi)?.latLng
+            ?: (point as PointType.Address).latLng
 
         // Add a new symbol at specified lat/lon.
         markerSymbol =
@@ -2696,10 +2710,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             update(markerSymbol)
         }
 
-        if (point is PointType.Marker) {
-            openBottomSheetLayout(latLng)
-        } else {
-            showPoiInfo(poiId = (point as PointType.Poi).id)
+        when (point) {
+            is PointType.Poi -> showPoiInfo(poiId = point.id)
+            is PointType.Marker -> openBottomSheetLayout(point.latLng)
+            is PointType.Address -> {
+                // nothing
+            }
         }
     }
 
@@ -2716,6 +2732,26 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         ) {
             viewModel.addMeasurePoint(centerGeoPoint)
         }
+    }
+
+    private fun removeSearchPlace() {
+        // Removes place boundaries if rendered
+        if (mapSharedViewModel.searchPlace.value != null) {
+            if (boundaryManager != null) {
+                boundaryManager?.deleteAll()
+                boundaryManager = null
+            }
+
+            // Removes searched poi marker
+            mapSharedViewModel.setSearchPlace(null)
+            removeSearchBoxText(SearchBoxTextType.PoiName())
+        }
+    }
+
+    private fun removeMarker() {
+        // Removes marker placed by the user
+        mapSharedViewModel.setLatLng(null)
+        removeSearchBoxText(SearchBoxTextType.Coordinates())
     }
 
     private fun closeBottomSheetLayout() {
@@ -2747,7 +2783,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     MapUtil.latitudeToDMS(p.latitude),
                     MapUtil.longitudeToDMS(p.longitude),
                 )
-                setSearchBoxText(this.text.toString())
+                setSearchBoxText(SearchBoxTextType.Coordinates(this.text.toString()))
             }
             showBottomSheetLayout()
         } else {
@@ -2757,13 +2793,17 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     MapUtil.latitudeToDMS(p.latitude),
                     MapUtil.longitudeToDMS(p.longitude),
                 )
-                setSearchBoxText(this.text.toString())
+                setSearchBoxText(SearchBoxTextType.Coordinates(this.text.toString()))
             }
         }
     }
 
-    private fun setSearchBoxText(text: String?) {
-        binding.searchMapBox.searchMapEditText.setText(text)
+    private fun setSearchBoxText(text: SearchBoxTextType) {
+        viewModel.insertTextIntoSearchBoxTextPlaceholder(text)
+    }
+
+    private fun removeSearchBoxText(text: SearchBoxTextType) {
+        viewModel.removeTextFromSearchBoxTextPlaceholder(text)
     }
 
     @SuppressLint("MissingPermission")

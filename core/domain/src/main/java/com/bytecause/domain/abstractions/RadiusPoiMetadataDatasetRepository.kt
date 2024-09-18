@@ -7,4 +7,5 @@ interface RadiusPoiMetadataDatasetRepository {
     suspend fun insertDataset(dataset: RadiusPoiMetadataDatasetModel)
     suspend fun deleteDataset(categoryName: String)
     fun getDatasetByName(categoryName: String): Flow<RadiusPoiMetadataDatasetModel?>
+    fun getAllDatasets(): Flow<List<RadiusPoiMetadataDatasetModel>>
 }

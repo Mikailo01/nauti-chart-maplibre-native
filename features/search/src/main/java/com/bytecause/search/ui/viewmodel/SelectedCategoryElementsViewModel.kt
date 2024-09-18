@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
-import com.bytecause.domain.model.ElementTagModel
+import com.bytecause.search.ui.model.ElementTagModel
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
@@ -69,12 +69,12 @@ constructor(
         )
     val uiSearchCategoryState get() = _uiSearchCategoryState.asStateFlow()
 
-    private val _categoryElementsList = mutableSetOf<PoiUiModel>()
-    val categoryElementsList get() = _categoryElementsList.toList()
+    var categoryElementsSet: Set<PoiUiModel> = emptySet()
+        private set
 
-    private val _elementList =
+    private val _elementSet =
         MutableStateFlow<Set<PoiUiModel>>(emptySet())
-    val elementList: StateFlow<Set<PoiUiModel>> get() = _elementList.asStateFlow()
+    val elementSet: StateFlow<Set<PoiUiModel>> get() = _elementSet.asStateFlow()
 
     // Holds unmodified init map key value pairs.
     private val _allTagsMap = mutableMapOf<String, List<ElementTagModel>>()
@@ -85,24 +85,24 @@ constructor(
 
     private var getPoiJob: Job? = null
 
-    fun addElements(elements: List<PoiUiModel>) {
-        _elementList.value = elements.toSet()
+    fun addElements(elements: Set<PoiUiModel>) {
+        _elementSet.value = elements
     }
 
     fun clearElements() {
-        _elementList.value = setOf()
+        _elementSet.value = setOf()
     }
 
     fun resetSearchRadius() {
         radius = INIT_SEARCH_RADIUS
     }
 
-    // Via this function we save all items for given category, elementList holds content which will be
+    // Via this function we save all items for given category, elementSet holds content which will be
     // shown to the user and can be modified using filters, categoryElementsList serves as holder
     // for all elements, so when user clear all filters, elementList's content is replaced by
     // categoryElementsList's content
-    fun addAllToCategoryElementsList(element: List<PoiUiModel>) {
-        _categoryElementsList.addAll(element)
+    fun addAllToCategoryElementsSet(element: Set<PoiUiModel>) {
+        categoryElementsSet = element
     }
 
     fun doubleSearchRadius() {
@@ -110,7 +110,7 @@ constructor(
     }
 
     fun extractAllTags() {
-        _elementList.value.let {
+        _elementSet.value.let {
             _allTagsMap.putAll(sortMap(extractValuesToMap(it)))
         }
     }
@@ -183,11 +183,11 @@ constructor(
     }
 
     // filter algorithm which will filter POIs based on selected tags
-    fun filterAlgorithm(filterTags: Map<String, List<String>>): List<PoiUiModel> {
-        if (filterTags.isEmpty()) return categoryElementsList
+    fun filterAlgorithm(filterTags: Map<String, List<String>>): Set<PoiUiModel> {
+        if (filterTags.isEmpty()) return categoryElementsSet
 
-        val filteredList = mutableListOf<PoiUiModel>()
-        for (element in categoryElementsList) {
+        val filteredList = mutableSetOf<PoiUiModel>()
+        for (element in categoryElementsSet) {
             for ((key, value) in filterTags) {
                 if (element.tags.keys.contains(key)) {
                     if (value.contains(element.tags[key])) {
@@ -256,11 +256,11 @@ constructor(
         return allTagsMap.filterKeys { key ->
             // Finding keys that are present in visible elements.
 
-            _elementList.value.any { it.tags.keys.contains(key) }
+            _elementSet.value.any { it.tags.keys.contains(key) }
         }.mapValues { (_, value) ->
             value.filter { elementTagModel ->
                 // Finding values held by visible elements.
-                _elementList.value
+                _elementSet.value
                     .any { it.tags.values.contains(elementTagModel.tagName) }
             }
         }

@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bytecause.search.ui.model.ElementTagModel
 import com.bytecause.features.search.databinding.SelectedCategoryElementsFilterDialogLayoutBinding
 import com.bytecause.search.ui.recyclerview.adapter.TagsFilterParentAdapter
 import com.bytecause.search.ui.recyclerview.interfaces.SelectCheckBoxListener
@@ -36,8 +37,6 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
     private lateinit var parentRecyclerView: RecyclerView
     private lateinit var parentRecyclerViewAdapter: TagsFilterParentAdapter
 
-    private val tagsMap = mutableMapOf<String, List<com.bytecause.domain.model.ElementTagModel>>()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -49,26 +48,29 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        parentRecyclerView = binding.checkBoxParentRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            setHasFixedSize(true)
+            parentRecyclerViewAdapter = TagsFilterParentAdapter(
+                emptyMap(),
+                this@SelectedCategoryElementsListFilterDialog
+            )
+            adapter = parentRecyclerViewAdapter
+            viewModel.recyclerViewExpandedStateList.takeIf { stateList -> stateList.isNotEmpty() }
+                ?.let { states ->
+                    parentRecyclerViewAdapter.restoreExpandedStates(states)
+                }
+        }
+
         binding.clearFiltersButton.setOnClickListener {
             if (!LastClick().lastClick(1000)) {
                 return@setOnClickListener
             }
-
-            val updatedTagsMap = tagsMap.mapValues { (_, tagModels) ->
-                tagModels.map { tagModel ->
-                    tagModel.copy(isChecked = false)
-                }.sortedWith(
-                    compareBy { it.tagName.lowercase() }
-                )
-            }
-
-            tagsMap.clear()
-            tagsMap.putAll(updatedTagsMap)
-            parentRecyclerViewAdapter.notifyItemRangeChanged(0, tagsMap.keys.size)
+            viewModel.clearFilters()
         }
 
         binding.btnDone.setOnClickListener {
-            tagsMap.mapValues { (_, tagsList) ->
+            viewModel.tagsMap.value.mapValues { (_, tagsList) ->
                 tagsList.filter { it.isChecked }
             }.filterValues { it.isNotEmpty() }.let { tagList ->
 
@@ -91,15 +93,12 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
         this@SelectedCategoryElementsListFilterDialog.isCancelable = false
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 // This SharedFlow takes only the first emitted value and will ignore other emissions.
                 sharedViewModel.allTagsSharedFlow.take(1).collect { allTags ->
-                    if (viewModel.tagMap.isNotEmpty()) {
-                        tagsMap.putAll(viewModel.tagMap)
-                    }
 
-                    else if (viewModel.tagMap.isEmpty()) {
-                        tagsMap.putAll(
+                    if (viewModel.tagsMap.value.isEmpty()) {
+                        viewModel.saveTags(
                             allTags.map { mapEntry ->
                                 mapEntry.value.sortedWith(
                                     compareBy { listElement -> listElement.tagName.lowercase() }
@@ -112,37 +111,18 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
                             }.toMap()
                         )
                     }
+                }
+            }
+        }
 
-                    parentRecyclerView = binding.checkBoxParentRecyclerView.apply {
-                        layoutManager = LinearLayoutManager(requireContext())
-                        setHasFixedSize(true)
-                        parentRecyclerViewAdapter = TagsFilterParentAdapter(
-                            tagsMap,
-                            this@SelectedCategoryElementsListFilterDialog
-                        )
-                        adapter = parentRecyclerViewAdapter
-                        viewModel.recyclerViewExpandedStateList.takeIf { stateList -> stateList.isNotEmpty() }
-                            ?.let { states ->
-                                parentRecyclerViewAdapter.restoreExpandedStates(states)
-                            }
-                    }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.tagsMap.collect { tagsMap ->
+                    parentRecyclerViewAdapter.submitMap(tagsMap)
                 }
             }
         }
     }
-
-    /*// Sort check box list alphabetically by name and then sort by isChecked state (true first).
-    private fun sortCheckBoxes() {
-        tagsList.sortedWith(
-            compareBy { it.tagName.lowercase() }
-        ).let { listSortedByName ->
-            listSortedByName.sortedByDescending { element -> element.isChecked }
-                .let { listSortedByState ->
-                    tagsList.clear()
-                    tagsList.addAll(listSortedByState)
-                }
-        }
-    }*/
 
     override fun onStart() {
         super.onStart()
@@ -150,10 +130,14 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
         val displayMetrics = resources.displayMetrics
         dialog?.window?.setLayout(
             (displayMetrics.widthPixels * 0.9).toInt(),
-            if (displayMetrics.heightPixels > displayMetrics.widthPixels) displayMetrics.heightPixels / 2 else ViewGroup.LayoutParams.WRAP_CONTENT
+            if (displayMetrics.heightPixels > displayMetrics.widthPixels) displayMetrics.heightPixels / 2
+            else ViewGroup.LayoutParams.WRAP_CONTENT
         )
         dialog?.window?.setBackgroundDrawable(
-            ContextCompat.getDrawable(requireContext(), com.bytecause.core.resources.R.drawable.rounded_dialog)
+            ContextCompat.getDrawable(
+                requireContext(),
+                com.bytecause.core.resources.R.drawable.rounded_dialog
+            )
         )
     }
 
@@ -163,29 +147,12 @@ class SelectedCategoryElementsListFilterDialog : DialogFragment(), SelectCheckBo
         parentPosition: Int,
         isChecked: Boolean
     ) {
-        val elementTag =
-            com.bytecause.domain.model.ElementTagModel(buttonView.tag.toString(), isChecked)
-        val mapKey = tagsMap.keys.elementAt(parentPosition)
-
-        val elementList = tagsMap[mapKey]?.toMutableList()
-        elementList?.find { it.tagName == elementTag.tagName }?.let {
-            elementList.remove(it)
-            elementList.add(elementTag)
-        }
-
-        elementList?.sortedWith(
-            compareBy { it.tagName.lowercase() }
-        ).let { listSortedByName ->
-            listSortedByName?.sortedByDescending { element -> element.isChecked }?.let {
-                tagsMap[mapKey] = it
-                parentRecyclerViewAdapter.notifyItemRangeChanged(0, tagsMap.keys.size)
-            }
-        }
+        val elementTag = ElementTagModel(tagName = buttonView.tag.toString(), isChecked = isChecked)
+        viewModel.checkBoxClicked(element = elementTag, parentPosition = parentPosition)
     }
 
     override fun onDestroyView() {
-        viewModel.saveRecyclerViewExpandedStates(parentRecyclerViewAdapter.getExpandedStateList())
-        viewModel.saveTagsMap(tagsMap)
         super.onDestroyView()
+        viewModel.saveRecyclerViewExpandedStates(parentRecyclerViewAdapter.getExpandedStateList())
     }
 }

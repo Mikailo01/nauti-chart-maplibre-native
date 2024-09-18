@@ -1,4 +1,4 @@
-package com.bytecause.data.workers
+package com.bytecause.nautichart.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

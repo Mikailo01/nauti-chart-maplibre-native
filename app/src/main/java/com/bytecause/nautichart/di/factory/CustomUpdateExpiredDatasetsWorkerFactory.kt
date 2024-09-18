@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
-import com.bytecause.data.workers.UpdateExpiredDatasetsWorker
+import com.bytecause.nautichart.worker.UpdateExpiredDatasetsWorker
 import com.bytecause.domain.usecase.UpdateExpiredDatasetsUseCase
 import javax.inject.Inject
 

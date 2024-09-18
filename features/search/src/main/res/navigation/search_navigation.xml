@@ -5,12 +5,13 @@
     android:id="@+id/search_navigation"
     app:startDestination="@id/searchMapFragmentDialog">
 
+    <deepLink app:uri="search://home" />
+
     <dialog
         android:id="@+id/searchMapFragmentDialog"
         android:name="com.bytecause.search.ui.dialog.SearchMapFragmentDialog"
         android:label="SearchMapFragmentDialog"
         tools:layout="@layout/search_map_fragment_dialog">
-        <deepLink app:uri="search://home" />
         <action
             android:id="@+id/action_searchMapFragmentDialog_to_selectedCategoryElementsDialogFragment"
             app:destination="@id/selectedCategoryElementsDialogFragment" />

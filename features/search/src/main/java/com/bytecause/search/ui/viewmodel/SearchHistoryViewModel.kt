@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.data.repository.abstractions.SearchManager
-import com.bytecause.nautichart.RecentlySearchedPlace
-import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.presentation.model.SearchedPlaceUiModel
+import com.bytecause.search.mapper.asRecentlySearchedPlace
+import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
 import com.bytecause.search.mapper.asSearchedPlaceUiModel
+import com.bytecause.search.ui.model.RecentlySearchedPlaceUiModel
 import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -21,8 +22,18 @@ class SearchHistoryViewModel @Inject constructor(
     private val searchManager: SearchManager
 ) : ViewModel() {
 
-    val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> =
+    /* Because historyList is limited to 7 elements and datastore is not,
+      then we have to know the total count of elements in datastore during removing process. */
+    var dataStoreSize: Int = -1
+        private set
+
+    val getRecentlySearchedPlaceList: Flow<Sequence<RecentlySearchedPlaceUiModel>> =
         historyRepository.getRecentlySearchedPlaces()
+            .map { originalList ->
+                mapList(originalList.placeList) { it.asRecentlySearchedPlaceUiModel() }
+                    .asSequence()
+                    .also { dataStoreSize = it.count() }
+            }
 
     fun deleteRecentlySearchedPlace(index: Int) {
         viewModelScope.launch {
@@ -30,9 +41,9 @@ class SearchHistoryViewModel @Inject constructor(
         }
     }
 
-    fun updateRecentlySearchedPlaces(entityList: List<RecentlySearchedPlace>) {
+    fun saveRecentlySearchedPlace(place: RecentlySearchedPlaceUiModel) {
         viewModelScope.launch {
-            historyRepository.updateRecentlySearchedPlaces(entityList)
+            historyRepository.saveRecentlySearchedPlace(place.asRecentlySearchedPlace())
         }
     }
 

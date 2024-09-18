@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
 import com.bytecause.data.repository.abstractions.SearchManager
-import com.bytecause.nautichart.RecentlySearchedPlace
-import com.bytecause.nautichart.RecentlySearchedPlaceList
 import com.bytecause.presentation.model.SearchedPlaceUiModel
+import com.bytecause.search.mapper.asRecentlySearchedPlace
+import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
 import com.bytecause.search.mapper.asSearchedPlaceUiModel
+import com.bytecause.search.ui.model.RecentlySearchedPlaceUiModel
 import com.bytecause.search.ui.model.SearchHistoryParentItem
 import com.bytecause.util.mappers.mapList
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.sql.Date
@@ -34,36 +34,23 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
     private val _parentList = MutableStateFlow(listOf<SearchHistoryParentItem>())
     val parentList: StateFlow<List<SearchHistoryParentItem>> = _parentList.asStateFlow()
 
-    fun loadSearchHistory(cache: Flow<RecentlySearchedPlaceList?>, stringArray: Array<String>) {
+    fun loadSearchHistory(stringArray: Array<String>) {
         viewModelScope.launch {
-            cache.firstOrNull().let { entity ->
-                entity ?: return@launch
-
-                entity.placeList.sortedByDescending { it.timeStamp }
-                    .groupBy { getParentTitle(it.timeStamp, stringArray) }
+            getRecentlySearchedPlaceList.firstOrNull()?.let { searchedPlaces ->
+                searchedPlaces.sortedByDescending { it.timestamp }
+                    .groupBy { getParentTitle(it.timestamp, stringArray) }
                     .map { (title, childList) ->
-                        listOf(SearchHistoryParentItem(title, childList))
+                        SearchHistoryParentItem(title, childList)
                     }
-                    .flatten()
-                    .let {
+                    .also {
                         _parentList.value = it
                     }
             }
         }
     }
 
-    fun updateRecentlySearchedPlaces(
-        element: RecentlySearchedPlace
-    ) = flow {
-        element.let {
-            getRecentlySearchedPlaceList.firstOrNull()
-                .let { savedPlaces ->
-                    savedPlaces ?: return@flow
-                    val updatedList =
-                        (savedPlaces.placeList.filter { place -> place.placeId != it.placeId } + it)
-                    emit(updatedList)
-                }
-        }
+    suspend fun saveRecentlySearchedPlace(element: RecentlySearchedPlaceUiModel) {
+        historyRepository.saveRecentlySearchedPlace(element.asRecentlySearchedPlace())
     }
 
     private fun getParentTitle(timestamp: Long, stringArray: Array<String>): String {
@@ -100,14 +87,9 @@ class FullSearchHistoryListDialogViewModel @Inject constructor(
         }
     }
 
-    val getRecentlySearchedPlaceList: Flow<RecentlySearchedPlaceList?> =
+    private val getRecentlySearchedPlaceList: Flow<List<RecentlySearchedPlaceUiModel>> =
         historyRepository.getRecentlySearchedPlaces()
-
-    fun updateRecentlySearchedPlaces(entityList: List<RecentlySearchedPlace>) {
-        viewModelScope.launch {
-            historyRepository.updateRecentlySearchedPlaces(entityList)
-        }
-    }
+            .map { originalList -> mapList(originalList.placeList) { it.asRecentlySearchedPlaceUiModel() } }
 
     fun searchCachedResult(query: String): Flow<List<SearchedPlaceUiModel>> =
         searchManager.searchCachedResult(query)

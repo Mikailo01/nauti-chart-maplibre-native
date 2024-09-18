@@ -5,6 +5,7 @@ import com.bytecause.data.mappers.asRadiusPoiMetadataDatasetEntity
 import com.bytecause.data.mappers.asRadiusPoiMetadataDatasetModel
 import com.bytecause.domain.abstractions.RadiusPoiMetadataDatasetRepository
 import com.bytecause.domain.model.RadiusPoiMetadataDatasetModel
+import com.bytecause.util.mappers.mapList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -32,5 +33,10 @@ class RadiusPoiMetadataDatasetRepositoryImpl(
     override fun getDatasetByName(categoryName: String): Flow<RadiusPoiMetadataDatasetModel?> =
         radiusPoiMetadataDatasetDao.getDatasetByName(categoryName)
             .map { it?.asRadiusPoiMetadataDatasetModel() }
+            .flowOn(coroutineDispatcher)
+
+    override fun getAllDatasets(): Flow<List<RadiusPoiMetadataDatasetModel>> =
+        radiusPoiMetadataDatasetDao.getAllDatasets()
+            .map { originalList -> mapList(originalList) { it.asRadiusPoiMetadataDatasetModel() } }
             .flowOn(coroutineDispatcher)
 }

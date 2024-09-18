@@ -4,19 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@color/md_theme_secondaryContainer"
+    android:background="@color/md_theme_onPrimaryContainer"
     android:orientation="vertical">
 
     <CheckBox
         android:id="@+id/check_box_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/md_theme_onSecondaryContainer"
+        android:textColor="@color/md_theme_onPrimaryContainer_mediumContrast"
+        style="@style/Base.Theme.NautiChart"
         tools:text="Supermarket"/>
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="2dp"
-        app:dividerColor="@color/md_theme_onSecondaryContainer"/>
+        app:dividerColor="@color/md_theme_onPrimaryContainer_mediumContrast"/>
 
 </LinearLayout>

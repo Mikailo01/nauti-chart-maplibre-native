@@ -24,14 +24,11 @@ class MapSharedViewModel : ViewModel() {
     private val _tileSource = MutableSharedFlow<TileSources?>(1)
     val tileSource: SharedFlow<TileSources?> = _tileSource.asSharedFlow()
 
-    private val _placeToFindStateFlow = MutableStateFlow<PlaceType?>(null)
-    val placeToFindStateFlow get() = _placeToFindStateFlow.asStateFlow()
+    private val _searchPlace = MutableStateFlow<PlaceType?>(null)
+    val searchPlace get() = _searchPlace.asStateFlow()
 
     private val _showPoiStateFlow = MutableStateFlow<Map<String, List<Long>>?>(null)
     val showPoiStateFlow get() = _showPoiStateFlow.asStateFlow()
-
-    private val _dismissSearchMapDialog = MutableStateFlow<Boolean?>(null)
-    val dismissSearchMapDialog get() = _dismissSearchMapDialog.asStateFlow()
 
     private val _isCustomizeDialogVisible = MutableStateFlow(false)
     val isCustomizeDialogVisible = _isCustomizeDialogVisible.asStateFlow()
@@ -62,16 +59,12 @@ class MapSharedViewModel : ViewModel() {
         }
     }
 
-    fun setPlaceToFind(entity: PlaceType?) {
-        _placeToFindStateFlow.value = entity
+    fun setSearchPlace(entity: PlaceType?) {
+        _searchPlace.value = entity
     }
 
     fun setPoiToShow(poiMap: Map<String, List<Long>>?) {
         _showPoiStateFlow.value = poiMap
-    }
-
-    fun setDismissSearchMapDialogState(bool: Boolean?) {
-        _dismissSearchMapDialog.value = bool
     }
 
     fun setTile(src: TileSources) {

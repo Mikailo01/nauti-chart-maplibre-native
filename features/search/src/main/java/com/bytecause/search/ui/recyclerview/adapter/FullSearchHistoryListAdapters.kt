@@ -9,8 +9,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.features.search.R
-import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
+import com.bytecause.search.ui.model.RecentlySearchedPlaceUiModel
 import com.bytecause.search.ui.model.SearchHistoryParentItem
 import com.bytecause.search.ui.recyclerview.interfaces.SearchHistoryAdapterListener
 
@@ -21,7 +21,7 @@ class FullSearchHistoryListParentAdapter(
 
     fun submitList(list: List<SearchHistoryParentItem>) {
         parentList = list
-        notifyItemRangeChanged(0, parentList.size)
+        notifyDataSetChanged()
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -65,7 +65,7 @@ class FullSearchHistoryListParentAdapter(
 }
 
 class FullSearchHistoryListChildAdapter(
-    private val childList: List<RecentlySearchedPlace>,
+    private val childList: List<RecentlySearchedPlaceUiModel>,
     private val parentPosition: Int,
     searchHistoryAdapterListener: SearchHistoryAdapterListener
 ) : RecyclerView.Adapter<FullSearchHistoryListChildAdapter.ViewHolder>() {

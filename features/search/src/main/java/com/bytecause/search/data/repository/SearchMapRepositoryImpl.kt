@@ -18,20 +18,20 @@ class SearchMapRepositoryImpl @Inject constructor(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SearchMapRepository {
 
-    override suspend fun searchPlaces(query: String): Flow<ApiResult<List<SearchedPlaceModel>>> = flow {
-        try {
-            val response = nominatimRestApiService.search(query)
-            if (response.isSuccessful) {
-                emit(
-                    ApiResult.Success(
-                        mapNullInputList(response.body()) { it.asSearchedPlace() }
+    override suspend fun searchPlaces(query: String): Flow<ApiResult<List<SearchedPlaceModel>>> =
+        flow {
+            try {
+                val response = nominatimRestApiService.search(query)
+                if (response.isSuccessful) {
+                    emit(
+                        ApiResult.Success(
+                            mapNullInputList(response.body()) { it.asSearchedPlace() }
+                        )
                     )
-                )
-            } else emit(ApiResult.Failure(exception = Exception("${response.code()}")))
-        } catch (e: Exception) {
-            emit(ApiResult.Failure(exception = e))
-            throw e
+                } else emit(ApiResult.Failure(exception = Exception("${response.code()}")))
+            } catch (e: Exception) {
+                emit(ApiResult.Failure(exception = e))
+            }
         }
-    }
-        .flowOn(coroutineDispatcher)
+            .flowOn(coroutineDispatcher)
 }

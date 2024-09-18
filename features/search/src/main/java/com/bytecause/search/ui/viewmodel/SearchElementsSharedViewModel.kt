@@ -2,7 +2,7 @@ package com.bytecause.search.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.domain.model.ElementTagModel
+import com.bytecause.search.ui.model.ElementTagModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

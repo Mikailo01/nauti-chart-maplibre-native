@@ -16,7 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.features.search.R
 import com.bytecause.features.search.databinding.FullSearchHistoryListDialogBinding
-import com.bytecause.nautichart.RecentlySearchedPlace
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.recyclerview.adapter.FullSearchHistoryListParentAdapter
@@ -25,6 +24,7 @@ import com.bytecause.search.ui.viewmodel.FullSearchHistoryListDialogViewModel
 import com.bytecause.util.delegates.viewBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -43,7 +43,6 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
         super.onViewCreated(view, savedInstanceState)
 
         viewModel.loadSearchHistory(
-            viewModel.getRecentlySearchedPlaceList,
             resources.getStringArray(com.bytecause.core.resources.R.array.searchHistoryKeys)
         )
 
@@ -55,22 +54,21 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
                 getString(com.bytecause.core.resources.R.string.search_history_list)
         }
 
+        parentRecyclerView = binding.historyListParentRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            setHasFixedSize(true)
+            parentRecyclerViewAdapter =
+                FullSearchHistoryListParentAdapter(
+                    parentList = emptyList(),
+                    this@FullSearchHistoryListDialog
+                )
+            adapter = parentRecyclerViewAdapter
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.parentList.collect { content ->
-
-                    if (!::parentRecyclerView.isInitialized) {
-                        parentRecyclerView = binding.historyListParentRecyclerView.apply {
-                            layoutManager = LinearLayoutManager(requireContext())
-                            setHasFixedSize(true)
-                            parentRecyclerViewAdapter =
-                                FullSearchHistoryListParentAdapter(
-                                    parentList = content,
-                                    this@FullSearchHistoryListDialog
-                                )
-                            adapter = parentRecyclerViewAdapter
-                        }
-                    } else parentRecyclerViewAdapter.submitList(content)
+                    parentRecyclerViewAdapter.submitList(content)
                 }
             }
         }
@@ -80,32 +78,33 @@ class FullSearchHistoryListDialog : DialogFragment(R.layout.full_search_history_
         viewModel.parentList.value[parentIndex].searchHistory[childIndex].let { recentlySearchedPlace ->
             viewLifecycleOwner.lifecycleScope.launch {
 
-                viewModel.updateRecentlySearchedPlaces(
-                    element = RecentlySearchedPlace.newBuilder()
-                        .setPlaceId(recentlySearchedPlace.placeId)
-                        .setLatitude(recentlySearchedPlace.latitude)
-                        .setLongitude(recentlySearchedPlace.longitude)
-                        .setName(recentlySearchedPlace.name)
-                        .setDisplayName(recentlySearchedPlace.displayName)
-                        .setType(recentlySearchedPlace.type)
-                        .setTimeStamp(System.currentTimeMillis())
-                        .build()
-                ).firstOrNull()?.let {
-                    viewModel.updateRecentlySearchedPlaces(it)
+                val updateJob = launch {
+                    viewModel.saveRecentlySearchedPlace(
+                        element = recentlySearchedPlace.copy(timestamp = System.currentTimeMillis())
+                    )
                 }
 
-                // Make query to get needed element using AppSearch API.
-                viewModel.searchCachedResult(
-                    recentlySearchedPlace.name.takeIf { it.isNotEmpty() }
-                        ?: recentlySearchedPlace.displayName)
-                    .firstOrNull()
-                    ?.first {
-                        it.placeId == recentlySearchedPlace.placeId
-                    }?.let {
-                        mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
-                    }
-                mapSharedViewModel.setDismissSearchMapDialogState(true)
-                findNavController().popBackStack()
+                val searchJob = launch {
+                    // Make query to get needed element using AppSearch API.
+                    viewModel.searchCachedResult(
+                        recentlySearchedPlace.name.takeIf { it.isNotEmpty() }
+                            ?: recentlySearchedPlace.displayName
+                    )
+                        .firstOrNull()
+                        ?.firstOrNull {
+                            it.placeId == recentlySearchedPlace.placeId
+                        }?.let {
+                            mapSharedViewModel.setSearchPlace(PlaceType.Address(it))
+                        }
+                }
+
+                // wait for all jobs
+                joinAll(updateJob, searchJob)
+
+                findNavController().popBackStack(
+                    R.id.search_navigation,
+                    true
+                )
             }
         }
     }

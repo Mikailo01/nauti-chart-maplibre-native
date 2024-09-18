@@ -1,4 +1,4 @@
-package com.bytecause.nautichart.worker
+package com.bytecause.nautichart.worker.initializer
 
 import android.content.Context
 import androidx.work.BackoffPolicy
@@ -6,7 +6,7 @@ import androidx.work.Constraints
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
-import com.bytecause.data.workers.UpdateExpiredDatasetsWorker
+import com.bytecause.nautichart.worker.UpdateExpiredDatasetsWorker
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.model.NetworkType
 import kotlinx.coroutines.flow.first

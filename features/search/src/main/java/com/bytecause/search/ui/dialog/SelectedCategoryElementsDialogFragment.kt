@@ -10,7 +10,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -18,7 +17,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -39,14 +37,12 @@ import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.poi.PoiUtil.getCategoriesUnderUnifiedCategory
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import java.io.IOException
 import java.net.ConnectException
 
-fun NavController.navigateHome() = navigate("map://home".toUri())
 
 @AndroidEntryPoint
 class SelectedCategoryElementsDialogFragment :
@@ -88,7 +84,7 @@ class SelectedCategoryElementsDialogFragment :
                         itemView.findViewById(com.bytecause.core.presentation.R.id.distance_textview)
 
                     innerItemView.setOnClickListener {
-                        mapSharedViewModel.setPlaceToFind(
+                        mapSharedViewModel.setSearchPlace(
                             PlaceType.Poi(
                                 id = item.id,
                                 latitude = item.lat,
@@ -100,7 +96,10 @@ class SelectedCategoryElementsDialogFragment :
                         sharedViewModel.setFilter(null)
                         sharedViewModel.resetTags()
 
-                        findNavController().navigateHome()
+                        findNavController().popBackStack(
+                            R.id.search_navigation,
+                            true
+                        )
                     }
 
                     placeImage.setImageDrawable(
@@ -131,9 +130,9 @@ class SelectedCategoryElementsDialogFragment :
 
         genericRecyclerViewAdapter =
             GenericRecyclerViewAdapter(
-                viewModel.elementList.value.toList(),
+                emptyList(),
                 com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
-                bindingInterface,
+                bindingInterface
             )
 
         isCancelable = false
@@ -148,8 +147,8 @@ class SelectedCategoryElementsDialogFragment :
         super.onViewCreated(view, savedInstanceState)
 
         // If list is not empty, add all values to elementList, otherwise make API call.
-        viewModel.categoryElementsList.takeIf { it.isNotEmpty() }?.let { categoryList ->
-            viewModel.addElements(categoryList)
+        viewModel.categoryElementsSet.takeIf { it.isNotEmpty() }?.let { categorySet ->
+            viewModel.addElements(categorySet)
         } ?: run {
             mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let {
                 populateRecyclerView()
@@ -169,14 +168,17 @@ class SelectedCategoryElementsDialogFragment :
 
         binding.showResultsOnTheMapRelativeLayout.setOnClickListener {
             mapSharedViewModel.setPoiToShow(
-                viewModel.elementList.value.let { elementSet ->
+                viewModel.elementSet.value.let { elementSet ->
                     mapOf(getString(args.poiCategory.name) to elementSet.map { it.id })
                 }
             )
 
             sharedViewModel.setFilter(null)
             sharedViewModel.resetTags()
-            findNavController().navigateHome()
+            findNavController().popBackStack(
+                R.id.search_navigation,
+                true
+            )
         }
 
         recyclerView =
@@ -203,7 +205,7 @@ class SelectedCategoryElementsDialogFragment :
             ) return@setOnClickListener
 
             filterJob =
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                viewLifecycleOwner.lifecycleScope.launch {
                     sharedViewModel.allTagsSharedFlow.replayCache.lastOrNull().let {
                         if (it.isNullOrEmpty()) {
                             // Save init map key value pairs.
@@ -219,10 +221,11 @@ class SelectedCategoryElementsDialogFragment :
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.elementList.collect { elements ->
-                    genericRecyclerViewAdapter.updateContent(elements.toList())
+                viewModel.elementSet.collect { elements ->
 
+                    genericRecyclerViewAdapter.updateContent(elements.toList())
                     updateCount(elements.size)
+
                     if (viewModel.uiSearchCategoryState.value != UiState<PoiUiModel>(
                             loading = Loading(
                                 isLoading = true
@@ -243,14 +246,14 @@ class SelectedCategoryElementsDialogFragment :
                     state ?: return@collect
 
                     when {
-                        viewModel.elementList.value.containsAll(state.items) && state.items.isNotEmpty() -> {
+                        viewModel.elementSet.value.containsAll(state.items) && state.items.isNotEmpty() -> {
                             return@collect
                         }
 
                         state.items.isNotEmpty() &&
-                                viewModel.elementList.value
+                                viewModel.elementSet.value
                                     .isNotEmpty() &&
-                                !viewModel.elementList.value
+                                !viewModel.elementSet.value
                                     .containsAll(
                                         state.items,
                                     ) -> {
@@ -295,24 +298,26 @@ class SelectedCategoryElementsDialogFragment :
                             state.items.takeIf { it.isNotEmpty() }?.let { foundElementList ->
                                 mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
                                     ?.let { position ->
-                                        foundElementList.sortedBy { elementToSort ->
-                                            LatLng(
-                                                elementToSort.lat,
-                                                elementToSort.lon,
-                                            ).distanceTo(position)
-                                        }.let { sortedList ->
-                                            viewModel.addAllToCategoryElementsList(sortedList)
-                                            sharedViewModel.filteredTagsStateFlow.value.takeIf { !it.isNullOrEmpty() }
-                                                ?.let { appliedFilters ->
-                                                    viewModel.addElements(
-                                                        viewModel.filterAlgorithm(
-                                                            appliedFilters,
-                                                        ),
-                                                    )
-                                                } ?: run {
-                                                viewModel.addElements(sortedList)
+                                        foundElementList
+                                            .toSortedSet(compareBy { poi ->
+                                                LatLng(
+                                                    poi.lat,
+                                                    poi.lon,
+                                                ).distanceTo(position)
+                                            })
+                                            .let { sortedSet ->
+                                                viewModel.addAllToCategoryElementsSet(sortedSet)
+                                                sharedViewModel.filteredTagsStateFlow.value.takeIf { !it.isNullOrEmpty() }
+                                                    ?.let { appliedFilters ->
+                                                        viewModel.addElements(
+                                                            viewModel.filterAlgorithm(
+                                                                appliedFilters
+                                                            )
+                                                        )
+                                                    } ?: run {
+                                                    viewModel.addElements(sortedSet)
+                                                }
                                             }
-                                        }
                                     }
                             } ?: run {
                                 if (state.loading.isLoading) return@run
@@ -351,7 +356,7 @@ class SelectedCategoryElementsDialogFragment :
                                 com.bytecause.core.resources.R.drawable.filter_off_icon,
                             ),
                         )
-                        filteredList.addAll(viewModel.categoryElementsList)
+                        filteredList.addAll(viewModel.categoryElementsSet)
                     } else {
                         // If filter is applied update drawable.
                         binding.filterListImageButton.setImageDrawable(
@@ -433,7 +438,7 @@ class SelectedCategoryElementsDialogFragment :
             || binding.locationUnknownLayout.locationUnknownLinearLayout.visibility == View.VISIBLE
         ) return
 
-        if (viewModel.elementList.value.size < 15) {
+        if (viewModel.elementSet.value.size < 15) {
             binding.extendSearchRadiusLayout.extendSearchRadiusLinearLayout.visibility =
                 View.VISIBLE
             updateExtendSearchRadiusLayout()
@@ -446,7 +451,7 @@ class SelectedCategoryElementsDialogFragment :
     private fun updateExtendSearchRadiusLayout() {
         binding.extendSearchRadiusLayout.extendSearchRadiusLayoutTitle.text =
             getString(com.bytecause.core.resources.R.string.nothing_found_text_place_holder).format(
-                if (viewModel.elementList.value.isEmpty()) getString(com.bytecause.core.resources.R.string.nothing) else viewModel.elementList.value.size,
+                if (viewModel.elementSet.value.isEmpty()) getString(com.bytecause.core.resources.R.string.nothing) else viewModel.elementSet.value.size,
                 viewModel.radius / 1000,
                 "km",
             )

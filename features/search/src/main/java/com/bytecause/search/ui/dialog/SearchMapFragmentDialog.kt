@@ -1,6 +1,5 @@
 package com.bytecause.search.ui.dialog
 
-import android.content.DialogInterface
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -46,9 +45,7 @@ import com.bytecause.util.string.StringUtil
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.maplibre.android.geometry.LatLng
 import java.io.IOException
 import java.net.ConnectException
@@ -124,7 +121,7 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
 
         genericRecyclerViewAdapter = GenericRecyclerViewAdapter(
-            listOf(),
+            emptyList(),
             com.bytecause.core.presentation.R.layout.searched_places_recycler_view_item_view,
             bindingInterface
         )
@@ -134,9 +131,8 @@ class SearchMapFragmentDialog : DialogFragment() {
             adapter = genericRecyclerViewAdapter
         }
 
+        // Tab destinations
         val fragmentList = listOf(SearchHistoryFragment(), SearchMapCategoriesFragment())
-
-        binding.searchViewPager.viewPager
 
         viewPagerAdapter =
             SearchMapViewPagerAdapter(fragmentList, childFragmentManager, this.lifecycle)
@@ -157,16 +153,13 @@ class SearchMapFragmentDialog : DialogFragment() {
             })
         }
 
-        this.isCancelable = false
+        isCancelable = false
 
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Open AppSearch API session.
-        viewModel.initSession()
 
         val clearTextDrawable =
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_close_24)?.apply {
@@ -182,7 +175,6 @@ class SearchMapFragmentDialog : DialogFragment() {
         }
 
         binding.searchMapBox.searchMapEditText.apply {
-
             // Set navigate back arrow in custom edit text view.
             ContextCompat.getDrawable(requireContext(), R.drawable.baseline_arrow_back_24)?.apply {
                 setTint(
@@ -207,13 +199,15 @@ class SearchMapFragmentDialog : DialogFragment() {
                 setTextColor(it)
             }
 
-            requestFocus()
-            postDelayed({
-                KeyboardUtils.toggleKeyboardVisibility(requireContext())
-            }, 400)
+            if (findNavController().currentDestination?.id == com.bytecause.features.search.R.id.searchMapFragmentDialog) {
+                requestFocus()
+                postDelayed({
+                    KeyboardUtils.toggleKeyboardVisibility(requireContext())
+                }, 400)
+            }
+
             setOnEditorActionListener { _, actionId, _ ->
                 if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    // Handle the action (e.g., perform search)
                     KeyboardUtils.forceCloseKeyboard(view)
                     return@setOnEditorActionListener true
                 }
@@ -263,8 +257,7 @@ class SearchMapFragmentDialog : DialogFragment() {
 
                 override fun onEndDrawableClick(view: CustomTextInputEditText) {
                     binding.searchMapBox.searchMapEditText.let {
-                        it.text ?: return
-                        if (viewModel.isLoading) return
+                        if (it.text == null || viewModel.isLoading) return
                         it.text = null
                     }
                 }
@@ -290,21 +283,12 @@ class SearchMapFragmentDialog : DialogFragment() {
             }
         }.attach()
 
-        // hides search map dialog, after tapping on element in search history (history content is
-        // inflated in different fragment, so I needed to notify parent fragment dialog which serves
-        // as container.)
-        viewLifecycleOwner.lifecycleScope.launch {
-            mapSharedViewModel.dismissSearchMapDialog.collect {
-                it ?: return@collect
-                findNavController().popBackStack()
-            }
-        }
-
         // data returned by api or cache database
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiSearchState.collect {
                     it ?: return@collect
+
                     if (it.loading.isLoading) {
                         binding.searchMapBox.searchMapEditText.setDrawables(right = progressDrawable)
                         (progressDrawable as? Animatable)?.start()
@@ -318,12 +302,10 @@ class SearchMapFragmentDialog : DialogFragment() {
 
         // we have to notify MapFragment that the selected place should be drawn on map.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.CREATED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.searchPlace.collect {
-                    mapSharedViewModel.setPlaceToFind(PlaceType.Address(it))
-                    withContext(Dispatchers.Main) {
-                        findNavController().popBackStack()
-                    }
+                    mapSharedViewModel.setSearchPlace(PlaceType.Address(it))
+                    findNavController().popBackStack()
                 }
             }
         }
@@ -363,7 +345,6 @@ class SearchMapFragmentDialog : DialogFragment() {
 
     private fun populateRecyclerView(places: UiState<SearchedPlaceUiModel>) {
         when (val exception = places.error) {
-
             is IOException -> {
                 binding.errorLayout.apply {
                     errorImageView.apply {
@@ -433,11 +414,5 @@ class SearchMapFragmentDialog : DialogFragment() {
                 )
             )
         )
-    }
-
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        // reset state
-        mapSharedViewModel.setDismissSearchMapDialogState(null)
     }
 }

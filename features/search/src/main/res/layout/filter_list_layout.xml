@@ -6,7 +6,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginBottom="15dp"
-    app:cardBackgroundColor="@color/md_theme_secondaryContainer">
+    app:cardBackgroundColor="@color/md_theme_onPrimaryContainer">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -25,7 +25,7 @@
                 android:id="@+id/tag_title_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/md_theme_onPrimaryContainer"
+                android:textColor="@color/md_theme_onPrimaryContainer_mediumContrast"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="Tag" />
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:src="@drawable/expand_less_icon"
-                app:tint="@color/md_theme_onPrimaryContainer"
+                app:tint="@color/md_theme_onPrimaryContainer_mediumContrast"
                 tools:src="@drawable/expand_less_icon" />
         </LinearLayout>
 

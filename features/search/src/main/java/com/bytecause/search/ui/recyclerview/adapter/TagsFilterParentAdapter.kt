@@ -12,19 +12,28 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.features.search.R
+import com.bytecause.search.ui.model.ElementTagModel
 import com.bytecause.search.ui.recyclerview.interfaces.SelectCheckBoxListener
 
 class TagsFilterParentAdapter(
-    private val parentList: Map<String, List<com.bytecause.domain.model.ElementTagModel>>,
+    private var parentMap: Map<String, List<ElementTagModel>>,
     private val selectCheckBoxInterface: SelectCheckBoxListener
 ) : RecyclerView.Adapter<TagsFilterParentAdapter.ViewHolder>() {
 
+    fun submitMap(map: Map<String, List<ElementTagModel>>) {
+        if (map.keys.size != expandedStateList.size) {
+            expandedStateList = MutableList(map.size) { false }
+        }
+
+        parentMap = map
+        notifyDataSetChanged()
+    }
+
     // MutableList which will keep track of expanded lists.
-    private val expandedStateList: MutableList<Boolean> = MutableList(parentList.size) { false }
+    private var expandedStateList: List<Boolean> = List(parentMap.size) { false }
 
     fun restoreExpandedStates(stateList: List<Boolean>) {
-        expandedStateList.clear()
-        expandedStateList.addAll(stateList)
+        expandedStateList = stateList
     }
 
     fun getExpandedStateList(): List<Boolean> = expandedStateList.toList()
@@ -48,12 +57,14 @@ class TagsFilterParentAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        if (expandedStateList.isEmpty()) return
+
         val isExpanded = expandedStateList[position]
 
-        holder.tagTitle.text = formatTagString(parentList.keys.elementAt(position))
+        holder.tagTitle.text = formatTagString(parentMap.keys.elementAt(position))
 
         val childAdapter = TagsFilterChildAdapter(
-            parentList.values.elementAt(position),
+            parentMap.values.elementAt(position),
             selectCheckBoxInterface
         ).apply {
             setParentAdapterPosition(position)
@@ -77,18 +88,20 @@ class TagsFilterParentAdapter(
         // the corresponding list, it won't expand other lists which would be loaded into the same
         // view holder like the one previously expanded before view recycle.
         holder.expandOrCollapseRecyclerViewLinearLayout.setOnClickListener {
-            expandedStateList[position] = !isExpanded
+            expandedStateList = expandedStateList.toMutableList().apply {
+                this[position] = !isExpanded
+            }
             notifyItemChanged(position)
         }
     }
 
     override fun getItemCount(): Int {
-        return parentList.size
+        return parentMap.size
     }
 }
 
 class TagsFilterChildAdapter(
-    private val childList: List<com.bytecause.domain.model.ElementTagModel>,
+    private val childList: List<ElementTagModel>,
     private val selectCheckBoxInterface: SelectCheckBoxListener
 ) : RecyclerView.Adapter<TagsFilterChildAdapter.ViewHolder>() {
 
