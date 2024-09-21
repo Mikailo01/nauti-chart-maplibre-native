@@ -6,7 +6,7 @@ NautiChart is an application designed to provide users with real-time vessel pos
 
 **_Please note that NautiChart is still in development, so some features are not implemented yet._**
 
-<img src="screenshots/Screenshot_20240318_085139.png" alt="Example Image" width="300"/> <img src="screenshots/Screenshot_20240318_085255.png" alt="Example Image" width="300"/>
+<img src="screenshots/preview_1.png" alt="Example Image" width="300"/> <img src="screenshots/preview_2.png" alt="Example Image" width="300"/> <img src="screenshots/preview_3.png" alt="Example Image" width="300"/> <img src="screenshots/preview_4.png" alt="Example Image" width="300"/> <img src="screenshots/preview_5.png" alt="Example Image" width="300"/>
 
 ## Features
 - **Vessel Tracking**: Latest positions of vessels worldwide.
