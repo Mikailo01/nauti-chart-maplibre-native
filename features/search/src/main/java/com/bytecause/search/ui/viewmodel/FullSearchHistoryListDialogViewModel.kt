@@ -3,7 +3,7 @@ package com.bytecause.search.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
-import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.search.mapper.asRecentlySearchedPlace
 import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel

@@ -7,8 +7,7 @@ import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.app.SearchSpec.RANKING_STRATEGY_RELEVANCE_SCORE
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.localstorage.LocalStorage
-import com.bytecause.data.local.room.tables.SearchPlaceCacheEntity
-import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

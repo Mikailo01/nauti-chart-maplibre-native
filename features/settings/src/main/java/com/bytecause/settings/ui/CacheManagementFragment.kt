@@ -462,7 +462,7 @@ fun CacheManagementContent(
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
-                                text = state.vesselsTimestamp,
+                                text = state.vesselsTimestamp.takeIf { it.isNotBlank() } ?: "-",
                                 fontStyle = FontStyle.Italic,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )

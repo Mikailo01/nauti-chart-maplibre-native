@@ -2,8 +2,6 @@ package com.bytecause.util.map
 
 import android.app.Activity
 import android.database.sqlite.SQLiteDatabase
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
@@ -13,8 +11,8 @@ import java.io.InputStream
 import java.io.InputStreamReader
 
 enum class MbTileType {
-    Vector,
-    Raster
+    Raster,
+    Vector
 }
 
 object MbTilesLoader {
@@ -72,32 +70,6 @@ object MbTilesLoader {
         }
     }
 
-    private fun getLatLngBounds(file: File): LatLngBounds {
-        val openDatabase =
-            SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-
-        val cursor = openDatabase.query(
-            "metadata",
-            arrayOf("name", "value"),
-            "name=?",
-            arrayOf("bounds"),
-            null,
-            null,
-            null,
-        )
-        cursor?.moveToFirst()
-        val boundsStr = cursor.getString(1).split(",")
-
-        cursor.close()
-        openDatabase.close()
-
-        return LatLngBounds
-            .Builder()
-            .include(LatLng(boundsStr[1].toDouble(), boundsStr[0].toDouble()))
-            .include(LatLng(boundsStr[3].toDouble(), boundsStr[2].toDouble()))
-            .build()
-    }
-
     fun getFormat(file: File): MbTileType {
         val openDatabase =
             SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
@@ -111,7 +83,7 @@ object MbTilesLoader {
             null,
             null,
         )
-        formatCursor?.moveToFirst()
+        formatCursor.moveToFirst()
         val format = formatCursor.getString(1)
 
         formatCursor.close()
@@ -136,7 +108,7 @@ object MbTilesLoader {
             null,
             null,
         )
-        minZoomCursor?.moveToFirst()
+        minZoomCursor.moveToFirst()
         val minZoomLevel = minZoomCursor.getString(1)
 
         minZoomCursor.close()
@@ -150,7 +122,7 @@ object MbTilesLoader {
             null,
             null,
         )
-        maxZoomCursor?.moveToFirst()
+        maxZoomCursor.moveToFirst()
         val maxZoomLevel = maxZoomCursor.getString(1)
 
         maxZoomCursor.close()

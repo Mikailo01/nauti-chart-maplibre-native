@@ -7,7 +7,8 @@ import androidx.room.Query
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import kotlinx.coroutines.flow.Flow
 
-private const val INTERVAL = 6_000_000_000
+
+private const val INTERVAL = 600_000 // 10 minutes
 
 @Dao
 interface VesselInfoDao {

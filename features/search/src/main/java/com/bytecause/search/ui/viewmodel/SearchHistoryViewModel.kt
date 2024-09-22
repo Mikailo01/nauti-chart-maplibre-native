@@ -3,7 +3,7 @@ package com.bytecause.search.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
-import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.search.mapper.asRecentlySearchedPlace
 import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
@@ -27,12 +27,23 @@ class SearchHistoryViewModel @Inject constructor(
     var dataStoreSize: Int = -1
         private set
 
-    val getRecentlySearchedPlaceList: Flow<Sequence<RecentlySearchedPlaceUiModel>> =
+    val getRecentlySearchedPlaceList: Flow<List<SearchedPlaceUiModel>> =
         historyRepository.getRecentlySearchedPlaces()
             .map { originalList ->
                 mapList(originalList.placeList) { it.asRecentlySearchedPlaceUiModel() }
-                    .asSequence()
-                    .also { dataStoreSize = it.count() }
+                    .also { dataStoreSize = it.size }
+                    .sortedByDescending { element -> element.timestamp }
+                    .map { searchedPlace ->
+                        SearchedPlaceUiModel(
+                            placeId = searchedPlace.placeId,
+                            latitude = searchedPlace.latitude,
+                            longitude = searchedPlace.longitude,
+                            addressType = searchedPlace.type,
+                            name = searchedPlace.name,
+                            displayName = searchedPlace.displayName
+                        )
+                    }
+                    .take(8)
             }
 
     fun deleteRecentlySearchedPlace(index: Int) {

@@ -1,9 +1,9 @@
 package com.bytecause.presentation.components.compose
 
 import androidx.annotation.StringRes
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -26,7 +26,7 @@ fun AnnotatedString(
                 val endIndex = startIndex + arg.length
                 addStyle(
                     style = SpanStyle(
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     ), start = startIndex, end = endIndex
                 )

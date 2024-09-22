@@ -1,7 +1,7 @@
 package com.bytecause.search.di
 
 import android.content.Context
-import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.search.data.local.appsearch.SearchManagerImpl
 import dagger.Module
 import dagger.Provides

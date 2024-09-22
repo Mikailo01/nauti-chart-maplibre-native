@@ -1,6 +1,6 @@
 package com.bytecause.search.mapper
 
-import com.bytecause.data.local.room.tables.SearchPlaceCacheEntity
+import com.bytecause.search.data.local.appsearch.SearchPlaceCacheEntity
 import com.bytecause.domain.model.NominatimApiModel
 import com.bytecause.domain.model.SearchedPlaceModel
 import com.bytecause.nautichart.RecentlySearchedPlace

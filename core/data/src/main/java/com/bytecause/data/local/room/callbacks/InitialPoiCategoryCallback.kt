@@ -9,6 +9,7 @@ import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.tables.CustomPoiCategoryEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class InitialPoiCategoryCallback(
@@ -19,7 +20,11 @@ class InitialPoiCategoryCallback(
         super.onCreate(db)
 
         CoroutineScope(Dispatchers.IO).launch {
-            populateDatabase(context, provideDatabase(context).customPoiDao())
+            try {
+                populateDatabase(context, provideDatabase(context).customPoiDao())
+            } finally {
+                cancel()
+            }
         }
     }
 }

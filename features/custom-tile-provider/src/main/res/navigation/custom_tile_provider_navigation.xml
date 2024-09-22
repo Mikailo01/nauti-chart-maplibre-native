@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/customTileSourceComposedDialog"
-        android:name="com.bytecause.custom_tile_provider.ui.CustomTileSourceComposedDialog"
+        android:name="com.bytecause.custom_tile_provider.ui.screen.CustomTileSourceComposedDialog"
         android:label="CustomTileSourceComposedDialog">
         <deepLink app:uri="custom-tile-provider://home" />
     </fragment>

@@ -2,10 +2,10 @@ package com.bytecause.map.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOfflineVectorTileSourceRepository
 import com.bytecause.domain.abstractions.CustomOnlineRasterTileSourceRepository
+import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.model.CustomTileProvider
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.domain.tilesources.TileSourceTypes
@@ -34,14 +34,14 @@ constructor(
     private val customOfflineVectorTileSourceRepository: CustomOfflineVectorTileSourceRepository,
     customTileSourcesUseCase: CustomTileSourcesUseCase,
 ) : ViewModel() {
-    private val _contentMapStateFlow: MutableStateFlow<Map<LayerTypes, List<LayersChildItem>>> =
-        MutableStateFlow(emptyMap())
+    private val _contentMapStateFlow: MutableStateFlow<Map<LayerTypes, List<LayersChildItem>>?> =
+        MutableStateFlow(null)
 
     init {
         getCustomTileSources()
     }
 
-    val contentMapStateFlow: StateFlow<Map<LayerTypes, List<LayersChildItem>>> =
+    val contentMapStateFlow: StateFlow<Map<LayerTypes, List<LayersChildItem>>?> =
         _contentMapStateFlow.asStateFlow()
 
     fun cacheSelectedTileSource(tileSourceName: String) {
@@ -58,7 +58,7 @@ constructor(
         childPosition: Int
     ): Flow<Pair<LayerTypes, String?>?> = flow {
         val deletedItemName: Pair<LayerTypes, String?>? =
-            when (contentMapStateFlow.value.toList()[parentPosition].second[childPosition].layerType) {
+            when (contentMapStateFlow.value!!.toList()[parentPosition].second[childPosition].layerType) {
                 LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE -> {
                     LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE to customOnlineRasterTileSourceRepository.deleteOnlineRasterTileSourceProvider(
                         childPosition
@@ -84,7 +84,7 @@ constructor(
             }
 
         // Update the content map state flow
-        _contentMapStateFlow.value = _contentMapStateFlow.value.toMutableMap().apply {
+        _contentMapStateFlow.value = _contentMapStateFlow.value!!.toMutableMap().apply {
             val mapKey = this.keys.elementAt(parentPosition)
 
             val updatedList = this[mapKey]?.toMutableList()?.apply {
@@ -93,9 +93,7 @@ constructor(
 
             if (updatedList.isNullOrEmpty()) {
                 this.remove(mapKey)
-            } else {
-                this[mapKey] = updatedList
-            }
+            } else this[mapKey] = updatedList
         }
 
         // Emit the name of the deleted item
@@ -112,6 +110,8 @@ constructor(
         viewModelScope.launch {
             customTileSources.firstOrNull()?.let { customTileProviders ->
                 if (customTileProviders.isEmpty()) return@let
+
+                val sourcesMap: MutableMap<LayerTypes, List<LayersChildItem>> = mutableMapOf()
 
                 customTileProviders.values.map {
                     it.map { provider ->
@@ -142,35 +142,33 @@ constructor(
                         val vectorTileSources =
                             layersList.filter { tileSource -> tileSource.layerType == LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE }
 
-                        _contentMapStateFlow.value =
-                            _contentMapStateFlow.value.toMutableMap().apply {
+                        onlineRasterTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
+                            ?.let { rasterSources ->
+                                sourcesMap.put(
+                                    LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE,
+                                    rasterSources
+                                )
+                            }
 
-                                onlineRasterTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
-                                    ?.let { rasterSources ->
-                                        this.putIfAbsent(
-                                            LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE,
-                                            rasterSources
-                                        )
-                                    }
+                        offlineRasterTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
+                            ?.let { rasterSources ->
+                                sourcesMap.put(
+                                    LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE,
+                                    rasterSources
+                                )
+                            }
 
-                                offlineRasterTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
-                                    ?.let { rasterSources ->
-                                        this.putIfAbsent(
-                                            LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE,
-                                            rasterSources
-                                        )
-                                    }
-
-                                vectorTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
-                                    ?.let { vectorSources ->
-                                        this.putIfAbsent(
-                                            LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE,
-                                            vectorSources
-                                        )
-                                    }
+                        vectorTileSources.takeIf { tileSources -> tileSources.isNotEmpty() }
+                            ?.let { vectorSources ->
+                                sourcesMap.put(
+                                    LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE,
+                                    vectorSources
+                                )
                             }
                     }
                 }
+
+                _contentMapStateFlow.emit(sourcesMap)
             }
         }
     }

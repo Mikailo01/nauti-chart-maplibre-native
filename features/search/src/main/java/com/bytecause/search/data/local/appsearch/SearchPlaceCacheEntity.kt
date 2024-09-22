@@ -1,4 +1,4 @@
-package com.bytecause.data.local.room.tables
+package com.bytecause.search.data.local.appsearch
 
 import androidx.appsearch.annotation.Document
 import androidx.appsearch.app.AppSearchSchema

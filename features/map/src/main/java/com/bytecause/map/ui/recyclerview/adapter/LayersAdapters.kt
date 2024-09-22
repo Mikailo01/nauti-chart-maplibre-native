@@ -15,7 +15,6 @@ import com.bytecause.map.ui.bottomsheet.MapBottomSheetResources
 import com.bytecause.map.ui.model.LayersChildItem
 import com.bytecause.map.ui.recyclerview.interfaces.SelectLayerListener
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
-import com.google.android.material.divider.MaterialDivider
 
 
 class LayerParentAdapter(
@@ -24,8 +23,6 @@ class LayerParentAdapter(
 ) : RecyclerView.Adapter<LayerParentAdapter.ViewHolder>() {
 
     fun submitList(newContentMap: Map<LayerTypes, List<LayersChildItem>>) {
-        if (contentMap === newContentMap) return
-
         contentMap = newContentMap
         notifyDataSetChanged()
     }
@@ -42,7 +39,6 @@ class LayerParentAdapter(
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val childRecyclerView: FullyExpandedRecyclerView =
             itemView.findViewById(R.id.child_layers_recycler_view)
-        val divider: MaterialDivider = itemView.findViewById(R.id.recycler_view_divider)
         val layerTypeTextView: TextView = itemView.findViewById(R.id.layer_type_text_view)
     }
 

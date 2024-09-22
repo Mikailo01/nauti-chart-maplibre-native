@@ -16,6 +16,7 @@ import com.bytecause.core.resources.R
 @Composable
 fun TileSizeChips(
     tileSize: Int,
+    enabled: Boolean = true,
     onTileSizeValueChange: (Int) -> Unit
 ) {
     Column {
@@ -25,6 +26,7 @@ fun TileSizeChips(
                 selected = tileSize == 256,
                 onClick = { onTileSizeValueChange(256) },
                 label = { Text(text = "256x256") },
+                enabled = enabled,
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_layers_24),
@@ -36,6 +38,7 @@ fun TileSizeChips(
                 selected = tileSize == 512,
                 onClick = { onTileSizeValueChange(512) },
                 label = { Text(text = "512x512") },
+                enabled = enabled,
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_layers_24),

@@ -2314,7 +2314,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Gets information about harbour from the database and pass this state into showMarkerBottomSheet,
-// which will render this state.
+    // which will render this state.
     private fun showHarbourInfo(harbourId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchHarbourById(harbourId).firstOrNull()?.let { harbour ->
@@ -2324,7 +2324,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         ?: "",
                         iconImage = null,
                         propImages = extractPropImagesFromTags(harbour.tags),
-                        description = harbour.tags.toList().joinToString("\n"),
+                        description = excludeDescriptionKeysFromTags(harbour.tags).takeIf { it.isNotBlank() },
                         image = replaceHttpWithHttps(harbour.tags["image"]),
                         position = LatLng(harbour.latitude, harbour.longitude)
                     )
@@ -2486,8 +2486,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     50,
                     50
                 )
-                setImageResource(drawableId)
-                setColorFilter(com.bytecause.core.resources.R.color.md_theme_onSurface)
+                val drawable = ContextCompat.getDrawable(requireContext(), drawableId)?.apply {
+                    setTint(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            com.bytecause.core.resources.R.color.md_theme_onSurface
+                        )
+                    )
+                }
+                setImageDrawable(drawable)
             }
 
             val spacer = LinearLayout(requireContext()).apply {
@@ -2884,6 +2891,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private fun cancelAnimation() {
+        circleLayerAnimator?.cancel()
+        circleLayerAnimator = null
+    }
+
     override fun onStart() {
         super.onStart()
         mapView?.onStart()
@@ -2929,9 +2941,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
-        // cancel animation if not null
-        circleLayerAnimator?.cancel()
-        circleLayerAnimator = null
+        cancelAnimation()
 
         saveMapState()
 

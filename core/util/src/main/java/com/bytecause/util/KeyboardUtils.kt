@@ -1,128 +1,109 @@
-package com.bytecause.util;
+package com.bytecause.util
 
-import android.app.Activity;
-import android.graphics.Rect;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
-import android.content.Context;
-import android.view.inputmethod.InputMethodManager;
+import android.app.Activity
+import android.content.Context
+import android.graphics.Rect
+import android.view.View
+import android.view.ViewGroup
+import android.view.ViewTreeObserver.OnGlobalLayoutListener
+import android.view.inputmethod.InputMethodManager
 
-import java.util.HashMap;
-import java.util.Objects;
+class KeyboardUtils(
+    act: Activity,
+    listener: SoftKeyboardToggleListener
+) : OnGlobalLayoutListener {
 
-/**
- * Based on the following Stackoverflow answer:
- * <a href="http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android">...</a>
- */
+    private var mRootView: View? = null
+    private var mCallback: SoftKeyboardToggleListener? = null
+    private var prevValue: Boolean? = null
+    private var mScreenDensity = 0f
 
-public class KeyboardUtils implements ViewTreeObserver.OnGlobalLayoutListener
-{
-    private final static int MAGIC_NUMBER = 200;
+    companion object {
+        private const val MAGIC_NUMBER: Int = 200
+        private val sListenerMap: HashMap<SoftKeyboardToggleListener, KeyboardUtils> = HashMap()
 
-    private SoftKeyboardToggleListener mCallback;
-    private final View mRootView;
-    private Boolean prevValue = null;
-    private final float mScreenDensity;
-    private static final HashMap<SoftKeyboardToggleListener, KeyboardUtils> sListenerMap = new HashMap<>();
+        fun interface SoftKeyboardToggleListener {
+            fun onToggleSoftKeyboard(isVisible: Boolean)
+        }
 
-    public interface SoftKeyboardToggleListener
-    {
-        void onToggleSoftKeyboard(boolean isVisible);
+        /**
+         * Add a new keyboard listener
+         * @param act calling activity
+         * @param listener callback
+         */
+        fun addKeyboardToggleListener(act: Activity, listener: SoftKeyboardToggleListener) {
+            removeKeyboardToggleListener(listener)
+            sListenerMap[listener] = KeyboardUtils(act, listener)
+        }
+
+        /**
+         * Remove a registered listener
+         * @param listener [SoftKeyboardToggleListener]
+         */
+        fun removeKeyboardToggleListener(listener: SoftKeyboardToggleListener?) {
+            if (sListenerMap.containsKey(listener)) {
+                sListenerMap[listener]?.removeListener()
+                sListenerMap.remove(listener)
+            }
+        }
+
+        /**
+         * Force closes the soft keyboard
+         * @param activeView the view with the keyboard focus
+         */
+        fun forceCloseKeyboard(activeView: View) {
+            val inputMethodManager =
+                activeView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            inputMethodManager.hideSoftInputFromWindow(activeView.windowToken, 0)
+        }
+
+        /**
+         * Remove all registered keyboard listeners
+         */
+        fun removeAllKeyboardToggleListeners() {
+            for (l in sListenerMap.keys) requireNotNull(sListenerMap[l]).removeListener()
+            sListenerMap.clear()
+        }
+
+        /**
+         * Manually toggle soft keyboard visibility
+         * @param context calling context
+         * @param view InputMethodManager's target view
+         */
+        fun toggleKeyboardVisibility(context: Context, view: View) {
+            val imm =
+                context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(view, 0)
+        }
     }
 
+    init {
+        mCallback = listener
 
-    @Override
-    public void onGlobalLayout()
-    {
-        Rect r = new Rect();
-        mRootView.getWindowVisibleDisplayFrame(r);
+        mRootView =
+            (act.findViewById<View>(android.R.id.content) as ViewGroup).getChildAt(0).apply {
+                viewTreeObserver.addOnGlobalLayoutListener(this@KeyboardUtils)
+            }
 
-        int heightDiff = mRootView.getRootView().getHeight() - (r.bottom - r.top);
-        float dp = heightDiff/ mScreenDensity;
-        boolean isVisible = dp > MAGIC_NUMBER;
+        mScreenDensity = act.resources.displayMetrics.density
+    }
+
+    override fun onGlobalLayout() {
+        val r = Rect()
+        mRootView?.getWindowVisibleDisplayFrame(r)
+
+        val heightDiff = mRootView!!.rootView.height - (r.bottom - r.top)
+        val dp = heightDiff / mScreenDensity
+        val isVisible: Boolean = dp > MAGIC_NUMBER
 
         if (mCallback != null && (prevValue == null || isVisible != prevValue)) {
-            prevValue = isVisible;
-            mCallback.onToggleSoftKeyboard(isVisible);
+            prevValue = isVisible
+            mCallback?.onToggleSoftKeyboard(isVisible)
         }
     }
 
-    /**
-     * Add a new keyboard listener
-     * @param act calling activity
-     * @param listener callback
-     */
-    public static void addKeyboardToggleListener(Activity act, SoftKeyboardToggleListener listener)
-    {
-        removeKeyboardToggleListener(listener);
-
-        sListenerMap.put(listener, new KeyboardUtils(act, listener));
+    private fun removeListener() {
+        mCallback = null
+        mRootView?.viewTreeObserver?.removeOnGlobalLayoutListener(this)
     }
-
-    /**
-     * Remove a registered listener
-     * @param listener {@link SoftKeyboardToggleListener}
-     */
-    public static void removeKeyboardToggleListener(SoftKeyboardToggleListener listener)
-    {
-        if(sListenerMap.containsKey(listener))
-        {
-            KeyboardUtils k = sListenerMap.get(listener);
-            if (k != null) k.removeListener();
-
-            sListenerMap.remove(listener);
-        }
-    }
-
-    /**
-     * Remove all registered keyboard listeners
-     */
-    public static void removeAllKeyboardToggleListeners()
-    {
-        for(SoftKeyboardToggleListener l : sListenerMap.keySet())
-            Objects.requireNonNull(sListenerMap.get(l)).removeListener();
-
-        sListenerMap.clear();
-    }
-
-    /**
-     * Manually toggle soft keyboard visibility
-     * @param context calling context
-     */
-    public static void toggleKeyboardVisibility(Context context)
-    {
-        InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-        if(inputMethodManager != null)
-            inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-    }
-
-    /**
-     * Force closes the soft keyboard
-     * @param activeView the view with the keyboard focus
-     */
-    public static void forceCloseKeyboard(View activeView)
-    {
-        InputMethodManager inputMethodManager = (InputMethodManager) activeView.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        if(inputMethodManager != null)
-            inputMethodManager.hideSoftInputFromWindow(activeView.getWindowToken(), 0);
-    }
-
-    private void removeListener()
-    {
-        mCallback = null;
-
-        mRootView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-    }
-
-    private KeyboardUtils(Activity act, SoftKeyboardToggleListener listener)
-    {
-        mCallback = listener;
-
-        mRootView = ((ViewGroup) act.findViewById(android.R.id.content)).getChildAt(0);
-        mRootView.getViewTreeObserver().addOnGlobalLayoutListener(this);
-
-        mScreenDensity = act.getResources().getDisplayMetrics().density;
-    }
-
 }

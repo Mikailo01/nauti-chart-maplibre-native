@@ -12,7 +12,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@color/md_theme_onPrimaryContainer_mediumContrast"
-        style="@style/Base.Theme.NautiChart"
         tools:text="Supermarket"/>
 
     <com.google.android.material.divider.MaterialDivider

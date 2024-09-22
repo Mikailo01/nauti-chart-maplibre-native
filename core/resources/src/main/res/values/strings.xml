@@ -46,7 +46,9 @@
     <string name="name_cannot_be_empty">Name cannot be empty!</string>
     <string name="name_of_this_tile_provider_already_exists">Name of this tile provider already exists.</string>
     <string name="url_cannot_be_empty">Url cannot be empty!</string>
-    <string name="url_is_not_in_valid_format">Url is not in valid format.</string>
+    <string name="url_is_not_in_valid_format">Url is not in valid format.\nPlease make sure that the inputted url is in corresponding format: \n\n%1s %2s\n\nSupported types: JPG, PNG, JPEG</string>
+    <string name="url_format_1">https://example.org/{z}/{x}/{y}.png</string>
+    <string name="url_format_2">https://example.org/{z}/{y}/{x}.png</string>
     <string name="min">Min</string>
     <string name="max">Max</string>
     <string name="invalid_file_type">Invalid file type.</string>
@@ -176,6 +178,8 @@
     <string name="pick_your_desired_region">Pick your desired region</string>
     <string name="grant_location_permission_to_determine_your_region">Grant location permission to determine your region</string>
     <string name="clear_filters">Clear filters</string>
+    <string name="incorrect_file_type_selected_message">Oops, make sure you selected the correct file type, only MBTiles are supported.</string>
+    <string name="tile_size_not_selected">Tile size not selected.</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>

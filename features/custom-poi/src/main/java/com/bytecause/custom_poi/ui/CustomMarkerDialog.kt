@@ -1,7 +1,5 @@
 package com.bytecause.custom_poi.ui
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
@@ -356,7 +354,8 @@ class CustomMarkerDialog :
                                 true -> binding.markerDescriptionInput.text.toString()
                                 else -> ""
                             },
-                            categoryName = categoryNameTextView?.text?.toString() ?: "Favorite",
+                            categoryName = categoryNameTextView?.text?.toString()
+                                ?: getString(com.bytecause.core.resources.R.string.favorite),
                             drawableResourceName = categoryRecyclerView.getChildAt(viewModel.selectedItemViewPosition.value).tag as? String
                                 ?: resources.getResourceEntryName(com.bytecause.core.resources.R.drawable.baseline_favorite_24),
                         )
@@ -461,7 +460,7 @@ class CustomMarkerDialog :
 
         ContextCompat.getDrawable(
             requireContext(),
-            com.bytecause.core.resources.R.drawable.rounded_background
+            R.drawable.item_view_rounded_background
         )?.apply {
             setTint(
                 ContextCompat.getColor(
@@ -500,7 +499,6 @@ class CustomMarkerDialog :
     }
 
     private fun cancelCategoryViewsAnimation() {
-        scaleAnimator?.removeAllListeners()
         scaleAnimator?.cancel()
         scaleAnimator = null
 
@@ -547,15 +545,8 @@ class CustomMarkerDialog :
 
             scaleAnimator?.apply {
                 playSequentially(scaleUp, scaleDown)
-                addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        // Restart the animation when it ends
-                        animation.start()
-                    }
-                })
+                start()
             }
-
-            scaleAnimator?.start()
         }
     }
 
@@ -592,5 +583,10 @@ class CustomMarkerDialog :
                 ),
             ),
         )
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        cancelCategoryViewsAnimation()
     }
 }

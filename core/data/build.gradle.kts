@@ -3,7 +3,6 @@ import com.bytecause.convention.implementation
 plugins {
     alias(libs.plugins.nautichart.android.library)
     alias(libs.plugins.nautichart.android.hilt)
-    alias(libs.plugins.nautichart.android.appsearchapi)
     id("com.google.protobuf")
 }
 

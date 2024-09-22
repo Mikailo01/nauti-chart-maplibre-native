@@ -10,7 +10,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bytecause.domain.model.ArgsObjectTypeArray
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.domain.tilesources.DefaultTileSources
@@ -22,6 +21,7 @@ import com.bytecause.map.ui.recyclerview.adapter.LayerParentAdapter
 import com.bytecause.map.ui.recyclerview.interfaces.SelectLayerListener
 import com.bytecause.map.ui.viewmodel.MapBottomSheetViewModel
 import com.bytecause.presentation.components.views.dialog.ConfirmationDialog
+import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.file.FileUtil.offlineTilesDir
@@ -43,7 +43,6 @@ sealed interface MapBottomSheetResources {
     data class Custom(val name: String, val imageUrl: String? = null) : MapBottomSheetResources
 }
 
-// TODO("Image rendering slows down opening of this fragment.")
 @AndroidEntryPoint
 class MapBottomSheetFragment :
     BottomSheetDialogFragment(R.layout.map_bottom_sheet),
@@ -54,8 +53,17 @@ class MapBottomSheetFragment :
     private val viewModel: MapBottomSheetViewModel by viewModels()
     private val mapSharedViewModel: MapSharedViewModel by activityViewModels()
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var recyclerView: FullyExpandedRecyclerView
     private lateinit var recyclerViewAdapter: LayerParentAdapter
+
+    // when new element into recycler view is added, the scroll view will jump to the bottom, so this
+    // listener scrolls back to the top
+    private val onLayoutChangeListener =
+        View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            binding.mapBottomSheetNestedScrollView.fullScroll(
+                View.FOCUS_UP
+            )
+        }
 
     override fun onViewCreated(
         view: View,
@@ -76,7 +84,7 @@ class MapBottomSheetFragment :
             layerDrawable.setImageDrawable(
                 ContextCompat.getDrawable(
                     requireContext(),
-                    com.bytecause.core.resources.R.drawable.terrain
+                    R.drawable.terrain
                 )
             )
             layersChildItemView.setOnClickListener {
@@ -99,7 +107,7 @@ class MapBottomSheetFragment :
             layerDrawable.setImageDrawable(
                 ContextCompat.getDrawable(
                     requireContext(),
-                    com.bytecause.core.resources.R.drawable.satellite
+                    R.drawable.satellite
                 )
             )
             layersChildItemView.setOnClickListener {
@@ -122,7 +130,7 @@ class MapBottomSheetFragment :
             layerDrawable.setImageDrawable(
                 ContextCompat.getDrawable(
                     requireContext(),
-                    com.bytecause.core.resources.R.drawable.topo_map
+                    R.drawable.topo_map
                 )
             )
             layersChildItemView.setOnClickListener {
@@ -140,25 +148,26 @@ class MapBottomSheetFragment :
             }
         }
 
+        recyclerViewAdapter =
+            LayerParentAdapter(
+                emptyMap(),
+                this@MapBottomSheetFragment,
+            )
+
+        recyclerView =
+            binding.parentLayersRecyclerView.apply {
+                layoutManager = LinearLayoutManager(requireContext())
+                adapter = recyclerViewAdapter
+            }
+
+        recyclerView.addOnLayoutChangeListener(onLayoutChangeListener)
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.contentMapStateFlow.collect { newContent ->
+                    newContent ?: return@collect
 
-                    if (!::recyclerView.isInitialized) {
-                        recyclerViewAdapter =
-                            LayerParentAdapter(
-                                newContent,
-                                this@MapBottomSheetFragment,
-                            )
-
-                        recyclerView =
-                            binding.parentLayersRecyclerView.apply {
-                                layoutManager = LinearLayoutManager(requireContext())
-                                adapter = recyclerViewAdapter
-                            }
-                    } else {
-                        recyclerViewAdapter.submitList(newContent)
-                    }
+                    recyclerViewAdapter.submitList(newContent)
                 }
             }
         }
@@ -273,9 +282,7 @@ class MapBottomSheetFragment :
             }
 
             LayerTypes.ADDITIONAL_OVERLAY -> {
-                when (position) {
-                    // TODO("Additional overlays")
-                }
+                // TODO("Additional overlays")
             }
         }
     }
@@ -334,5 +341,10 @@ class MapBottomSheetFragment :
             }
 
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        recyclerView.removeOnLayoutChangeListener(onLayoutChangeListener)
     }
 }

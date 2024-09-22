@@ -13,5 +13,5 @@ plugins {
 }
 
 extra["appVersionCode"] = 1
-extra["appVersionName"] = "1.0.0"
+extra["appVersionName"] = "0.1.0-beta1"
 

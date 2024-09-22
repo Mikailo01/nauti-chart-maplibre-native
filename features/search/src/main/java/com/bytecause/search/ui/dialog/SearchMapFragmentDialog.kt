@@ -202,7 +202,7 @@ class SearchMapFragmentDialog : DialogFragment() {
             if (findNavController().currentDestination?.id == com.bytecause.features.search.R.id.searchMapFragmentDialog) {
                 requestFocus()
                 postDelayed({
-                    KeyboardUtils.toggleKeyboardVisibility(requireContext())
+                    KeyboardUtils.toggleKeyboardVisibility(requireContext(), view = this)
                 }, 400)
             }
 

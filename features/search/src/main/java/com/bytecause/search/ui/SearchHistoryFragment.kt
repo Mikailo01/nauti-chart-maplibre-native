@@ -2,7 +2,6 @@ package com.bytecause.search.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -27,7 +26,7 @@ import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
 import com.bytecause.search.ui.viewmodel.SearchHistoryViewModel
-import com.bytecause.util.KeyboardUtils
+import com.bytecause.util.common.LastClick
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.poi.PoiUtil.assignDrawableToAddressType
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,7 +47,7 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
     private lateinit var recyclerView: FullyExpandedRecyclerView
     private lateinit var genericRecyclerViewAdapter: GenericRecyclerViewAdapter<SearchedPlaceUiModel>
 
-    private var isKeyboardVisible: Boolean = false
+    private val lastClickUtil = LastClick()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -131,31 +130,15 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.getRecentlySearchedPlaceList.collect { searchedPlaces ->
 
-                    searchedPlaces
-                        .sortedByDescending { element -> element.timestamp }
-                        .map { searchedPlace ->
-                            SearchedPlaceUiModel(
-                                placeId = searchedPlace.placeId,
-                                latitude = searchedPlace.latitude,
-                                longitude = searchedPlace.longitude,
-                                addressType = searchedPlace.type,
-                                name = searchedPlace.name,
-                                displayName = searchedPlace.displayName
-                            )
-                        }
-                        .take(8)
-                        .toList()
-                        .let { list ->
-                            // if sequence has more than 7 elements, show TextView and drop last element
-                            // because only 7 elements should be rendered in the recycler view
-                            if (list.size > 7) {
-                                binding.showAllPlacesTextView.visibility = View.VISIBLE
-                                genericRecyclerViewAdapter.updateContent(list.dropLast(1))
-                            } else {
-                                binding.showAllPlacesTextView.visibility = View.GONE
-                                genericRecyclerViewAdapter.updateContent(list)
-                            }
-                        }
+                    // if sequence has more than 7 elements, show TextView and drop last element
+                    // because only 7 elements should be rendered in the recycler view
+                    if (searchedPlaces.size > 7) {
+                        binding.showAllPlacesTextView.visibility = View.VISIBLE
+                        genericRecyclerViewAdapter.updateContent(searchedPlaces.dropLast(1))
+                    } else {
+                        binding.showAllPlacesTextView.visibility = View.GONE
+                        genericRecyclerViewAdapter.updateContent(searchedPlaces)
+                    }
                 }
             }
         }
@@ -165,20 +148,6 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        KeyboardUtils.addKeyboardToggleListener(this@SearchHistoryFragment.activity) { isVisible ->
-            isKeyboardVisible = isVisible
-        }
-
-        view.setOnTouchListener { v, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                if (!isKeyboardVisible) return@setOnTouchListener false
-                KeyboardUtils.forceCloseKeyboard(v)
-                v.performClick()
-                return@setOnTouchListener true
-            }
-            return@setOnTouchListener false
-        }
 
         val linearLayoutManager = object : LinearLayoutManager(requireContext()) {
             override fun canScrollVertically(): Boolean {
@@ -192,7 +161,9 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
         }
 
         binding.showAllPlacesTextView.setOnClickListener {
-            findNavController().navigate(R.id.action_searchMapFragmentDialog_to_fullSearchHistoryListDialog)
+            if (lastClickUtil.lastClick()) {
+                findNavController().navigate(R.id.action_searchMapFragmentDialog_to_fullSearchHistoryListDialog)
+            }
         }
     }
 
@@ -202,10 +173,5 @@ class SearchHistoryFragment : Fragment(R.layout.search_history_fragment),
 
             viewModel.deleteRecentlySearchedPlace((viewModel.dataStoreSize - 1) - position)
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        KeyboardUtils.removeAllKeyboardToggleListeners()
     }
 }

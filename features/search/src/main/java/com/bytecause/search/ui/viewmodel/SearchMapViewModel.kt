@@ -3,13 +3,14 @@ package com.bytecause.search.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
-import com.bytecause.data.repository.abstractions.SearchManager
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.SearchedPlaceModel
 import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.model.UiState
 import com.bytecause.search.data.local.appsearch.RECENTLY_SEARCHED_PLACE_NAMESPACE
+import com.bytecause.search.data.local.appsearch.SearchPlaceCacheEntity
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
 import com.bytecause.search.mapper.asRecentlySearchedPlace
 import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
@@ -17,6 +18,7 @@ import com.bytecause.search.mapper.asSearchedPlaceUiModel
 import com.bytecause.search.ui.model.RecentlySearchedPlaceUiModel
 import com.bytecause.util.mappers.mapList
 import com.bytecause.util.mappers.mapNullInputList
+import com.bytecause.util.string.StringUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -165,7 +167,7 @@ constructor(
             com.bytecause.util.algorithms.PolylineAlgorithms()
 
         result.map { searchedPlace ->
-            com.bytecause.data.local.room.tables.SearchPlaceCacheEntity(
+            SearchPlaceCacheEntity(
                 nameSpace = RECENTLY_SEARCHED_PLACE_NAMESPACE,
                 placeId = searchedPlace.placeId.toString(),
                 latitude = searchedPlace.latitude,
@@ -176,7 +178,7 @@ constructor(
                 polygonCoordinates =
                 withContext(Dispatchers.Default) {
                     polylineAlgorithms.encode(
-                        com.bytecause.util.string.StringUtil.extractCoordinatesToGeoPointList(
+                        StringUtil.extractCoordinatesToGeoPointList(
                             searchedPlace.polygonCoordinates
                         )
                             .let { latLngList ->
