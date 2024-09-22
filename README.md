@@ -31,8 +31,5 @@ NautiChart is an application designed to provide users with real-time vessel pos
 ## License
 **NautiChart** is licensed under the **GNU General Public License (GPL)**. This license ensures that anyone who distributes copies of your app, whether for free or for a fee, must also make the source code available under the same license. This effectively prevents others from selling your app without also providing the source code.
 
-## Note
-**NautiChart** is a passion project developed with the aim of learning and exploring Android development. Please note that while the app provides valuable functionalities, it may contain certain aspects that are not optimized for professional use. As the developer, I had limited experience in Android development when starting this project, which may reflect in some hard-to-understand or non-scalable parts of the application. Your understanding and feedback are appreciated as I continue to improve and refine the app over time.
-
 ## Contact
 mikailodev@gmail.com
