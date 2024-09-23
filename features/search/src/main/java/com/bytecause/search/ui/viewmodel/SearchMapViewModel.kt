@@ -1,5 +1,6 @@
 package com.bytecause.search.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
@@ -102,6 +103,8 @@ constructor(
                     }
 
                     is ApiResult.Failure -> {
+
+                        Log.d("idk", result.exception?.message.toString())
                         _uiSearchState.emit(UiState(error = result.exception))
                     }
 

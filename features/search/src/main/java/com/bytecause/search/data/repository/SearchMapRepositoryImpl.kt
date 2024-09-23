@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import retrofit2.HttpException
 import javax.inject.Inject
 
 class SearchMapRepositoryImpl @Inject constructor(
@@ -28,7 +29,7 @@ class SearchMapRepositoryImpl @Inject constructor(
                             mapNullInputList(response.body()) { it.asSearchedPlace() }
                         )
                     )
-                } else emit(ApiResult.Failure(exception = Exception("${response.code()}")))
+                } else emit(ApiResult.Failure(exception = Exception("Error: ${response.code()}")))
             } catch (e: Exception) {
                 emit(ApiResult.Failure(exception = e))
             }

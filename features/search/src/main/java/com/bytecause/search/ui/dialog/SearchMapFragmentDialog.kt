@@ -1,7 +1,9 @@
 package com.bytecause.search.ui.dialog
 
+import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -172,6 +174,13 @@ class SearchMapFragmentDialog : DialogFragment() {
             }
         val progressDrawable = requireContext().getProgressBarDrawable().apply {
             setTint(ContextCompat.getColor(requireContext(), R.color.black))
+        }
+
+        binding.attributionTextView.setOnClickListener {
+            val url = "https://www.openstreetmap.org/copyright"
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse(url)
+            startActivity(intent)
         }
 
         binding.searchMapBox.searchMapEditText.apply {
@@ -392,7 +401,7 @@ class SearchMapFragmentDialog : DialogFragment() {
             else -> {
                 Toast.makeText(
                     requireContext(),
-                    getString(R.string.something_went_wrong),
+                    exception.message ?: getString(R.string.something_went_wrong),
                     Toast.LENGTH_SHORT
                 ).show()
             }

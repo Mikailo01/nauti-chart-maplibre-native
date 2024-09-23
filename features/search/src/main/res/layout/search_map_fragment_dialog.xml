@@ -1,44 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/md_theme_surface"
-    android:orientation="vertical">
+    android:background="@color/md_theme_surface">
 
-   <include layout="@layout/search_map_box"
-       android:id="@+id/search_map_box"
-       android:layout_gravity="center"
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-       android:layout_marginVertical="10dp" />
-
-    <com.google.android.material.divider.MaterialDivider
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="2dp" />
+        android:layout_height="match_parent"
+        android:layout_above="@id/attribution_text_view"
+        android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/search_map_tab_layout"
+        <include
+            android:id="@+id/search_map_box"
+            layout="@layout/search_map_box"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginVertical="10dp" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="2dp" />
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/search_map_tab_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/md_theme_surface" />
+
+        <include
+            android:id="@+id/search_view_pager"
+            layout="@layout/fragment_viewpager2" />
+
+        <ScrollView
+            android:id="@+id/search_map_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
+                android:id="@+id/searched_places_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </ScrollView>
+
+        <include
+            android:id="@+id/error_layout"
+            layout="@layout/network_error_layout" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/attribution_text_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/md_theme_surface"/>
+        android:alpha="0.6"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="5dp"
+        android:gravity="center"
+        android:textColor="@color/md_theme_onSurface"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="@string/openstreetmap" />
 
-    <include
-        android:id="@+id/search_view_pager"
-        layout="@layout/fragment_viewpager2" />
-
-    <ScrollView
-        android:id="@+id/search_map_scroll_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
-            android:id="@+id/searched_places_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </ScrollView>
-
-    <include layout="@layout/network_error_layout"
-        android:id="@+id/error_layout" />
-
-</LinearLayout>
+</RelativeLayout>
