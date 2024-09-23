@@ -45,10 +45,6 @@ import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
-import com.bytecause.map.util.MapFragmentConstants.COMPASS_BOTTOM_MARGIN
-import com.bytecause.map.util.MapFragmentConstants.COMPASS_LEFT_MARGIN
-import com.bytecause.map.util.MapFragmentConstants.COMPASS_RIGHT_MARGIN
-import com.bytecause.map.util.MapFragmentConstants.COMPASS_TOP_MARGIN
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_DEFAULT_SIZE
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX
@@ -1792,11 +1788,19 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         }
                         uiSettings.apply {
                             compassGravity = Gravity.START
+
+                            val location = IntArray(2)
+                            binding.mapLeftPanelLinearLayout.leftLinearLayout.getLocationOnScreen(
+                                location
+                            )
+                            val leftLinearLayoutBottom =
+                                location[1] + binding.mapLeftPanelLinearLayout.leftLinearLayout.height / 1.7f
+
                             setCompassMargins(
-                                COMPASS_LEFT_MARGIN,
-                                COMPASS_TOP_MARGIN,
-                                COMPASS_RIGHT_MARGIN,
-                                COMPASS_BOTTOM_MARGIN,
+                                location[0] / 2,
+                                leftLinearLayoutBottom.toInt(),
+                                0,
+                                0,
                             )
                         }
                     }

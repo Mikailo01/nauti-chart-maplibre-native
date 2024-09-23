@@ -108,7 +108,7 @@ class CustomTextInputEditText : TextInputEditText {
         top?.setBounds(0, 0, top.intrinsicWidth, top.intrinsicHeight)
         bottom?.setBounds(0, 0, bottom.intrinsicWidth, bottom.intrinsicHeight)
 
-        left?.bounds?.let leftLet@{ leftBound ->
+        left?.bounds?.let leftLet@ { leftBound ->
             right?.bounds?.let { rightBound ->
                 if (leftBound == rightBound) return@leftLet
                 right.setBounds(0, 0, leftBound.right, leftBound.bottom)

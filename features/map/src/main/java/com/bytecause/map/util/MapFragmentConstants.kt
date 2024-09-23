@@ -59,10 +59,5 @@ object MapFragmentConstants {
     const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY = "vessel_icon_drawable"
     const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX = "custom_poi_icon_"
 
-    const val COMPASS_LEFT_MARGIN = 20
-    const val COMPASS_RIGHT_MARGIN = 0
-    const val COMPASS_TOP_MARGIN = 330
-    const val COMPASS_BOTTOM_MARGIN = 0
-
     const val POIS_VISIBILITY_ZOOM_LEVEL = 10.0
 }

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +33,6 @@ import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRec
 import com.bytecause.presentation.components.views.recyclerview.adapter.GenericRecyclerViewAdapter
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.model.SearchedPlaceUiModel
-import com.bytecause.presentation.model.UiState
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.search.ui.SearchHistoryFragment
 import com.bytecause.search.ui.SearchMapCategoriesFragment
@@ -228,7 +228,10 @@ class SearchMapFragmentDialog : DialogFragment() {
             setOnTextChangedListener(object : CustomTextInputEditText.OnTextChangedListener {
                 override fun onTextChanged(text: CharSequence?) {
                     hideErrorLayout()
-                    genericRecyclerViewAdapter.updateContent(listOf())
+                    genericRecyclerViewAdapter.updateContent(emptyList())
+
+                    Log.d("idk", text.toString())
+
                     if (text.isNullOrEmpty() && genericRecyclerViewAdapter.itemCount == 0) {
                         // Clear right drawable when empty.
                         setDrawables(
@@ -239,6 +242,7 @@ class SearchMapFragmentDialog : DialogFragment() {
                         return
                     }
                     // Show right drawable if not empty.
+                    Log.d("idk", "set")
                     setDrawables(
                         right = clearTextDrawable,
                     )
@@ -260,7 +264,6 @@ class SearchMapFragmentDialog : DialogFragment() {
             setOnDrawableClickListener(object :
                 CustomTextInputEditText.OnDrawableClickListener {
                 override fun onStartDrawableClick(view: CustomTextInputEditText) {
-                    //   findNavController().popBackStack(R.id.map_dest, false)
                     findNavController().popBackStack()
                 }
 
@@ -295,16 +298,77 @@ class SearchMapFragmentDialog : DialogFragment() {
         // data returned by api or cache database
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiSearchState.collect {
-                    it ?: return@collect
+                viewModel.uiSearchState.collect { state ->
+                    state ?: return@collect
 
-                    if (it.loading.isLoading) {
-                        binding.searchMapBox.searchMapEditText.setDrawables(right = progressDrawable)
-                        (progressDrawable as? Animatable)?.start()
-                    } else {
-                        binding.searchMapBox.searchMapEditText.setDrawables(right = clearTextDrawable)
+                    when (val exception = state.error) {
+                        is IOException -> {
+                            binding.errorLayout.apply {
+                                errorImageView.apply {
+                                    setImageResource(
+                                        if (exception is ConnectException) R.drawable.service_unavailable
+                                        else R.drawable.network_error
+                                    )
+                                }
+                                errorTextView.text = resources.getString(
+                                    if (exception is ConnectException) R.string.service_unavailable
+                                    else R.string.network_error
+
+                                )
+                            }
+
+                            showErrorLayout()
+                        }
+
+                        null -> {
+                            when {
+                                state.loading.isLoading -> {
+                                    binding.searchMapBox.searchMapEditText.setDrawables(right = progressDrawable)
+                                    (progressDrawable as? Animatable)?.start()
+                                }
+
+                                else -> {
+                                    if (binding.searchMapBox.searchMapEditText.text.isNullOrEmpty()
+                                            .not()
+                                    ) {
+                                        binding.searchMapBox.searchMapEditText.setDrawables(right = clearTextDrawable)
+                                    }
+                                }
+                            }
+
+                            if (binding.searchedPlacesRecyclerView.visibility != View.VISIBLE) {
+                                binding.errorLayout.networkErrorLinearLayout.visibility = View.GONE
+                                binding.searchedPlacesRecyclerView.visibility = View.VISIBLE
+                            }
+
+                            state.items.let { searchedPlaces ->
+                                /*if (searchedPlaces.isEmpty()) {
+                                    if (MapUtil.areCoordinatesValid(binding.searchMapBox.searchMapEditText.text.toString())) {
+                                        searchByCoordinates(binding.searchMapBox.searchMapEditText.toString())
+                                    }
+                                    return@let
+                                } */
+
+                                // don't sort list if it contains single element
+                                if (searchedPlaces.size > 1) {
+                                    viewModel.sortListByDistance(
+                                        searchedPlaces,
+                                        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
+                                    ).let { sortedList ->
+                                        genericRecyclerViewAdapter.updateContent(sortedList)
+                                    }
+                                } else genericRecyclerViewAdapter.updateContent(searchedPlaces)
+                            }
+                        }
+
+                        else -> {
+                            Toast.makeText(
+                                requireContext(),
+                                exception.message ?: getString(R.string.something_went_wrong),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
-                    populateRecyclerView(it)
                 }
             }
         }
@@ -351,62 +415,6 @@ class SearchMapFragmentDialog : DialogFragment() {
             )
         }
     }*/
-
-    private fun populateRecyclerView(places: UiState<SearchedPlaceUiModel>) {
-        when (val exception = places.error) {
-            is IOException -> {
-                binding.errorLayout.apply {
-                    errorImageView.apply {
-                        setImageResource(
-                            if (exception is ConnectException) R.drawable.service_unavailable
-                            else R.drawable.network_error
-                        )
-                    }
-                    errorTextView.text = resources.getString(
-                        if (exception is ConnectException) R.string.service_unavailable
-                        else R.string.network_error
-
-                    )
-                }
-
-                showErrorLayout()
-            }
-
-            null -> {
-                if (binding.searchedPlacesRecyclerView.visibility != View.VISIBLE) {
-                    binding.errorLayout.networkErrorLinearLayout.visibility = View.GONE
-                    binding.searchedPlacesRecyclerView.visibility = View.VISIBLE
-                }
-
-                places.items.let { searchedPlaces ->
-                    /*if (searchedPlaces.isEmpty()) {
-                        if (MapUtil.areCoordinatesValid(binding.searchMapBox.searchMapEditText.text.toString())) {
-                            searchByCoordinates(binding.searchMapBox.searchMapEditText.toString())
-                        }
-                        return@let
-                    } */
-
-                    // don't sort list if it contains single element
-                    if (searchedPlaces.size > 1) {
-                        viewModel.sortListByDistance(
-                            searchedPlaces,
-                            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
-                        ).let { sortedList ->
-                            genericRecyclerViewAdapter.updateContent(sortedList)
-                        }
-                    } else genericRecyclerViewAdapter.updateContent(searchedPlaces)
-                }
-            }
-
-            else -> {
-                Toast.makeText(
-                    requireContext(),
-                    exception.message ?: getString(R.string.something_went_wrong),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
 
     override fun onStart() {
         super.onStart()
