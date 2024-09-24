@@ -18,6 +18,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val NOTIFICATION_ID = 2
+
 @AndroidEntryPoint
 class HarboursUpdateService : LifecycleService() {
 
@@ -29,10 +31,6 @@ class HarboursUpdateService : LifecycleService() {
 
     @Inject
     lateinit var updateHarboursUseCase: UpdateHarboursUseCase
-
-    companion object {
-        private const val NOTIFICATION_ID = 2
-    }
 
     override fun onCreate() {
         super.onCreate()

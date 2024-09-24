@@ -65,6 +65,10 @@
         layout="@layout/marker_bottom_sheet_layout" />
 
     <include
+        android:id="@+id/anchorage_alarm_bottom_sheet"
+        layout="@layout/anchorage_alarm_bottom_sheet_layout" />
+
+    <include
         android:id="@+id/measureDistanceBottomSheet"
         layout="@layout/measure_distance_bottom_sheet"
         tools:visibility="gone" />

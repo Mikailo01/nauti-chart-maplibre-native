@@ -54,7 +54,7 @@ class CacheManagementViewModel @Inject constructor(
 
     private var uiReadyFlag: Boolean = false
 
-    init {
+    private fun startObservingRegionDatasets() {
         // get regions datasets and their last update timestamps
         combine(
             regionRepository.getAllDownloadedRegions(),
@@ -80,9 +80,10 @@ class CacheManagementViewModel @Inject constructor(
             }
 
             uiReadyFlag = true
-        }
-            .launchIn(viewModelScope)
+        }.launchIn(viewModelScope)
+    }
 
+    private fun startObservingHarboursDataset() {
         // get harbours dataset and last update timestamp
         viewModelScope.launch {
             harboursMetadataDatasetRepository.getDataset().collect { dataset ->
@@ -100,7 +101,9 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
+    }
 
+    private fun startObservingVesselsDataset() {
         // get vessels dataset and last update timestamp
         viewModelScope.launch {
             vesselsMetadataDatasetRepository.getDataset().collect { dataset ->
@@ -116,7 +119,9 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
+    }
 
+    private fun startObservingSelectedHarboursUpdateInterval() {
         // get selected harbours update interval from preferences datastore
         viewModelScope.launch {
             userPreferencesRepository.getHarboursUpdateInterval().collect { interval ->
@@ -133,7 +138,9 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
+    }
 
+    private fun startObservingSelectedPoiUpdateInterval() {
         // get selected region pois update interval from preferences datastore
         viewModelScope.launch {
             userPreferencesRepository.getPoiUpdateInterval().collect { interval ->
@@ -148,7 +155,9 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
+    }
 
+    private fun startObservingAutoUpdatesNetworkPreference() {
         viewModelScope.launch {
             userPreferencesRepository.getAutoUpdatesNetworkPreference().collect { preference ->
                 _uiState.update {
@@ -156,6 +165,16 @@ class CacheManagementViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    init {
+        startObservingRegionDatasets()
+        startObservingHarboursDataset()
+        startObservingVesselsDataset()
+
+        startObservingSelectedHarboursUpdateInterval()
+        startObservingSelectedPoiUpdateInterval()
+        startObservingAutoUpdatesNetworkPreference()
 
         viewModelScope.launch {
             // wait until the UI is ready

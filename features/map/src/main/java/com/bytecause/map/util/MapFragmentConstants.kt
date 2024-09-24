@@ -23,6 +23,13 @@ object MapFragmentConstants {
     const val ANIMATED_CIRCLE_RADIUS = 15f
     const val ANIMATED_CIRCLE_COLOR = Color.DKGRAY
 
+    const val ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE = "ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE"
+    const val ANCHORAGE_BORDER_RADIUS_LAYER = "anchorage_border_radius_layer"
+    const val ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE =
+        "anchorage_radius_center_symbol_geojson_source"
+    const val ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER = "anchorage_radius_center_symbol_layer"
+    const val ANCHORAGE_CENTER_SYMBOL_ICON = "anchorage_center_symbol_icon"
+
     const val SYMBOL_TYPE = "symbol-type"
 
     const val POI_GEOJSON_SOURCE = "poi-geojson-source"

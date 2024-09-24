@@ -21,6 +21,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val NOTIFICATION_ID = 1
+
 @AndroidEntryPoint
 class RegionPoiDownloadService : LifecycleService() {
 
@@ -37,7 +39,6 @@ class RegionPoiDownloadService : LifecycleService() {
     lateinit var getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase
 
     companion object {
-        private const val NOTIFICATION_ID = 1
         const val REGION_ID_PARAM = "regionId"
         const val REGION_NAME_PARAM = "regionName"
     }

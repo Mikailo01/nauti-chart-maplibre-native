@@ -45,6 +45,15 @@ class MapSharedViewModel : ViewModel() {
     private val _lastKnownPosition = MutableSharedFlow<LatLng?>(1)
     val lastKnownPosition get() = _lastKnownPosition.asSharedFlow()
 
+    private val _showAnchorageAlarmBottomSheet = MutableStateFlow(false)
+    val showAnchorageAlarmBottomSheet = _showAnchorageAlarmBottomSheet.asStateFlow()
+
+    fun setShowAnchorageAlarmBottomSheet(boolean: Boolean) {
+        viewModelScope.launch {
+            _showAnchorageAlarmBottomSheet.emit(boolean)
+        }
+    }
+
     fun permissionGranted(bool: Boolean?) {
         _permissionGranted.value = bool
     }

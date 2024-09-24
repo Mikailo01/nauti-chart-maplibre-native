@@ -4,7 +4,9 @@ import android.Manifest
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.res.Resources
+import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -32,6 +34,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import coil.load
+import com.bytecause.data.services.AnchorageAlarmService
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
@@ -43,6 +46,11 @@ import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.viewmodel.MapViewModel
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_LAYER
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_CENTER_SYMBOL_ICON
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_GEOJSON_SOURCE
@@ -90,7 +98,8 @@ import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_PROPERTY_SELECT
 import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.ZOOM_IN_DEFAULT_LEVEL
 import com.bytecause.map.util.MapUtil
-import com.bytecause.map.util.MapUtil.Companion.drawLine
+import com.bytecause.map.util.MapUtil.drawLine
+import com.bytecause.map.util.MapUtil.radiusInMetersToRadiusInPixels
 import com.bytecause.map.util.navigateToCustomPoiNavigation
 import com.bytecause.map.util.navigateToFirstRunNavigation
 import com.bytecause.map.util.navigateToSearchNavigation
@@ -104,6 +113,7 @@ import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
 import com.bytecause.util.map.MapUtil.Companion.bearingTo
 import com.bytecause.util.map.TileSourceLoader
+import com.bytecause.util.map.TileSourceLoader.MAIN_LAYER_ID
 import com.bytecause.util.poi.PoiUtil
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
 import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
@@ -133,6 +143,7 @@ import org.maplibre.android.location.engine.LocationEngineResult
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMap.OnCameraMoveListener
 import org.maplibre.android.maps.MapLibreMap.OnMoveListener
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -145,7 +156,11 @@ import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
@@ -206,6 +221,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private var poisFeatureCollection: FeatureCollection? = null
 
     private var circleLayerAnimator: Animator? = null
+
+    private val onCameraMoveListener: OnCameraMoveListener = OnCameraMoveListener {
+        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let {
+            updateAnchorageRadius(mapStyle, latitude = it.latitude)
+        }
+    }
 
     private lateinit var bottomSheetLayout: LinearLayout
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
@@ -323,13 +344,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     }
 
                                     removeMarker()
-
-                                    /*// Removes all poi markers of given category if rendered
-                                    if (mapSharedViewModel.showPoiStateFlow.value != null) {
-                                        mapSharedViewModel.setPoiToShow(
-                                            null,
-                                        )
-                                    }*/
                                 }
 
                                 markerBottomSheetLayout.id -> {
@@ -462,8 +476,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                              style.addLayer(lineLayer)*/
 
                             mapSharedViewModel.setTile(tileSource)
-
-                            activateLocationComponent(style)
 
                             // Init marker icons
                             mapStyle.addImages(
@@ -1726,6 +1738,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     }
                                 }
                             }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.showAnchorageAlarmBottomSheet.collect { show ->
+                                        if (show) showAnchorageAlarmBottomSheet()
+                                        else hideAnchorageAlarmBottomSheet()
+                                    }
+                                }
+                            }
                         }
 
                         addOnMapClickListener { latLng ->
@@ -2002,6 +2023,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             tileSource = tileSource
                         )
                     }
+
+                    if (!mapLibre.locationComponent.isLocationComponentActivated) {
+                        activateLocationComponent(mapStyle)
+                    }
                 }
             }
         }
@@ -2064,6 +2089,91 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private fun showAnchorageRadius(style: Style, radiusInPixels: Float, latLng: LatLng) {
+        if (style.getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE) != null) return
+
+        val radiusBorderSource = GeoJsonSource(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE).apply {
+            setGeoJson(
+                Point.fromLngLat(
+                    latLng.longitude,
+                    latLng.latitude
+                )
+            )
+        }
+
+        val radiusBorderLayer =
+            CircleLayer(ANCHORAGE_BORDER_RADIUS_LAYER, ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
+                .withProperties(
+                    circleRadius(radiusInPixels),
+                    circleColor(Color.DKGRAY),
+                    circleOpacity(0.2f),
+                    circleStrokeWidth(2f),
+                    circleStrokeColor(Color.BLACK)
+                )
+
+        val centerRadiusSource =
+            GeoJsonSource(ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE).apply {
+                setGeoJson(
+                    Point.fromLngLat(
+                        latLng.longitude,
+                        latLng.latitude
+                    )
+                )
+            }
+
+        val centerRadiusLayer = SymbolLayer(
+            ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER,
+            ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE
+        )
+            .withProperties(
+                iconImage(ANCHORAGE_CENTER_SYMBOL_ICON)
+            )
+
+        ContextCompat.getDrawable(
+            requireContext(),
+            com.bytecause.core.resources.R.drawable.anchor
+        )?.let {
+            style.addImage(ANCHORAGE_CENTER_SYMBOL_ICON, it)
+        }
+
+        style.apply {
+            addSource(radiusBorderSource)
+            addSource(centerRadiusSource)
+
+            addLayerAbove(radiusBorderLayer, MAIN_LAYER_ID)
+            addLayerAbove(centerRadiusLayer, ANCHORAGE_BORDER_RADIUS_LAYER)
+        }
+
+        // we need camera move listener to calculate new radius in pixels on each zoom change
+        mapLibre.addOnCameraMoveListener(onCameraMoveListener)
+    }
+
+    private fun updateAnchorageRadius(style: Style, latitude: Double) {
+        val circleLayer = style.getLayerAs<CircleLayer>(ANCHORAGE_BORDER_RADIUS_LAYER)
+
+        // Update the CircleLayer properties
+        circleLayer?.setProperties(
+            circleRadius(
+                radiusInMetersToRadiusInPixels(
+                    mapLibreMap = mapLibre,
+                    radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
+                    latitude = latitude
+                )
+            )
+        )
+    }
+
+    private fun removeAnchorageRadius(style: Style) {
+        style.apply {
+            removeLayer(ANCHORAGE_BORDER_RADIUS_LAYER)
+            removeLayer(ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER)
+            removeSource(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
+            removeSource(ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE)
+        }
+
+        mapLibre.removeOnCameraMoveListener(onCameraMoveListener)
+    }
+
     // Adds a layer on which to render the tapped animation.
     private fun addPulsingCircleLayer(style: Style) {
         val circleSource = GeoJsonSource(PULSING_CIRCLE_GEOJSON_SOURCE)
@@ -2072,7 +2182,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         val circleLayer =
             CircleLayer(PULSING_CIRCLE_LAYER, PULSING_CIRCLE_GEOJSON_SOURCE)
                 .withProperties(
-                    PropertyFactory.circleColor(ANIMATED_CIRCLE_COLOR)
+                    circleColor(ANIMATED_CIRCLE_COLOR)
                 )
 
         style.addLayerBelow(circleLayer, VESSEL_SYMBOL_LAYER)
@@ -2118,14 +2228,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 if (value < 14.5f) {
                     // Circle is expanding show the circle
                     circleLayer?.setProperties(
-                        PropertyFactory.circleRadius(value),
-                        PropertyFactory.circleOpacity(1f - (value / ANIMATED_CIRCLE_RADIUS)),
+                        circleRadius(value),
+                        circleOpacity(1f - (value / ANIMATED_CIRCLE_RADIUS)),
                     )
                 } else {
                     // Value is greater than 14.5f, circle is shrinking, hide circle to prevent transition glitch
                     circleLayer?.setProperties(
-                        PropertyFactory.circleRadius(0f),
-                        PropertyFactory.circleOpacity(0f),
+                        circleRadius(0f),
+                        circleOpacity(0f),
                     )
                 }
             }
@@ -2185,7 +2295,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // Gets information about custom poi from the database and pass this state into showMarkerBottomSheet,
-// which will render this state.
+    // which will render this state.
     private fun showCustomPoiInfo(customPoiId: Int) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.searchCustomPoiById(customPoiId).firstOrNull()?.let { customPoi ->
@@ -2227,11 +2337,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             ?.let { "($it)" },
                         iconImage = null,
                         propImages = extractPropImagesFromTags(poi.tags),
-                        description = excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() }/*poi.tags.entries.joinToString(
-                            separator = "\n"
-                        ) { (key, value) ->
-                            "${formatTagString(key)}: ${formatTagString(value)}"
-                        }*/,
+                        description = excludeDescriptionKeysFromTags(poi.tags).takeIf { it.isNotBlank() },
                         contacts = extractContactsFromTags(poi.tags).takeIf { it.isNotBlank() },
                         image = replaceHttpWithHttps(poi.tags["image"]),
                         position = LatLng(poi.latitude, poi.longitude)
@@ -2370,6 +2476,68 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         )
     }
 
+    private fun showAnchorageAlarmBottomSheet() {
+        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
+            binding.anchorageAlarmBottomSheet.apply {
+                markerBottomSheetLayout.visibility = View.VISIBLE
+                radiusValueTextView.text =
+                    getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
+                        radiusSlider.value.toInt().toString(),
+                        "m"
+                    )
+
+                radiusSlider.addOnChangeListener { _, value, _ ->
+                    radiusValueTextView.text =
+                        getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
+                            value.toInt().toString(),
+                            "m"
+                        )
+
+                    updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                }
+
+                startButton.setOnClickListener {
+                    // Start service
+                    Intent(activity, AnchorageAlarmService::class.java).also {
+                        it.setAction(AnchorageAlarmService.Actions.START.toString())
+                        it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
+                        it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
+                        it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
+                        requireActivity().startService(it)
+                    }
+                }
+
+                stopButton.setOnClickListener {
+                    // Stop service
+                    Intent(
+                        activity,
+                        AnchorageAlarmService::class.java
+                    ).also {
+                        it.setAction(AnchorageAlarmService.Actions.STOP.toString())
+                        requireActivity().startService(it)
+                    }
+                }
+
+                cancelButton.setOnClickListener {
+                    removeAnchorageRadius(mapStyle)
+                    mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
+                }
+            }
+
+            showAnchorageRadius(
+                mapStyle, radiusInMetersToRadiusInPixels(
+                    mapLibreMap = mapLibre,
+                    radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
+                    latitude = latLng.latitude
+                ),
+                latLng = latLng
+            )
+        }
+    }
+
+    private fun hideAnchorageAlarmBottomSheet() {
+        binding.anchorageAlarmBottomSheet.markerBottomSheetLayout.visibility = View.GONE
+    }
 
     // Takes MarkerInfoModel state as an argument and renders it.
     private fun showMarkerBottomSheet(markerInfo: MarkerInfoModel) {

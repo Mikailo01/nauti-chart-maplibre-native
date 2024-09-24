@@ -19,19 +19,16 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CompletableDeferred
 import java.io.IOException
 
+private const val NOTIFICATION_ID = 3
+private const val CHANNEL_ID = "dataset_update_channel"
+private const val INITIAL_PROGRESS = -1
+
 @HiltWorker
 class UpdateExpiredDatasetsWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val updateExpiredDatasetsUseCase: UpdateExpiredDatasetsUseCase
 ) : CoroutineWorker(appContext, workerParams) {
-
-    companion object {
-        private const val NOTIFICATION_ID = 3
-        private const val CHANNEL_ID = "dataset_update_channel"
-
-        private const val INITIAL_PROGRESS = -1
-    }
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder

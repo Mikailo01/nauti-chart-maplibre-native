@@ -47,6 +47,29 @@
             android:orientation="vertical">
 
             <ImageButton
+                android:id="@+id/anchorage_alarm_image_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@color/transparent"
+                android:src="@drawable/anchorage_alarm"
+                app:tint="@color/md_theme_onSurface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/md_theme_onSurface"
+                android:text="@string/anchorage_alarm" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
                 android:id="@+id/salling_route_image_view"
                 android:layout_width="30dp"
                 android:layout_height="30dp"

@@ -13,7 +13,7 @@ import org.maplibre.android.style.sources.TileSet
 
 object TileSourceLoader {
 
-    private const val MAIN_LAYER_ID = "main-tile-layer"
+    const val MAIN_LAYER_ID = "main-tile-layer"
     private const val ADDITIONAL_LAYER_ID = "additional-tile-layer"
     private const val TILE_JSON = "tileset"
     private const val WORLD_BOUNDARIES_GEOJSON_NAME = "country_boundaries.geojson"
@@ -36,6 +36,7 @@ object TileSourceLoader {
                     createRasterSource(tileSource),
                 )
 
+                // add open sea map as top level layer for each tile source
                 getSourceAs<RasterSource?>(OPEN_SEA_MAP.id.name) ?: run {
                     addSource(createRasterSource(OPEN_SEA_MAP))
                 }

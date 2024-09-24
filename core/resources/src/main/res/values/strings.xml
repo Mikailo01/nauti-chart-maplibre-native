@@ -11,6 +11,8 @@
     <string name="navigation_drawer_close"> Close Drawer</string>
     <string name="my_location">This is my location</string>
     <string name="preview">Preview</string>
+    <string name="stop">Stop</string>
+    <string name="start">Start</string>
 
     <string name="download_maps"> Download maps </string>
     <string name="free"> %s </string>
@@ -25,10 +27,10 @@
 
     <string name="loading_vessels_text">Fetching vessels positions…</string>
     <string name="loading_harbours_text">Fetching harbours…</string>
-    <string name="legal_notice">Legal Notice</string>
-    <string name="runtime_dialog_description">This tile provider doesn\'t approve offline downloads. Please use different tile provider.</string>
     <string name="vessels">Vessels</string>
     <string name="vessel_content_description">Vessel\'s info description.</string>
+
+    <string name="radius_value_placeholder">%1s %2s</string>
 
     <string name="implicit_geo_intent_title">Choose an application</string>
     <string name="implicit_geo_info_arg">Location: %1s, %2s</string>
@@ -71,6 +73,8 @@
     <string name="harbours_dataset_is_being_updated">Harbours dataset is being updated</string>
     <string name="region_dataset_is_being_updated">%1s dataset is being updated</string>
     <string name="updating_harbours">Updating Harbours</string>
+    <string name="anchorage_alarm">Anchorage Alarm</string>
+    <string name="anchorage_alarm_running">Anchorage Alarm Running</string>
     <string name="downloading_region">Downloading %1s Region Dataset</string>
     <string name="update_interval">Update interval</string>
     <string name="data_will_be_permanently_deleted.">Data will be permanently deleted.</string>
@@ -86,6 +90,7 @@
     <string name="travel_plans">Travel plans</string>
     <string name="category_name">Category name</string>
     <string name="save">Save</string>
+    <string name="radius">Radius:</string>
     <string name="new_category">New category</string>
     <string name="empty_list">Empty list</string>
     <string name="distance_from_geopoint">Distance: %1s</string>
@@ -116,8 +121,8 @@
     <string name="download_map">Download map</string>
     <string name="download_poi">Download POI</string>
     <string name="customize_map">Customize map</string>
-    <string name="custom_map">Custom map</string>
-    <string name="sailing_route">Sailing route</string>
+    <string name="custom_map">Custom Map</string>
+    <string name="sailing_route">Sailing Route</string>
     <string name="nothing_found_text_place_holder">%1s found in %2s %3s</string>
     <string name="extend_search_radius_text_place_holder">Extend search radius to %1s %2s</string>
     <string name="unknown_location_title">Couldn\'t determine your current location.</string>
