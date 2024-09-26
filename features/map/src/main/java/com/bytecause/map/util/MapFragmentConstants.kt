@@ -29,6 +29,7 @@ object MapFragmentConstants {
         "anchorage_radius_center_symbol_geojson_source"
     const val ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER = "anchorage_radius_center_symbol_layer"
     const val ANCHORAGE_CENTER_SYMBOL_ICON = "anchorage_center_symbol_icon"
+    const val ANIMATE_TO_RADIUS_BOUNDS_PADDING = 150
 
     const val SYMBOL_TYPE = "symbol-type"
 

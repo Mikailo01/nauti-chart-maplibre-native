@@ -11,6 +11,7 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -53,6 +54,7 @@ import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBO
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
+import com.bytecause.map.util.MapFragmentConstants.ANIMATE_TO_RADIUS_BOUNDS_PADDING
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_DEFAULT_SIZE
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX
@@ -98,6 +100,7 @@ import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_PROPERTY_SELECT
 import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.ZOOM_IN_DEFAULT_LEVEL
 import com.bytecause.map.util.MapUtil
+import com.bytecause.map.util.MapUtil.calculateBoundsForRadius
 import com.bytecause.map.util.MapUtil.drawLine
 import com.bytecause.map.util.MapUtil.radiusInMetersToRadiusInPixels
 import com.bytecause.map.util.navigateToCustomPoiNavigation
@@ -170,6 +173,7 @@ import org.maplibre.android.style.layers.PropertyFactory.textFont
 import org.maplibre.android.style.layers.PropertyFactory.textMaxWidth
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonOptions
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -1747,6 +1751,87 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     }
                                 }
                             }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.runningAnchorageAlarm.collect { anchorageAlarm ->
+                                        if (anchorageAlarm.isRunning) {
+                                            showAnchorageRadius(
+                                                style, radiusInMetersToRadiusInPixels(
+                                                    mapLibreMap = mapLibreMap,
+                                                    radiusInMeters = anchorageAlarm.radius,
+                                                    latitude = anchorageAlarm.latitude
+                                                ),
+                                                latLng = LatLng(
+                                                    latitude = anchorageAlarm.latitude,
+                                                    longitude = anchorageAlarm.longitude
+                                                )
+                                            )
+
+                                            binding.mapBottomRightPanelLinearLayout.apply {
+                                                mapBottomRightButtonsLinearLayout.visibility =
+                                                    View.VISIBLE
+                                                anchorageAlarmButton.setOnClickListener {
+                                                    mapSharedViewModel.setShowAnchorageAlarmBottomSheet(
+                                                        true
+                                                    )
+
+                                                    if (anchorageAlarm.radius >= 15f) {
+                                                        mapLibreMap.animateCamera(
+                                                            CameraUpdateFactory.newLatLngBounds(
+                                                                bounds = calculateBoundsForRadius(
+                                                                    radiusInMeters = anchorageAlarm.radius,
+                                                                    centerLatitude = anchorageAlarm.latitude,
+                                                                    centerLongitude = anchorageAlarm.longitude
+                                                                ),
+                                                                paddingRight = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
+                                                                paddingLeft = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
+                                                                paddingBottom = 0,
+                                                                paddingTop = 0
+                                                            )
+                                                        )
+                                                    } else {
+                                                        mapLibreMap.animateCamera(
+                                                            CameraUpdateFactory.newLatLngZoom(
+                                                                latLng = LatLng(
+                                                                    latitude = anchorageAlarm.latitude,
+                                                                    longitude = anchorageAlarm.longitude
+                                                                ),
+                                                                zoom = style.getLayerAs<RasterLayer>(
+                                                                    MAIN_LAYER_ID
+                                                                )?.maxZoom?.toDouble() ?: 18.0
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            binding.anchorageAlarmBottomSheet.apply {
+                                                startButton.isEnabled = false
+                                                stopButton.isEnabled = true
+                                                radiusSlider.isEnabled = false
+                                                radiusSlider.value = anchorageAlarm.radius
+                                                radiusValueTextView.text =
+                                                    getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
+                                                        anchorageAlarm.radius.toInt().toString(),
+                                                        "m"
+                                                    )
+                                            }
+                                        } else {
+                                            binding.mapBottomRightPanelLinearLayout.mapBottomRightButtonsLinearLayout.visibility =
+                                                View.GONE
+                                            binding.anchorageAlarmBottomSheet.apply {
+                                                if (markerBottomSheetLayout.visibility != View.VISIBLE) {
+                                                    removeAnchorageRadius(style)
+                                                }
+
+                                                startButton.isEnabled = true
+                                                stopButton.isEnabled = false
+                                                radiusSlider.isEnabled = true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         addOnMapClickListener { latLng ->
@@ -1784,7 +1869,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
 
                                 override fun onMoveBegin(detector: MoveGestureDetector) {}
-                                override fun onMoveEnd(detector: MoveGestureDetector) {}
+                                override fun onMoveEnd(detector: MoveGestureDetector) {
+                                    Log.d("idk", mapLibreMap.cameraPosition.zoom.toString())
+                                }
                             },
                         )
 
@@ -1811,11 +1898,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             compassGravity = Gravity.START
 
                             val location = IntArray(2)
-                            binding.mapLeftPanelLinearLayout.leftLinearLayout.getLocationOnScreen(
+                            binding.mapTopLeftPanelLinearLayout.leftLinearLayout.getLocationOnScreen(
                                 location
                             )
                             val leftLinearLayoutBottom =
-                                location[1] + binding.mapLeftPanelLinearLayout.leftLinearLayout.height / 1.7f
+                                location[1] + binding.mapTopLeftPanelLinearLayout.leftLinearLayout.height / 1.7f
 
                             setCompassMargins(
                                 location[0] / 2,
@@ -1932,7 +2019,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             isLongClickable = false
         }
 
-        binding.mapRightPanelLinearLayout.locationButton.setOnClickListener {
+        binding.mapTopRightPanelLinearLayout.locationButton.setOnClickListener {
             if (!lastClick.lastClick(300)) return@setOnClickListener
 
             if (requireContext().isLocationPermissionGranted()) {
@@ -1946,12 +2033,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
-        binding.mapRightPanelLinearLayout.layersButton.setOnClickListener {
+        binding.mapTopRightPanelLinearLayout.layersButton.setOnClickListener {
             if (!lastClick.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapFragment_to_mapBottomSheetFragment)
         }
 
-        binding.mapLeftPanelLinearLayout.customizeMapImageButton.setOnClickListener {
+        binding.mapTopLeftPanelLinearLayout.customizeMapImageButton.setOnClickListener {
             if (!lastClick.lastClick(1000)) return@setOnClickListener
             findNavController().navigate(R.id.action_mapFragment_to_customizeMapDialog)
         }
@@ -2056,18 +2143,18 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         true -> {
                             binding.searchMapBox.searchBoxLinearLayout.visibility =
                                 View.GONE
-                            binding.mapLeftPanelLinearLayout.leftLinearLayout.visibility =
+                            binding.mapTopLeftPanelLinearLayout.leftLinearLayout.visibility =
                                 View.GONE
-                            binding.mapRightPanelLinearLayout.mapButtonsLayerLinearLayout.visibility =
+                            binding.mapTopRightPanelLinearLayout.mapButtonsLayerLinearLayout.visibility =
                                 View.GONE
                         }
 
                         false -> {
                             binding.searchMapBox.searchBoxLinearLayout.visibility =
                                 View.VISIBLE
-                            binding.mapLeftPanelLinearLayout.leftLinearLayout.visibility =
+                            binding.mapTopLeftPanelLinearLayout.leftLinearLayout.visibility =
                                 View.VISIBLE
-                            binding.mapRightPanelLinearLayout.mapButtonsLayerLinearLayout.visibility =
+                            binding.mapTopRightPanelLinearLayout.mapButtonsLayerLinearLayout.visibility =
                                 View.VISIBLE
                         }
                     }
@@ -2478,22 +2565,29 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private fun showAnchorageAlarmBottomSheet() {
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
+
             binding.anchorageAlarmBottomSheet.apply {
                 markerBottomSheetLayout.visibility = View.VISIBLE
                 radiusValueTextView.text =
                     getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
-                        radiusSlider.value.toInt().toString(),
+                        if (viewModel.runningAnchorageAlarm.value.isRunning) {
+                            viewModel.runningAnchorageAlarm.value.radius.toInt().toString()
+                        } else radiusSlider.value.toInt().toString(),
                         "m"
                     )
 
-                radiusSlider.addOnChangeListener { _, value, _ ->
-                    radiusValueTextView.text =
-                        getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
-                            value.toInt().toString(),
-                            "m"
-                        )
+                radiusSlider.apply {
+                    if (viewModel.runningAnchorageAlarm.value.isRunning) value =
+                        viewModel.runningAnchorageAlarm.value.radius
+                    addOnChangeListener { _, value, _ ->
+                        radiusValueTextView.text =
+                            getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
+                                value.toInt().toString(),
+                                "m"
+                            )
 
-                    updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                        updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                    }
                 }
 
                 startButton.setOnClickListener {
@@ -2518,20 +2612,23 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     }
                 }
 
-                cancelButton.setOnClickListener {
-                    removeAnchorageRadius(mapStyle)
+                closeButton.setOnClickListener {
+                    if (viewModel.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
+                        mapStyle
+                    )
                     mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
                 }
-            }
 
-            showAnchorageRadius(
-                mapStyle, radiusInMetersToRadiusInPixels(
-                    mapLibreMap = mapLibre,
-                    radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
-                    latitude = latLng.latitude
-                ),
-                latLng = latLng
-            )
+                showAnchorageRadius(
+                    style = mapStyle,
+                    radiusInPixels = radiusInMetersToRadiusInPixels(
+                        mapLibreMap = mapLibre,
+                        radiusInMeters = radiusSlider.value,
+                        latitude = latLng.latitude
+                    ),
+                    latLng = latLng
+                )
+            }
         }
     }
 
@@ -2801,11 +2898,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
         viewModel.setIsMeasuring(true)
 
-        binding.mapRightPanelLinearLayout.layersButton.visibility = View.GONE
-        binding.mapLeftPanelLinearLayout.leftLinearLayout.visibility = View.GONE
+        binding.mapTopRightPanelLinearLayout.layersButton.visibility = View.GONE
+        binding.mapTopLeftPanelLinearLayout.leftLinearLayout.visibility = View.GONE
 
         val layoutParams =
-            binding.mapRightPanelLinearLayout.locationButton.layoutParams as ViewGroup.MarginLayoutParams
+            binding.mapTopRightPanelLinearLayout.locationButton.layoutParams as ViewGroup.MarginLayoutParams
         layoutParams.topMargin = 65
 
         binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility = View.VISIBLE
@@ -2838,12 +2935,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
 
         binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility = View.GONE
-        binding.mapRightPanelLinearLayout.layersButton.visibility = View.VISIBLE
-        binding.mapLeftPanelLinearLayout.leftLinearLayout.visibility = View.VISIBLE
+        binding.mapTopRightPanelLinearLayout.layersButton.visibility = View.VISIBLE
+        binding.mapTopLeftPanelLinearLayout.leftLinearLayout.visibility = View.VISIBLE
         measureBottomSheetBehavior.state = STATE_HIDDEN
         showBottomSheetLayout()
 
-        (binding.mapRightPanelLinearLayout.locationButton.layoutParams as ViewGroup.MarginLayoutParams).apply {
+        (binding.mapTopRightPanelLinearLayout.locationButton.layoutParams as ViewGroup.MarginLayoutParams).apply {
             topMargin = 0
         }
 

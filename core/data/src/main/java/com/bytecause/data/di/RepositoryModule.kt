@@ -13,6 +13,7 @@ import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
+import com.bytecause.data.repository.AnchorageAlarmRepositoryImpl
 import com.bytecause.data.repository.CountryRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineRasterTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineVectorTileSourceRepositoryImpl
@@ -26,6 +27,7 @@ import com.bytecause.data.repository.RadiusPoiCacheRepositoryImpl
 import com.bytecause.data.repository.RadiusPoiMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
+import com.bytecause.data.repository.abstractions.AnchorageAlarmRepository
 import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
@@ -117,6 +119,11 @@ object RepositoryModule {
         UserPreferencesRepositoryImpl(
             context.userDataStore
         )
+
+    @Provides
+    @Singleton
+    fun providesAnchorageAlarmRepository(@ApplicationContext context: Context): AnchorageAlarmRepository =
+        AnchorageAlarmRepositoryImpl(context = context)
 
     @Provides
     @Singleton

@@ -14,13 +14,20 @@ import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
+import com.bytecause.data.repository.abstractions.AnchorageAlarmRepository
+import com.bytecause.domain.model.RunningAnchorageAlarmModel
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 
 private const val NOTIFICATION_ID = 4
 private const val CHANNEL_ID = "anchorage_alarm_channel"
 
 // TODO("Finish implementation")
+@AndroidEntryPoint
 class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     private lateinit var notificationManager: NotificationManager
@@ -32,6 +39,9 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     private lateinit var locationManager: LocationManager
 
     private var ringtone: Ringtone? = null
+
+    @Inject
+    lateinit var anchorageAlarmRepository: AnchorageAlarmRepository
 
     companion object {
         const val EXTRA_RADIUS = "EXTRA_RADIUS"
@@ -82,6 +92,25 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         }
     }
 
+    private fun saveRunningAnchorageAlarm() {
+        lifecycleScope.launch {
+            anchorageAlarmRepository.saveRunningAnchorageAlarm(
+                RunningAnchorageAlarmModel(
+                    isRunning = true,
+                    latitude = centerLat,
+                    longitude = centerLng,
+                    radius = radius
+                )
+            )
+        }
+    }
+
+    private fun removeRunningAnchorageAlarm() {
+        lifecycleScope.launch {
+            anchorageAlarmRepository.deleteRunningAnchorageAlarm()
+        }
+    }
+
     // Start location updates
     @Suppress("MissingPermission")
     private fun startLocationUpdates() {
@@ -103,6 +132,8 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         notificationBuilder
             .setContentText("You have moved outside the defined radius!")
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+
+        playAlarmSound()
     }
 
     private fun playAlarmSound() {
@@ -134,7 +165,10 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
         if (distance > radius) {
             triggerAlarmNotification()
-            playAlarmSound()
+        } else {
+            if (ringtone != null) {
+                triggerDefaultNotification()
+            }
         }
     }
 
@@ -159,11 +193,26 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
             .setOngoing(true)
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        saveRunningAnchorageAlarm()
+    }
+
+    private fun triggerDefaultNotification() {
+        notificationBuilder
+            .setContentText(null)
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+
+        stopRingtone()
+    }
+
+    private fun stopRingtone() {
+        ringtone?.stop()
+        ringtone = null
     }
 
     private fun stopService() {
         ringtone?.stop()
         locationManager.removeUpdates(this)
+        removeRunningAnchorageAlarm()
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

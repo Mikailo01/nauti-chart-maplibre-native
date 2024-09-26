@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/map_bottom_right_buttons_linear_layout"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentEnd="true"
+    android:gravity="end"
+    android:orientation="vertical"
+    android:visibility="gone"
+    tools:showIn="@layout/fragment_map"
+    tools:visibility="visible">
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/anchorage_alarm_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="100dp"
+        android:background="@drawable/custom_location_image_button_shape"
+        android:padding="@dimen/map_button_margin"
+        android:src="@drawable/anchor" />
+</LinearLayout>

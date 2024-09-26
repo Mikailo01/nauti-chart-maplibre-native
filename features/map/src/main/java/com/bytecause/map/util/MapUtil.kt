@@ -1,6 +1,5 @@
 package com.bytecause.map.util
 
-import android.graphics.Color
 import android.util.Log
 import androidx.annotation.ColorInt
 import androidx.core.text.isDigitsOnly
@@ -13,7 +12,9 @@ import org.maplibre.android.plugins.annotation.LineManager
 import org.maplibre.android.plugins.annotation.LineOptions
 import java.math.RoundingMode
 import java.util.Locale
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 
 object MapUtil {
     fun drawLine(
@@ -46,19 +47,6 @@ object MapUtil {
         }
     }
 
-    fun determineVesselColorType2(type: String): Int {
-        return when (type) {
-            "1" -> Color.RED
-            "3" -> Color.GREEN
-            "4" -> Color.BLUE
-            "6" -> Color.CYAN
-            "7" -> Color.MAGENTA
-            "8" -> Color.YELLOW
-            "9" -> Color.BLACK
-            else -> Color.LTGRAY
-        }
-    }
-
     fun determineVesselType(type: String): Int {
         return when (type) {
             "1" -> com.bytecause.core.resources.R.string.vessel_type_1
@@ -83,6 +71,30 @@ object MapUtil {
         val lngDifference = abs(point1.longitude - point2.longitude)
 
         return latDifference <= delta && lngDifference <= delta
+    }
+
+    fun calculateBoundsForRadius(
+        radiusInMeters: Float,
+        centerLatitude: Double,
+        centerLongitude: Double
+    ): LatLngBounds {
+        val earthEquatorialRadius = 6378.137
+        val m = (1 / ((2 * PI / 360) * earthEquatorialRadius)) / 1000 // 1 meter in degree
+
+        val positiveLatitude = centerLatitude + (radiusInMeters * m)
+        val positiveLongitude = centerLongitude + (radiusInMeters * m) / cos(
+            centerLatitude * (PI / 180)
+        )
+
+        val negativeLatitude = centerLatitude - (radiusInMeters * m)
+        val negativeLongitude = centerLongitude - (radiusInMeters * m) / cos(
+            centerLatitude * (PI / 180)
+        )
+
+        val northEast = LatLng(latitude = positiveLatitude, longitude = positiveLongitude)
+        val southWest = LatLng(latitude = negativeLatitude, longitude = negativeLongitude)
+
+        return LatLngBounds.fromLatLngs(listOf(northEast, southWest))
     }
 
     /** This method take international date line into consideration. **/

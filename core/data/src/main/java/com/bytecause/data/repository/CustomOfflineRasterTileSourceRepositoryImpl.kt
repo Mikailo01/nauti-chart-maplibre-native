@@ -1,7 +1,6 @@
 package com.bytecause.data.repository
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.dataStore
@@ -65,15 +64,12 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
 
         emit(deletedItemName)
     }
-        .flowOn(coroutineDispatcher)
         .catch { exception ->
             exception.printStackTrace()
-            if (exception is IOException) {
-                emit(null)
-            } else {
-                throw exception
-            }
+            if (exception is IOException) emit(null)
+            else throw exception
         }
+        .flowOn(coroutineDispatcher)
 
     override fun getOfflineRasterTileSourceProviders(): Flow<List<CustomTileProvider>> =
         context.customOfflineRasterTileSourceDataStore.data.map {
@@ -94,15 +90,12 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
                 }
             }
         }
-            .flowOn(coroutineDispatcher)
             .catch { exception ->
                 exception.printStackTrace()
-                if (exception is IOException) {
-                    emit(listOf(CustomTileProvider(CustomTileProviderType.Raster.Offline())))
-                } else {
-                    throw exception
-                }
+                if (exception is IOException) emit(listOf(CustomTileProvider(CustomTileProviderType.Raster.Offline())))
+                else throw exception
             }
+            .flowOn(coroutineDispatcher)
 
     private fun tilesExist(tilesName: String): Boolean {
         val file = File(context.offlineTilesDir())

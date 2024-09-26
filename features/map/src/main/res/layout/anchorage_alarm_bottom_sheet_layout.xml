@@ -78,11 +78,11 @@
                 android:layout_weight="1" />
 
             <Button
-                android:id="@+id/cancel_button"
+                android:id="@+id/close_button"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/cancel"
+                android:text="@string/close"
                 android:textColor="@color/md_theme_error" />
         </LinearLayout>
     </LinearLayout>

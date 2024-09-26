@@ -3,6 +3,7 @@ package com.bytecause.map.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.CustomPoiEntity
+import com.bytecause.data.repository.abstractions.AnchorageAlarmRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
@@ -21,9 +22,11 @@ import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
+import com.bytecause.map.ui.mappers.asRunningAnchorageAlarmUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
+import com.bytecause.map.ui.model.RunningAnchorageAlarmUiModel
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.mappers.asLatLng
@@ -64,6 +67,7 @@ constructor(
     private val customPoiRepository: CustomPoiRepository,
     getVesselsUseCase: GetVesselsUseCase,
     getHarboursUseCase: GetHarboursUseCase,
+    anchorageAlarmRepository: AnchorageAlarmRepository,
     private val vesselsDatabaseRepository: VesselsDatabaseRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
@@ -89,6 +93,15 @@ constructor(
 
     val areHarboursVisible: StateFlow<Boolean> = userPreferencesRepository.getAreHarboursVisible()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val runningAnchorageAlarm: StateFlow<RunningAnchorageAlarmUiModel> =
+        anchorageAlarmRepository.getRunningAnchorageAlarm()
+            .map { it.asRunningAnchorageAlarmUiModel() }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                RunningAnchorageAlarmUiModel()
+            )
 
     var isMeasuring = false
         private set

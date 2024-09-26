@@ -36,8 +36,8 @@
             layout="@layout/search_map_box" />
 
         <include
-            android:id="@+id/map_left_panel_linear_layout"
-            layout="@layout/map_left_panel"
+            android:id="@+id/map_top_left_panel_linear_layout"
+            layout="@layout/map_top_left_panel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/search_map_box"
@@ -45,14 +45,23 @@
             android:layout_marginStart="10dp" />
 
         <include
-            android:id="@+id/map_right_panel_linear_layout"
-            layout="@layout/map_right_panel"
+            android:id="@+id/map_top_right_panel_linear_layout"
+            layout="@layout/map_top_right_panel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/search_map_box"
             android:layout_alignParentEnd="true"
             android:layout_marginTop="5dp"
             android:layout_marginEnd="10dp" />
+
+        <include
+            android:id="@+id/map_bottom_right_panel_linear_layout"
+            layout="@layout/map_bottom_right_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true" />
 
     </RelativeLayout>
 

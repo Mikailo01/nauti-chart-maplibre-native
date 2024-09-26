@@ -22,7 +22,7 @@ object DefaultTileSources {
             id = TileSourceId.OPEN_TOPO_MAP_SOURCE_ID,
             url = arrayOf("https://tile.opentopomap.org/{z}/{x}/{y}.png"),
             minZoom = 3F,
-            maxZoom = 18F,
+            maxZoom = 19F,
         )
 
     val OPEN_SEA_MAP =
