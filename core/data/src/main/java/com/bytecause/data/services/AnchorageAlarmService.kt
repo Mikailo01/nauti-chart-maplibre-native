@@ -23,9 +23,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
-private const val NOTIFICATION_ID = 4
-private const val CHANNEL_ID = "anchorage_alarm_channel"
-
 // TODO("Finish implementation")
 @AndroidEntryPoint
 class AnchorageAlarmService : LifecycleService(), LocationListener {
@@ -44,6 +41,9 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     lateinit var anchorageAlarmRepository: AnchorageAlarmRepository
 
     companion object {
+        private const val NOTIFICATION_ID = 4
+        private const val CHANNEL_ID = "anchorage_alarm_channel"
+
         const val EXTRA_RADIUS = "EXTRA_RADIUS"
         const val EXTRA_LATITUDE = "EXTRA_LATITUDE"
         const val EXTRA_LONGITUDE = "EXTRA_LONGITUDE"

@@ -30,7 +30,7 @@
     <string name="vessels">Vessels</string>
     <string name="vessel_content_description">Vessel\'s info description.</string>
 
-    <string name="radius_value_placeholder">%1s %2s</string>
+    <string name="value_with_unit_placeholder">%1s %2s</string>
 
     <string name="implicit_geo_intent_title">Choose an application</string>
     <string name="implicit_geo_info_arg">Location: %1s, %2s</string>
@@ -91,6 +91,8 @@
     <string name="category_name">Category name</string>
     <string name="save">Save</string>
     <string name="radius">Radius:</string>
+    <string name="distance_from_anchor">Distance from anchor:</string>
+    <string name="could_not_determine_current_position">Couldn\'t determine current position.</string>
     <string name="new_category">New category</string>
     <string name="empty_list">Empty list</string>
     <string name="distance_from_geopoint">Distance: %1s</string>

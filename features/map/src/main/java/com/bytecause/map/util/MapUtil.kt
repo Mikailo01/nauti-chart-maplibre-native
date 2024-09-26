@@ -13,8 +13,9 @@ import org.maplibre.android.plugins.annotation.LineOptions
 import java.math.RoundingMode
 import java.util.Locale
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.max
 
 object MapUtil {
     fun drawLine(
@@ -63,14 +64,36 @@ object MapUtil {
     fun arePointsWithinDelta(
         point1: LatLng?,
         point2: LatLng?,
-        delta: Double = 1e-5,
+        deltaInMeters: Double = 1.0
     ): Boolean {
         if (point1 == null || point2 == null) return false
 
-        val latDifference = abs(point1.latitude - point2.latitude)
-        val lngDifference = abs(point1.longitude - point2.longitude)
+        // Use the distanceTo method to calculate the distance in meters
+        val differenceInMeters = point1.distanceTo(point2)
 
-        return latDifference <= delta && lngDifference <= delta
+        return differenceInMeters <= deltaInMeters
+    }
+
+    /**
+     * Calculates the optimal zoom level for a bounding box defined by the
+     * specified North-East and South-West geographical coordinates.
+     *
+     * @param northEast The North-East corner of the bounding box as a [LatLng].
+     * @param southWest The South-West corner of the bounding box as a [LatLng].
+     * @return The calculated zoom level as a [Double]. The value is constrained
+     *         to be at least 1.0, where 1.0 represents the minimum zoom level
+     *         for the map.
+     */
+    fun calculateZoomForBounds(northEast: LatLng, southWest: LatLng): Double {
+        var zoomLevel: Double
+        val latDiff: Double = northEast.latitude - southWest.latitude
+        val lngDiff: Double = northEast.longitude - southWest.longitude
+
+        val maxDiff = max(lngDiff, latDiff)
+        zoomLevel = (-1 * ((ln(maxDiff) / ln(2.0)) - (ln(360.0) / ln(2.0))))
+        if (zoomLevel < 1) zoomLevel = 1.0
+
+        return zoomLevel
     }
 
     fun calculateBoundsForRadius(
@@ -112,6 +135,7 @@ object MapUtil {
                     (latLng.latitude in boundingBox.latitudeSouth..boundingBox.latitudeNorth)
         }
     }
+
 
     fun radiusInMetersToRadiusInPixels(
         mapLibreMap: MapLibreMap,

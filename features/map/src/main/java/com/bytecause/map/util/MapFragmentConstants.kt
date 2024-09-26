@@ -14,6 +14,9 @@ object MapFragmentConstants {
     const val MAP_MARKER = "map_marker"
     const val LINE_WIDTH = 2f
 
+    const val MEASURE_LINE_GEOJSON_SOURCE = "measure_line_geojson_source"
+    const val MEASURE_LINE_LAYER = "measure_line_layer"
+
     const val SYMBOL_ICON_ANCHOR_BOTTOM = ICON_ANCHOR_BOTTOM
     const val SYMBOL_ICON_ANCHOR_CENTER = ICON_ANCHOR_CENTER
 
@@ -23,13 +26,16 @@ object MapFragmentConstants {
     const val ANIMATED_CIRCLE_RADIUS = 15f
     const val ANIMATED_CIRCLE_COLOR = Color.DKGRAY
 
-    const val ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE = "ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE"
+    const val ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE = "anchorage_border_radius_geojson_source"
     const val ANCHORAGE_BORDER_RADIUS_LAYER = "anchorage_border_radius_layer"
     const val ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE =
         "anchorage_radius_center_symbol_geojson_source"
     const val ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER = "anchorage_radius_center_symbol_layer"
     const val ANCHORAGE_CENTER_SYMBOL_ICON = "anchorage_center_symbol_icon"
     const val ANIMATE_TO_RADIUS_BOUNDS_PADDING = 150
+
+    const val ANCHOR_CHAIN_LINE_GEOJSON_SOURCE = "anchor_chain_line_geojson_source"
+    const val ANCHOR_CHAIN_LINE_LAYER = "anchor_chain_line_layer"
 
     const val SYMBOL_TYPE = "symbol-type"
 

@@ -11,7 +11,6 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Looper
-import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -45,6 +44,7 @@ import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
 import com.bytecause.map.ui.model.MarkerInfoModel
+import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE
@@ -52,6 +52,8 @@ import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_CENTER_SYMBOL_ICON
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.ANCHOR_CHAIN_LINE_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_COLOR
 import com.bytecause.map.util.MapFragmentConstants.ANIMATED_CIRCLE_RADIUS
 import com.bytecause.map.util.MapFragmentConstants.ANIMATE_TO_RADIUS_BOUNDS_PADDING
@@ -72,6 +74,8 @@ import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_PROPERTY_SELEC
 import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.LINE_WIDTH
 import com.bytecause.map.util.MapFragmentConstants.MAP_MARKER
+import com.bytecause.map.util.MapFragmentConstants.MEASURE_LINE_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.MEASURE_LINE_LAYER
 import com.bytecause.map.util.MapFragmentConstants.PIN_ICON
 import com.bytecause.map.util.MapFragmentConstants.POIS_VISIBILITY_ZOOM_LEVEL
 import com.bytecause.map.util.MapFragmentConstants.POI_CATEGORY_KEY
@@ -101,6 +105,7 @@ import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.ZOOM_IN_DEFAULT_LEVEL
 import com.bytecause.map.util.MapUtil
 import com.bytecause.map.util.MapUtil.calculateBoundsForRadius
+import com.bytecause.map.util.MapUtil.calculateZoomForBounds
 import com.bytecause.map.util.MapUtil.drawLine
 import com.bytecause.map.util.MapUtil.radiusInMetersToRadiusInPixels
 import com.bytecause.map.util.navigateToCustomPoiNavigation
@@ -111,6 +116,7 @@ import com.bytecause.presentation.interfaces.DrawerController
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.model.PointType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
+import com.bytecause.util.color.toHexString
 import com.bytecause.util.common.LastClick
 import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
@@ -159,6 +165,7 @@ import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
@@ -168,6 +175,9 @@ import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
 import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineDasharray
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.layers.PropertyFactory.textField
 import org.maplibre.android.style.layers.PropertyFactory.textFont
 import org.maplibre.android.style.layers.PropertyFactory.textMaxWidth
@@ -179,6 +189,7 @@ import org.maplibre.android.style.sources.GeoJsonOptions
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -216,7 +227,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private lateinit var mapStyle: Style
 
     private var symbolManager: SymbolManager? = null
-    private var lineManager: LineManager? = null
     private var boundaryManager: LineManager? = null
     private var markerSymbol: Symbol? = null
     private var vesselsFeatureCollection: FeatureCollection? = null
@@ -242,6 +252,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private lateinit var measureBottomSheetLayout: LinearLayout
     private lateinit var measureBottomSheetBehavior: BottomSheetBehavior<LinearLayout>
 
+    private lateinit var anchorageAlarmBottomSheetLayout: LinearLayout
+    private lateinit var anchorageAlarmBottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
     private var locationButtonState: Int = DEFAULT_BUTTON_STATE
@@ -257,6 +270,34 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             if (::mapStyle.isInitialized) activateLocationComponent(mapStyle)
         }
     }
+
+    private val locationEngineCallback: LocationEngineCallback<LocationEngineResult> =
+        object : LocationEngineCallback<LocationEngineResult> {
+            override fun onSuccess(p0: LocationEngineResult?) {
+                if (p0 == null) return
+
+                p0.lastLocation?.run {
+                    LatLng(
+                        latitude = latitude,
+                        longitude = longitude,
+                    ).let {
+                        if (MapUtil.arePointsWithinDelta(
+                                it,
+                                mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull(),
+                            )
+                        ) {
+                            return@let
+                        }
+                        // save location into preferences datastore
+                        viewModel.saveUserLocation(it)
+                        mapSharedViewModel.setLastKnownPosition(it)
+                    }
+                    locationComponent?.forceLocationUpdate(this)
+                }
+            }
+
+            override fun onFailure(p0: java.lang.Exception) {}
+        }
 
     private val activityResultLauncher =
         registerForActivityResult(
@@ -284,6 +325,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                     markerBottomSheetBehavior.state == STATE_EXPANDED || markerBottomSheetBehavior.state == STATE_COLLAPSED -> {
                         closeMarkerBottomSheetLayout()
+                    }
+
+                    anchorageAlarmBottomSheetBehavior.state == STATE_EXPANDED || anchorageAlarmBottomSheetBehavior.state == STATE_COLLAPSED -> {
+                        closeAnchorageAlarmBottomSheet()
                     }
 
                     mapSharedViewModel.showPoiStateFlow.value != null -> {
@@ -343,6 +388,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         STATE_HIDDEN -> {
                             when (bottomSheet.id) {
                                 bottomSheetLayout.id -> {
+                                    bottomSheetLayout.visibility = View.GONE
+
                                     if (mapSharedViewModel.geoIntentFlow.replayCache.lastOrNull() != null) {
                                         mapSharedViewModel.resetGeoIntentFlow()
                                     }
@@ -351,6 +398,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
 
                                 markerBottomSheetLayout.id -> {
+                                    markerBottomSheetLayout.visibility = View.GONE
+
                                     // Resets clicked feature state if necessary
                                     when (viewModel.selectedFeatureIdFlow.value) {
                                         is FeatureType.Vessel -> {
@@ -395,7 +444,16 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     }
                                 }
 
-                                else -> return
+                                anchorageAlarmBottomSheetLayout.id -> {
+                                    anchorageAlarmBottomSheetLayout.visibility = View.GONE
+                                    if (viewModel.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
+                                        mapStyle
+                                    )
+                                }
+
+                                measureBottomSheetLayout.id -> {
+                                    measureBottomSheetLayout.visibility = View.GONE
+                                }
                             }
                         }
 
@@ -443,6 +501,16 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         measureBottomSheetLayout = binding.measureDistanceBottomSheet.measureDistanceBottomSheet
         measureBottomSheetBehavior =
             BottomSheetBehavior.from(measureBottomSheetLayout).apply {
+                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+                isHideable = true
+                isDraggable = false
+                state = STATE_HIDDEN
+            }
+
+        anchorageAlarmBottomSheetLayout =
+            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetLayout
+        anchorageAlarmBottomSheetBehavior =
+            BottomSheetBehavior.from(anchorageAlarmBottomSheetLayout).apply {
                 maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
                 isHideable = true
                 isDraggable = false
@@ -505,9 +573,17 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     viewModel.measurePointsSharedFlow.collect { points ->
                                         if (points.isEmpty()) return@collect
 
+                                        // will be true when the user leaves measure mode
                                         if (!viewModel.isMeasuring) {
-                                            if (lineManager != null) {
-                                                lineManager?.deleteAll()
+                                            if (style.getSourceAs<GeoJsonSource>(
+                                                    MEASURE_LINE_GEOJSON_SOURCE
+                                                ) != null
+                                            ) {
+                                                style.apply {
+                                                    removeLayer(MEASURE_LINE_LAYER)
+                                                    removeSource(MEASURE_LINE_GEOJSON_SOURCE)
+                                                }
+
                                                 symbolManager?.deleteAll()
                                                 mapSharedViewModel.setLatLng(PointType.Marker(points.first()))
                                                 mapLibreMap.animateCamera(
@@ -515,7 +591,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                         points.first(),
                                                     ),
                                                 )
-                                                lineManager = null
+
                                                 // latLngFlow state restored, now we can clear entire list of
                                                 // measure points.
                                                 viewModel.clearMeasurePoints(entireClear = true)
@@ -523,25 +599,62 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             return@collect
                                         }
 
+                                        if (style.getSourceAs<GeoJsonSource>(
+                                                MEASURE_LINE_GEOJSON_SOURCE
+                                            ) != null
+                                        ) {
+                                            style.apply {
+                                                removeLayer(MEASURE_LINE_LAYER)
+                                                removeSource(MEASURE_LINE_GEOJSON_SOURCE)
+                                            }
+                                        }
+
+                                        val lineFeature = Feature.fromGeometry(
+                                            LineString.fromLngLats(
+                                                points.map {
+                                                    Point.fromLngLat(it.longitude, it.latitude)
+                                                }.let {
+                                                    // add center point to the feature list if not null,
+                                                    // otherwise return original feature list
+                                                    mapLibreMap.cameraPosition.target?.let { centerPoint ->
+                                                        it.plus(
+                                                            Point.fromLngLat(
+                                                                centerPoint.longitude,
+                                                                centerPoint.latitude
+                                                            )
+                                                        )
+                                                    } ?: it
+                                                }
+                                            )
+                                        )
+
+                                        val measureLineGeojsonSource =
+                                            GeoJsonSource(
+                                                MEASURE_LINE_GEOJSON_SOURCE,
+                                                lineFeature
+                                            )
+                                        val measureLineLayer = LineLayer(
+                                            MEASURE_LINE_LAYER,
+                                            MEASURE_LINE_GEOJSON_SOURCE
+                                        )
+
+                                        measureLineLayer.setProperties(
+                                            lineWidth(3f),
+                                            lineDasharray(arrayOf(1f, 1f)),
+                                            lineColor(
+                                                requireContext().getColor(com.bytecause.core.resources.R.color.dark_blue)
+                                                    .toHexString()
+                                            )
+                                        )
+
+                                        style.apply {
+                                            addSource(measureLineGeojsonSource)
+                                            addLayer(measureLineLayer)
+                                        }
+
                                         if (binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility == View.GONE) {
                                             enterMeasureDistanceMode()
                                         }
-
-                                        if (lineManager == null) {
-                                            lineManager =
-                                                LineManager(mapView!!, mapLibreMap, mapStyle)
-                                        }
-
-                                        // Clear any existing polylines if necessary
-                                        lineManager?.deleteAll()
-
-                                        // Draw polyline
-                                        drawLine(
-                                            polylineList = points,
-                                            lineManager = lineManager,
-                                            lineColor = requireContext().getColor(com.bytecause.core.resources.R.color.black),
-                                            lineWidth = LINE_WIDTH,
-                                        )
 
                                         symbolManager?.deleteAll()
 
@@ -566,14 +679,17 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                         viewModel.calculateDistance(points)
                                             .let { distance ->
+
+                                                val (value, unit) = when (distance) {
+                                                    is MeasureUnit.Meters -> distance.value to "M"
+                                                    is MeasureUnit.KiloMeters -> distance.value to "KM"
+                                                }
+
                                                 val distanceTextViewText =
-                                                    if (distance > 1000) {
-                                                        ((round(distance / 1000 * 10) / 10).toString()) + " KM"
-                                                    } else {
-                                                        round(
-                                                            distance,
-                                                        ).toInt().toString() + " M"
-                                                    }
+                                                    getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                                                        value,
+                                                        unit
+                                                    )
 
                                                 binding.measureDistanceBottomSheet.distanceTextview.text =
                                                     distanceTextViewText
@@ -1743,11 +1859,40 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
                             }
 
+                            // State of the anchorage alarm bottom sheet should be altered ONLY
+                            // by this collector to respect SSOT principle
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     mapSharedViewModel.showAnchorageAlarmBottomSheet.collect { show ->
-                                        if (show) showAnchorageAlarmBottomSheet()
-                                        else hideAnchorageAlarmBottomSheet()
+                                        if (show) {
+                                            val centerPoint =
+                                                viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
+                                                    ?.run {
+                                                        LatLng(
+                                                            latitude = latitude,
+                                                            longitude = longitude
+                                                        )
+                                                    }
+                                                    ?: viewModel.anchorageCenterPoint
+                                                    ?: mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
+
+                                            centerPoint?.let {
+                                                showAnchorageAlarmBottomSheet(
+                                                    style = style,
+                                                    mapLibreMap = mapLibreMap,
+                                                    latLng = it
+                                                )
+                                            } ?: run {
+                                                Toast.makeText(
+                                                    requireContext(),
+                                                    getString(com.bytecause.core.resources.R.string.could_not_determine_current_position),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                mapSharedViewModel.setShowAnchorageAlarmBottomSheet(
+                                                    false
+                                                )
+                                            }
+                                        } else closeAnchorageAlarmBottomSheet()
                                     }
                                 }
                             }
@@ -1775,34 +1920,13 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     mapSharedViewModel.setShowAnchorageAlarmBottomSheet(
                                                         true
                                                     )
-
-                                                    if (anchorageAlarm.radius >= 15f) {
-                                                        mapLibreMap.animateCamera(
-                                                            CameraUpdateFactory.newLatLngBounds(
-                                                                bounds = calculateBoundsForRadius(
-                                                                    radiusInMeters = anchorageAlarm.radius,
-                                                                    centerLatitude = anchorageAlarm.latitude,
-                                                                    centerLongitude = anchorageAlarm.longitude
-                                                                ),
-                                                                paddingRight = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
-                                                                paddingLeft = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
-                                                                paddingBottom = 0,
-                                                                paddingTop = 0
-                                                            )
-                                                        )
-                                                    } else {
-                                                        mapLibreMap.animateCamera(
-                                                            CameraUpdateFactory.newLatLngZoom(
-                                                                latLng = LatLng(
-                                                                    latitude = anchorageAlarm.latitude,
-                                                                    longitude = anchorageAlarm.longitude
-                                                                ),
-                                                                zoom = style.getLayerAs<RasterLayer>(
-                                                                    MAIN_LAYER_ID
-                                                                )?.maxZoom?.toDouble() ?: 18.0
-                                                            )
-                                                        )
-                                                    }
+                                                    navigateToAnchorageRadius(
+                                                        style = style,
+                                                        mapLibreMap = mapLibreMap,
+                                                        radiusInMeters = anchorageAlarm.radius,
+                                                        centerLatitude = anchorageAlarm.latitude,
+                                                        centerLongitude = anchorageAlarm.longitude
+                                                    )
                                                 }
                                             }
                                             binding.anchorageAlarmBottomSheet.apply {
@@ -1811,7 +1935,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 radiusSlider.isEnabled = false
                                                 radiusSlider.value = anchorageAlarm.radius
                                                 radiusValueTextView.text =
-                                                    getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
+                                                    getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
                                                         anchorageAlarm.radius.toInt().toString(),
                                                         "m"
                                                     )
@@ -1820,7 +1944,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                             binding.mapBottomRightPanelLinearLayout.mapBottomRightButtonsLinearLayout.visibility =
                                                 View.GONE
                                             binding.anchorageAlarmBottomSheet.apply {
-                                                if (markerBottomSheetLayout.visibility != View.VISIBLE) {
+                                                if (anchorageAlarmBottomSheetBehavior.state == STATE_HIDDEN) {
                                                     removeAnchorageRadius(style)
                                                 }
 
@@ -1829,6 +1953,102 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 radiusSlider.isEnabled = true
                                             }
                                         }
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.lastKnownPosition.collect { latLng ->
+                                        latLng ?: return@collect
+
+                                        viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
+                                            ?.run {
+                                                if (style.getSourceAs<GeoJsonSource>(
+                                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                                    ) != null
+                                                ) {
+                                                    style.apply {
+                                                        removeLayer(ANCHOR_CHAIN_LINE_LAYER)
+                                                        removeSource(
+                                                            ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                                        )
+                                                    }
+                                                }
+
+                                                val lineFeatures = Feature.fromGeometry(
+                                                    LineString.fromLngLats(
+                                                        listOf(
+                                                            Point.fromLngLat(
+                                                                latLng.longitude,
+                                                                latLng.latitude
+                                                            ),
+                                                            Point.fromLngLat(longitude, latitude)
+                                                        )
+                                                    )
+                                                )
+
+                                                val lineSource = GeoJsonSource(
+                                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
+                                                    FeatureCollection.fromFeature(lineFeatures)
+                                                )
+
+                                                val lineLayer = LineLayer(
+                                                    ANCHOR_CHAIN_LINE_LAYER,
+                                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                                ).apply {
+                                                    setProperties(
+                                                        lineDasharray(arrayOf(4f, 3f)),
+                                                        lineColor(
+                                                            requireContext().getColor(com.bytecause.core.resources.R.color.red)
+                                                                .toHexString()
+                                                        ),
+                                                        lineWidth(2f)
+                                                    )
+                                                }
+
+                                                style.apply {
+                                                    addSource(lineSource)
+                                                    addLayerBelow(
+                                                        lineLayer,
+                                                        ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+                                                    )
+                                                }
+
+                                                updateVesselDistanceFromAnchor(latLng.distanceTo(
+                                                    LatLng(latitude, longitude)
+                                                ).let {
+                                                    round(it * 10) / 10
+                                                })
+                                            }
+                                    }
+                                }
+                            }
+
+                            if (mapSharedViewModel.geoIntentFlow.replayCache.lastOrNull() == null) {
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    // if anchorage alarm is on, navigate to anchorage location,
+                                    // otherwise use cached position
+                                    viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
+                                        ?.run {
+                                            navigateToAnchorageRadius(
+                                                style = style,
+                                                mapLibreMap = mapLibreMap,
+                                                radiusInMeters = radius,
+                                                centerLatitude = latitude,
+                                                centerLongitude = longitude
+                                            )
+                                        } ?: run {
+                                        cameraPosition = mapSharedViewModel.cameraPosition
+                                            ?: viewModel.getUserLocation().firstOrNull()?.let {
+                                                CameraPosition.Builder().target(it)
+                                                    .zoom(ZOOM_IN_DEFAULT_LEVEL)
+                                                    .build()
+                                            }
+                                                    ?: CameraPosition.Builder()
+                                                .target(LatLng(0.0, 0.0))
+                                                .zoom(1.0)
+                                                .build()
                                     }
                                 }
                             }
@@ -1860,18 +2080,49 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             )
                         }
 
+                        addOnCameraMoveListener {
+                            // if measure mode is on, render new dashed line which points
+                            // to the center of the screen on each camera move
+                            if (viewModel.isMeasuring) {
+                                mapLibreMap.cameraPosition.target?.let { centerPoint ->
+                                    val feature = Feature.fromGeometry(
+                                        LineString.fromLngLats(
+                                            viewModel.measurePointsSharedFlow.replayCache.lastOrNull()
+                                                ?.map {
+                                                    Point.fromLngLat(
+                                                        it.longitude,
+                                                        it.latitude
+                                                    )
+                                                }
+                                                ?.plus(
+                                                    Point.fromLngLat(
+                                                        centerPoint.longitude,
+                                                        centerPoint.latitude
+                                                    )
+                                                )
+                                                ?: emptyList()
+                                        )
+                                    )
+
+                                    mapStyle.getSourceAs<GeoJsonSource>(
+                                        MEASURE_LINE_GEOJSON_SOURCE
+                                    )?.setGeoJson(feature)
+                                }
+                            }
+                        }
+
                         addOnMoveListener(
                             object : OnMoveListener {
                                 override fun onMove(detector: MoveGestureDetector) {
                                     if (!locationComponent.isLocationComponentActivated) return
                                     if (locationComponent.cameraMode == DEFAULT_BUTTON_STATE) return
-                                    viewModel.setLocationButtonState(DEFAULT_BUTTON_STATE)
+                                    if (viewModel.locationButtonStateFlow.value != DEFAULT_BUTTON_STATE) {
+                                        viewModel.setLocationButtonState(DEFAULT_BUTTON_STATE)
+                                    }
                                 }
 
                                 override fun onMoveBegin(detector: MoveGestureDetector) {}
-                                override fun onMoveEnd(detector: MoveGestureDetector) {
-                                    Log.d("idk", mapLibreMap.cameraPosition.zoom.toString())
-                                }
+                                override fun onMoveEnd(detector: MoveGestureDetector) {}
                             },
                         )
 
@@ -1880,20 +2131,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                             true
                         }
 
-                        if (mapSharedViewModel.geoIntentFlow.replayCache.lastOrNull() == null) {
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                cameraPosition = mapSharedViewModel.cameraPosition
-                                    ?: viewModel.getUserLocation().firstOrNull()?.let {
-                                        CameraPosition.Builder().target(it)
-                                            .zoom(ZOOM_IN_DEFAULT_LEVEL)
-                                            .build()
-                                    }
-                                            ?: CameraPosition.Builder()
-                                        .target(LatLng(0.0, 0.0))
-                                        .zoom(1.0)
-                                        .build()
-                            }
-                        }
                         uiSettings.apply {
                             compassGravity = Gravity.START
 
@@ -2256,8 +2493,12 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             removeLayer(ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER)
             removeSource(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
             removeSource(ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE)
+
+            removeLayer(ANCHOR_CHAIN_LINE_LAYER)
+            removeSource(ANCHOR_CHAIN_LINE_GEOJSON_SOURCE)
         }
 
+        viewModel.setAnchorageCenterPoint(null)
         mapLibre.removeOnCameraMoveListener(onCameraMoveListener)
     }
 
@@ -2531,21 +2772,21 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     // when POI marker is hidden after bottom sheet expansion, camera will be adjusted.
-    private fun adjustMapViewPositionIfNeeded(point: LatLng) {
-        markerBottomSheetLayout.viewTreeObserver.addOnGlobalLayoutListener(
+    private fun adjustMapViewPositionIfNeeded(bottomSheetLayout: LinearLayout, point: LatLng) {
+        bottomSheetLayout.viewTreeObserver.addOnGlobalLayoutListener(
             object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
-                    markerBottomSheetLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    bottomSheetLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
 
-                    val markerBottomSheetHeight = markerBottomSheetLayout.height
+                    val bottomSheetHeight = bottomSheetLayout.height
                     val mapViewHeight = mapView!!.height
 
                     val projection = mapLibre.projection
                     val symbolScreenPoint = projection.toScreenLocation(point)
-                    val range = Range.create(mapViewHeight - markerBottomSheetHeight, mapViewHeight)
+                    val range = Range.create(mapViewHeight - bottomSheetHeight, mapViewHeight)
 
                     if (range.contains(symbolScreenPoint.y.toInt())) {
-                        val estimatedCenter = mapViewHeight - markerBottomSheetHeight
+                        val estimatedCenter = mapViewHeight - bottomSheetHeight
 
                         symbolScreenPoint.y += estimatedCenter / 4
 
@@ -2563,77 +2804,155 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         )
     }
 
-    private fun showAnchorageAlarmBottomSheet() {
-        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
+    private fun navigateToAnchorageRadius(
+        style: Style,
+        mapLibreMap: MapLibreMap,
+        radiusInMeters: Float,
+        centerLatitude: Double,
+        centerLongitude: Double
+    ) {
+        val bounds = calculateBoundsForRadius(
+            radiusInMeters = radiusInMeters,
+            centerLatitude = centerLatitude,
+            centerLongitude = centerLongitude
+        )
 
-            binding.anchorageAlarmBottomSheet.apply {
-                markerBottomSheetLayout.visibility = View.VISIBLE
-                radiusValueTextView.text =
-                    getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
-                        if (viewModel.runningAnchorageAlarm.value.isRunning) {
-                            viewModel.runningAnchorageAlarm.value.radius.toInt().toString()
-                        } else radiusSlider.value.toInt().toString(),
-                        "m"
-                    )
+        val maxSize = style.getLayerAs<RasterLayer>(
+            MAIN_LAYER_ID
+        )?.maxZoom?.toDouble() ?: 18.0
 
-                radiusSlider.apply {
-                    if (viewModel.runningAnchorageAlarm.value.isRunning) value =
-                        viewModel.runningAnchorageAlarm.value.radius
-                    addOnChangeListener { _, value, _ ->
-                        radiusValueTextView.text =
-                            getString(com.bytecause.core.resources.R.string.radius_value_placeholder).format(
-                                value.toInt().toString(),
-                                "m"
-                            )
-
-                        updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
-                    }
-                }
-
-                startButton.setOnClickListener {
-                    // Start service
-                    Intent(activity, AnchorageAlarmService::class.java).also {
-                        it.setAction(AnchorageAlarmService.Actions.START.toString())
-                        it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
-                        it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
-                        it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
-                        requireActivity().startService(it)
-                    }
-                }
-
-                stopButton.setOnClickListener {
-                    // Stop service
-                    Intent(
-                        activity,
-                        AnchorageAlarmService::class.java
-                    ).also {
-                        it.setAction(AnchorageAlarmService.Actions.STOP.toString())
-                        requireActivity().startService(it)
-                    }
-                }
-
-                closeButton.setOnClickListener {
-                    if (viewModel.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
-                        mapStyle
-                    )
-                    mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
-                }
-
-                showAnchorageRadius(
-                    style = mapStyle,
-                    radiusInPixels = radiusInMetersToRadiusInPixels(
-                        mapLibreMap = mapLibre,
-                        radiusInMeters = radiusSlider.value,
-                        latitude = latLng.latitude
+        if (calculateZoomForBounds(
+                northEast = bounds.northEast,
+                southWest = bounds.southWest
+            ) > maxSize
+        ) {
+            mapLibreMap.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    latLng = LatLng(
+                        latitude = centerLatitude,
+                        longitude = centerLongitude
                     ),
-                    latLng = latLng
+                    zoom = maxSize
                 )
-            }
+            )
+        } else {
+            mapLibreMap.animateCamera(
+                CameraUpdateFactory.newLatLngBounds(
+                    bounds = bounds,
+                    paddingRight = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
+                    paddingLeft = ANIMATE_TO_RADIUS_BOUNDS_PADDING,
+                    paddingBottom = 0,
+                    paddingTop = 0
+                )
+            )
         }
     }
 
-    private fun hideAnchorageAlarmBottomSheet() {
-        binding.anchorageAlarmBottomSheet.markerBottomSheetLayout.visibility = View.GONE
+    private fun updateVesselDistanceFromAnchor(distance: Double) {
+        binding.anchorageAlarmBottomSheet.distanceFromAnchorLinearLayout.visibility = View.VISIBLE
+        binding.anchorageAlarmBottomSheet.distanceFromAnchorTextView.text =
+            getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                distance,
+                "m"
+            )
+    }
+
+    private fun showAnchorageAlarmBottomSheet(
+        style: Style,
+        mapLibreMap: MapLibreMap,
+        latLng: LatLng
+    ) {
+        shouldInterceptBackEvent = true
+
+        if (viewModel.runningAnchorageAlarm.value.isRunning) {
+            navigateToAnchorageRadius(
+                style = style,
+                mapLibreMap = mapLibreMap,
+                radiusInMeters = viewModel.runningAnchorageAlarm.value.radius,
+                centerLatitude = latLng.latitude,
+                centerLongitude = latLng.longitude
+            )
+
+        } else viewModel.setAnchorageCenterPoint(latLng) // save center point only if there is no running service
+
+        anchorageAlarmBottomSheetLayout.visibility = View.VISIBLE
+        anchorageAlarmBottomSheetBehavior.state = STATE_EXPANDED
+
+        binding.anchorageAlarmBottomSheet.apply {
+            radiusValueTextView.text =
+                getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                    if (viewModel.runningAnchorageAlarm.value.isRunning) {
+                        viewModel.runningAnchorageAlarm.value.radius.toInt().toString()
+                    } else radiusSlider.value.toInt().toString(),
+                    "m"
+                )
+
+            viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }?.run {
+                mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
+
+                    updateVesselDistanceFromAnchor(
+                        latLng.distanceTo(LatLng(latitude, longitude)).let {
+                            round(it * 10) / 10 // rounds on first decimal place
+                        })
+                }
+            } ?: run {
+                distanceFromAnchorLinearLayout.visibility = View.GONE
+            }
+
+            radiusSlider.apply {
+                if (viewModel.runningAnchorageAlarm.value.isRunning) value =
+                    viewModel.runningAnchorageAlarm.value.radius
+                addOnChangeListener { _, value, _ ->
+                    radiusValueTextView.text =
+                        getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                            value.toInt().toString(),
+                            "m"
+                        )
+
+                    updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                }
+            }
+
+            startButton.setOnClickListener {
+                // Start service
+                Intent(activity, AnchorageAlarmService::class.java).also {
+                    it.setAction(AnchorageAlarmService.Actions.START.toString())
+                    it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
+                    it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
+                    it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
+                    requireActivity().startService(it)
+                }
+            }
+
+            stopButton.setOnClickListener {
+                // Stop service
+                Intent(
+                    activity,
+                    AnchorageAlarmService::class.java
+                ).also {
+                    it.setAction(AnchorageAlarmService.Actions.STOP.toString())
+                    requireActivity().startService(it)
+                }
+            }
+
+            closeButton.setOnClickListener {
+                mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
+            }
+
+            showAnchorageRadius(
+                style = mapStyle,
+                radiusInPixels = radiusInMetersToRadiusInPixels(
+                    mapLibreMap = mapLibre,
+                    radiusInMeters = radiusSlider.value,
+                    latitude = latLng.latitude
+                ),
+                latLng = latLng
+            )
+        }
+    }
+
+    private fun closeAnchorageAlarmBottomSheet() {
+        anchorageAlarmBottomSheetBehavior.state = STATE_HIDDEN
     }
 
     // Takes MarkerInfoModel state as an argument and renders it.
@@ -2643,7 +2962,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         shouldInterceptBackEvent = true
         openMarkerBottomSheetLayout()
 
-        adjustMapViewPositionIfNeeded(markerInfo.position)
+        adjustMapViewPositionIfNeeded(
+            bottomSheetLayout = markerBottomSheetLayout,
+            point = markerInfo.position
+        )
 
         markerInfo.run {
             binding.markerBottomSheetId.apply {
@@ -2890,6 +3212,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     // Shows necessary layouts needed for distance measuring.
     private fun enterMeasureDistanceMode() {
+        showMeasureBottomSheet()
+
         if (viewModel.isMeasuring) {
             binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility =
                 View.VISIBLE
@@ -2906,7 +3230,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         layoutParams.topMargin = 65
 
         binding.measureDistanceTop.measureDistanceTopLinearLayout.visibility = View.VISIBLE
-        measureBottomSheetBehavior.state = STATE_EXPANDED
 
         showTargetOverlay()
         mapSharedViewModel.latLngFlow.value?.let {
@@ -3035,7 +3358,13 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     private fun showBottomSheetLayout() {
+        bottomSheetLayout.visibility = View.VISIBLE
         bottomSheetBehavior.state = STATE_EXPANDED
+    }
+
+    private fun showMeasureBottomSheet() {
+        measureBottomSheetLayout.visibility = View.VISIBLE
+        measureBottomSheetBehavior.state = STATE_EXPANDED
     }
 
     private fun closeMarkerBottomSheetLayout() {
@@ -3043,6 +3372,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     private fun openMarkerBottomSheetLayout() {
+        markerBottomSheetLayout.visibility = View.VISIBLE
         markerBottomSheetBehavior.state = STATE_EXPANDED
     }
 
@@ -3052,7 +3382,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     ) {
         shouldInterceptBackEvent = true
 
-        if (bottomSheetBehavior.state == STATE_HIDDEN) {
+        if (bottomSheetLayout.visibility == View.GONE) {
             binding.bottomSheetId.textPlaceHolder.apply {
                 this.text = text ?: getString(
                     com.bytecause.core.resources.R.string.split_two_strings_formatter,
@@ -3072,6 +3402,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 setSearchBoxText(SearchBoxTextType.Coordinates(this.text.toString()))
             }
         }
+
+        adjustMapViewPositionIfNeeded(
+            bottomSheetLayout = bottomSheetLayout,
+            point = p
+        )
     }
 
     private fun setSearchBoxText(text: SearchBoxTextType) {
@@ -3115,31 +3450,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 val locationLooper = Looper.getMainLooper()
                 locationEngine?.requestLocationUpdates(
                     request,
-                    object : LocationEngineCallback<LocationEngineResult> {
-                        override fun onSuccess(result: LocationEngineResult?) {
-                            if (result == null) return
-
-                            result.lastLocation?.run {
-                                LatLng(
-                                    latitude = latitude,
-                                    longitude = longitude,
-                                ).let {
-                                    if (MapUtil.arePointsWithinDelta(
-                                            it,
-                                            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull(),
-                                        )
-                                    ) {
-                                        return@let
-                                    }
-                                    viewModel.saveUserLocation(it)
-                                    mapSharedViewModel.setLastKnownPosition(it)
-                                }
-                                locationComponent?.forceLocationUpdate(this)
-                            }
-                        }
-
-                        override fun onFailure(exception: Exception) {}
-                    },
+                    locationEngineCallback,
                     locationLooper,
                 )
             }
@@ -3200,6 +3511,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
+        anchorageAlarmBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
 
         mapView?.onResume()
     }
@@ -3210,6 +3522,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+        anchorageAlarmBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+
         cancelAnimation()
 
         saveMapState()

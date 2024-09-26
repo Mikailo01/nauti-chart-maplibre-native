@@ -24,6 +24,7 @@ import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
 import com.bytecause.map.ui.mappers.asRunningAnchorageAlarmUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
+import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
 import com.bytecause.map.ui.model.RunningAnchorageAlarmUiModel
@@ -55,6 +56,7 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import javax.inject.Inject
+import kotlin.math.round
 
 
 @HiltViewModel
@@ -99,11 +101,14 @@ constructor(
             .map { it.asRunningAnchorageAlarmUiModel() }
             .stateIn(
                 viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
+                SharingStarted.Eagerly,
                 RunningAnchorageAlarmUiModel()
             )
 
     var isMeasuring = false
+        private set
+
+    var anchorageCenterPoint: LatLng? = null
         private set
 
     private val _measurePointsSharedFlow = MutableSharedFlow<List<LatLng>>(replay = 1)
@@ -186,6 +191,10 @@ constructor(
         }
     }
 
+    fun setAnchorageCenterPoint(latLng: LatLng?) {
+        anchorageCenterPoint = latLng
+    }
+
     fun setSelectedFeatureId(featureType: com.bytecause.map.ui.FeatureType) {
         _selectedFeatureIdFlow.update { featureType }
     }
@@ -237,13 +246,14 @@ constructor(
         }
     }
 
-    fun calculateDistance(latLngList: List<LatLng>): Double {
+    fun calculateDistance(latLngList: List<LatLng>): MeasureUnit {
         var distance = 0.0
         for (index in latLngList.indices) {
-            if (index == latLngList.lastIndex) return distance
+            if (index == latLngList.lastIndex) break
             distance += latLngList[index].distanceTo(latLngList[index + 1])
         }
-        return distance
+        return if (distance > 1000) MeasureUnit.KiloMeters(((round(distance / 1000 * 10) / 10)))
+        else MeasureUnit.Meters(round(distance).toInt())
     }
 
     fun searchVesselById(id: Int): Flow<VesselInfoModel> =
