@@ -91,6 +91,8 @@
     <string name="category_name">Category name</string>
     <string name="save">Save</string>
     <string name="radius">Radius:</string>
+    <string name="accuracy">Accuracy:</string>
+    <string name="you_have_moved_outside_the_defined_radius">You have moved outside the defined radius!</string>
     <string name="distance_from_anchor">Distance from anchor:</string>
     <string name="could_not_determine_current_position">Couldn\'t determine current position.</string>
     <string name="new_category">New category</string>

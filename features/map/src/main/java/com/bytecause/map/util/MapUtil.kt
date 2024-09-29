@@ -16,6 +16,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
+import kotlin.math.round
 
 object MapUtil {
     fun drawLine(
@@ -93,7 +94,7 @@ object MapUtil {
         zoomLevel = (-1 * ((ln(maxDiff) / ln(2.0)) - (ln(360.0) / ln(2.0))))
         if (zoomLevel < 1) zoomLevel = 1.0
 
-        return zoomLevel
+        return round(zoomLevel) // round result to the closest integer for consistency
     }
 
     fun calculateBoundsForRadius(

@@ -16,7 +16,7 @@ composeLifecycle = "2.8.6"
 gson = "2.10.1"
 coreKtx = "1.13.1"
 appCompat = "1.7.0"
-coroutines = "1.8.1"
+coroutines = "1.9.0"
 constraintLayout = "2.1.4"
 material = "1.12.0"
 androidNavigation = "2.8.1"
@@ -36,6 +36,7 @@ moshi = "1.15.1"
 androidTools = "31.6.1"
 kotlinxSerialization = "1.7.0"
 jetpackLoadingAnimations = "1.1.0"
+googleServicesLocation = "21.3.0"
 
 # Plugins
 kotlin = "2.0.20"
@@ -50,7 +51,7 @@ kotlinxSerializationPlugin = "2.0.0"
 androidxJunit = "1.2.1"
 junit = "4.13.2"
 espresso = "3.6.1"
-jetbrainsKotlinJvm = "1.9.0"
+jetbrainsKotlinJvm = "2.0.20"
 
 [libraries]
 # UI
@@ -106,6 +107,9 @@ androidx-appCompat = { group = "androidx.appcompat", name = "appcompat", version
 
 # WorkManager
 androidx-workManager = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+
+# Google Services Location
+gms-playServicesLocation = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googleServicesLocation" }
 
 # Lifecycle
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }

@@ -47,6 +47,9 @@ dependencies {
     // Gson
     implementation(libs.gson)
 
+    // Google services location
+    implementation(libs.gms.playServicesLocation)
+
     // Moshi
     implementation(libs.moshi)
 

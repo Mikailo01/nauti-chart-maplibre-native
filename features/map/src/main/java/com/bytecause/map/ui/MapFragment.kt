@@ -242,6 +242,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private val maxBottomSheetHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+
     private lateinit var bottomSheetLayout: LinearLayout
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
     private lateinit var bottomSheetCallback: BottomSheetCallback
@@ -383,7 +385,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     bottomSheet: View,
                     newState: Int,
                 ) {
-                    // Handle state changes (e.g., expanded, collapsed, hidden)
+                    // Handle state changes
                     when (newState) {
                         STATE_HIDDEN -> {
                             when (bottomSheet.id) {
@@ -446,7 +448,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                 anchorageAlarmBottomSheetLayout.id -> {
                                     anchorageAlarmBottomSheetLayout.visibility = View.GONE
-                                    if (viewModel.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
+                                    if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
                                         mapStyle
                                     )
                                 }
@@ -485,7 +487,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetLayout = binding.bottomSheetId.bottomSheetLayout
         bottomSheetBehavior =
             BottomSheetBehavior.from(bottomSheetLayout).apply {
-                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+                maxHeight = maxBottomSheetHeight
                 isHideable = true
                 state = STATE_HIDDEN
             }
@@ -493,7 +495,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         markerBottomSheetLayout = binding.markerBottomSheetId.markerBottomSheetLayout
         markerBottomSheetBehavior =
             BottomSheetBehavior.from(markerBottomSheetLayout).apply {
-                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+                maxHeight = maxBottomSheetHeight
                 isHideable = true
                 state = STATE_HIDDEN
             }
@@ -501,7 +503,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         measureBottomSheetLayout = binding.measureDistanceBottomSheet.measureDistanceBottomSheet
         measureBottomSheetBehavior =
             BottomSheetBehavior.from(measureBottomSheetLayout).apply {
-                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+                maxHeight = maxBottomSheetHeight
                 isHideable = true
                 isDraggable = false
                 state = STATE_HIDDEN
@@ -511,7 +513,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetLayout
         anchorageAlarmBottomSheetBehavior =
             BottomSheetBehavior.from(anchorageAlarmBottomSheetLayout).apply {
-                maxHeight = Resources.getSystem().displayMetrics.heightPixels / 2
+                maxHeight = maxBottomSheetHeight
                 isHideable = true
                 isDraggable = false
                 state = STATE_HIDDEN
@@ -1866,7 +1868,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     mapSharedViewModel.showAnchorageAlarmBottomSheet.collect { show ->
                                         if (show) {
                                             val centerPoint =
-                                                viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
+                                                AnchorageAlarmService.runningAnchorageAlarm.value.takeIf { it.isRunning }
                                                     ?.run {
                                                         LatLng(
                                                             latitude = latitude,
@@ -1899,7 +1901,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    viewModel.runningAnchorageAlarm.collect { anchorageAlarm ->
+                                    AnchorageAlarmService.runningAnchorageAlarm.collect { anchorageAlarm ->
                                         if (anchorageAlarm.isRunning) {
                                             showAnchorageRadius(
                                                 style, radiusInMetersToRadiusInPixels(
@@ -1936,8 +1938,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 radiusSlider.value = anchorageAlarm.radius
                                                 radiusValueTextView.text =
                                                     getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                                                        anchorageAlarm.radius.toInt().toString(),
-                                                        "m"
+                                                        anchorageAlarm.radius.toInt()
+                                                            .toString(),
+                                                        "M"
                                                     )
                                             }
                                         } else {
@@ -1962,65 +1965,74 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     mapSharedViewModel.lastKnownPosition.collect { latLng ->
                                         latLng ?: return@collect
 
-                                        viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
-                                            ?.run {
-                                                if (style.getSourceAs<GeoJsonSource>(
-                                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                                    ) != null
-                                                ) {
-                                                    style.apply {
-                                                        removeLayer(ANCHOR_CHAIN_LINE_LAYER)
-                                                        removeSource(
-                                                            ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                                        )
-                                                    }
-                                                }
+                                        if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning ||
+                                            anchorageAlarmBottomSheetBehavior.state == STATE_EXPANDED
+                                        ) {
 
-                                                val lineFeatures = Feature.fromGeometry(
-                                                    LineString.fromLngLats(
-                                                        listOf(
-                                                            Point.fromLngLat(
-                                                                latLng.longitude,
-                                                                latLng.latitude
-                                                            ),
-                                                            Point.fromLngLat(longitude, latitude)
-                                                        )
-                                                    )
-                                                )
+                                            val (latitude, longitude) = if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
+                                                AnchorageAlarmService.runningAnchorageAlarm.value.run { latitude to longitude }
+                                            } else viewModel.anchorageCenterPoint!!.run { latitude to longitude }
 
-                                                val lineSource = GeoJsonSource(
-                                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
-                                                    FeatureCollection.fromFeature(lineFeatures)
-                                                )
-
-                                                val lineLayer = LineLayer(
-                                                    ANCHOR_CHAIN_LINE_LAYER,
+                                            if (style.getSourceAs<GeoJsonSource>(
                                                     ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                                ).apply {
-                                                    setProperties(
-                                                        lineDasharray(arrayOf(4f, 3f)),
-                                                        lineColor(
-                                                            requireContext().getColor(com.bytecause.core.resources.R.color.red)
-                                                                .toHexString()
-                                                        ),
-                                                        lineWidth(2f)
-                                                    )
-                                                }
-
+                                                ) != null
+                                            ) {
                                                 style.apply {
-                                                    addSource(lineSource)
-                                                    addLayerBelow(
-                                                        lineLayer,
-                                                        ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+                                                    removeLayer(ANCHOR_CHAIN_LINE_LAYER)
+                                                    removeSource(
+                                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
                                                     )
                                                 }
-
-                                                updateVesselDistanceFromAnchor(latLng.distanceTo(
-                                                    LatLng(latitude, longitude)
-                                                ).let {
-                                                    round(it * 10) / 10
-                                                })
                                             }
+
+                                            val lineFeatures = Feature.fromGeometry(
+                                                LineString.fromLngLats(
+                                                    listOf(
+                                                        Point.fromLngLat(
+                                                            latLng.longitude,
+                                                            latLng.latitude
+                                                        ),
+                                                        Point.fromLngLat(
+                                                            longitude,
+                                                            latitude
+                                                        )
+                                                    )
+                                                )
+                                            )
+
+                                            val lineSource = GeoJsonSource(
+                                                ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
+                                                FeatureCollection.fromFeature(lineFeatures)
+                                            )
+
+                                            val lineLayer = LineLayer(
+                                                ANCHOR_CHAIN_LINE_LAYER,
+                                                ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                            ).apply {
+                                                setProperties(
+                                                    lineDasharray(arrayOf(4f, 3f)),
+                                                    lineColor(
+                                                        requireContext().getColor(com.bytecause.core.resources.R.color.red)
+                                                            .toHexString()
+                                                    ),
+                                                    lineWidth(2f)
+                                                )
+                                            }
+
+                                            style.apply {
+                                                addSource(lineSource)
+                                                addLayerBelow(
+                                                    lineLayer,
+                                                    ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+                                                )
+                                            }
+
+                                            updateVesselDistanceFromAnchor(
+                                                latLng.distanceTo(
+                                                    LatLng(latitude, longitude)
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -2029,7 +2041,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 viewLifecycleOwner.lifecycleScope.launch {
                                     // if anchorage alarm is on, navigate to anchorage location,
                                     // otherwise use cached position
-                                    viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }
+                                    AnchorageAlarmService.runningAnchorageAlarm.value.takeIf { it.isRunning }
                                         ?.run {
                                             navigateToAnchorageRadius(
                                                 style = style,
@@ -2852,8 +2864,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         binding.anchorageAlarmBottomSheet.distanceFromAnchorLinearLayout.visibility = View.VISIBLE
         binding.anchorageAlarmBottomSheet.distanceFromAnchorTextView.text =
             getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                distance,
-                "m"
+                round(distance * 10) / 10,
+                "M"
             )
     }
 
@@ -2864,64 +2876,105 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     ) {
         shouldInterceptBackEvent = true
 
-        if (viewModel.runningAnchorageAlarm.value.isRunning) {
+        anchorageAlarmBottomSheetLayout.visibility = View.VISIBLE
+        anchorageAlarmBottomSheetBehavior.state = STATE_EXPANDED
+
+        if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
             navigateToAnchorageRadius(
                 style = style,
                 mapLibreMap = mapLibreMap,
-                radiusInMeters = viewModel.runningAnchorageAlarm.value.radius,
+                radiusInMeters = AnchorageAlarmService.runningAnchorageAlarm.value.radius,
                 centerLatitude = latLng.latitude,
                 centerLongitude = latLng.longitude
             )
 
-        } else viewModel.setAnchorageCenterPoint(latLng) // save center point only if there is no running service
+            binding.anchorageAlarmBottomSheet.apply {
+                radiusValueTextView.text =
+                    getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                        AnchorageAlarmService.runningAnchorageAlarm.value.radius.toInt().toString(),
+                        "M"
+                    )
 
-        anchorageAlarmBottomSheetLayout.visibility = View.VISIBLE
-        anchorageAlarmBottomSheetBehavior.state = STATE_EXPANDED
+                radiusSlider.apply {
+                    value = AnchorageAlarmService.runningAnchorageAlarm.value.radius
+                    addOnChangeListener { _, value, _ ->
+                        radiusValueTextView.text =
+                            getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                                value.toInt().toString(),
+                                "M"
+                            )
 
-        binding.anchorageAlarmBottomSheet.apply {
-            radiusValueTextView.text =
-                getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                    if (viewModel.runningAnchorageAlarm.value.isRunning) {
-                        viewModel.runningAnchorageAlarm.value.radius.toInt().toString()
-                    } else radiusSlider.value.toInt().toString(),
-                    "m"
-                )
+                        updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                    }
+                }
+            }
 
-            viewModel.runningAnchorageAlarm.value.takeIf { it.isRunning }?.run {
+            AnchorageAlarmService.runningAnchorageAlarm.value.takeIf { it.isRunning }?.run {
                 mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let { latLng ->
 
                     updateVesselDistanceFromAnchor(
-                        latLng.distanceTo(LatLng(latitude, longitude)).let {
-                            round(it * 10) / 10 // rounds on first decimal place
-                        })
+                        latLng.distanceTo(LatLng(latitude, longitude))
+                    )
                 }
-            } ?: run {
+            }
+        } else {
+            viewModel.setAnchorageCenterPoint(latLng) // save center point only if there is no running service
+
+            binding.anchorageAlarmBottomSheet.apply {
+                radiusValueTextView.text =
+                    getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                        radiusSlider.value.toInt().toString(),
+                        "M"
+                    )
+
+                radiusSlider.apply {
+                    addOnChangeListener { _, value, _ ->
+                        radiusValueTextView.text =
+                            getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                                value.toInt().toString(),
+                                "M"
+                            )
+
+                        updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+
+                        // update camera based on new rendered radius
+                        navigateToAnchorageRadius(
+                            style = style,
+                            mapLibreMap = mapLibreMap,
+                            radiusInMeters = value,
+                            centerLatitude = latLng.latitude,
+                            centerLongitude = latLng.longitude
+                        )
+                    }
+                }
+
+                // anchorage center point moved, reset the calculated distance
+                distanceFromAnchorTextView.text = null
                 distanceFromAnchorLinearLayout.visibility = View.GONE
             }
 
-            radiusSlider.apply {
-                if (viewModel.runningAnchorageAlarm.value.isRunning) value =
-                    viewModel.runningAnchorageAlarm.value.radius
-                addOnChangeListener { _, value, _ ->
-                    radiusValueTextView.text =
-                        getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                            value.toInt().toString(),
-                            "m"
-                        )
+            navigateToAnchorageRadius(
+                style = style,
+                mapLibreMap = mapLibreMap,
+                radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
+                centerLatitude = latLng.latitude,
+                centerLongitude = latLng.longitude
+            )
+        }
 
-                    updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
-                }
-            }
-
+        binding.anchorageAlarmBottomSheet.apply {
             startButton.setOnClickListener {
-                // Start service
-                Intent(activity, AnchorageAlarmService::class.java).also {
-                    it.setAction(AnchorageAlarmService.Actions.START.toString())
-                    it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
-                    it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
-                    it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
-                    requireActivity().startService(it)
-                }
+                if (isLocationPermissionGranted) {
+                    // Start service
+                    Intent(activity, AnchorageAlarmService::class.java).also {
+                        it.setAction(AnchorageAlarmService.Actions.START.toString())
+                        it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
+                        it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
+                        it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
+                        requireActivity().startService(it)
+                    }
+                } else activityResultLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+
             }
 
             stopButton.setOnClickListener {
@@ -3241,15 +3294,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
-    // Shows target in the center of mapView.
-    private fun showTargetOverlay() {
-        binding.targetOverlay.visibility = View.VISIBLE
-    }
-
-    private fun hideTargetOverlay() {
-        binding.targetOverlay.visibility = View.GONE
-    }
-
     // Hides layouts that are no longer needed after distance measure is done.
     private fun leaveMeasureDistanceMode() {
         viewModel.setIsMeasuring(false)
@@ -3273,6 +3317,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
         binding.measureDistanceBottomSheet.distanceTextview.text = null
         hideTargetOverlay()
+    }
+
+    // Shows target in the center of mapView.
+    private fun showTargetOverlay() {
+        binding.targetOverlay.visibility = View.VISIBLE
+    }
+
+    private fun hideTargetOverlay() {
+        binding.targetOverlay.visibility = View.GONE
     }
 
     private fun hideBottomSheetLayout() {
@@ -3442,7 +3495,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                 val request = LocationEngineRequest.Builder(10000)
                     .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                    .setFastestInterval(5000)
+                    .setFastestInterval(2000)
                     .build()
 
                 setEnabledLocationDrawable()

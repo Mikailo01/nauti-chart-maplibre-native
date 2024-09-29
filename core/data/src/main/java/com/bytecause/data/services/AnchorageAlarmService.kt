@@ -7,40 +7,69 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationListener
-import android.location.LocationManager
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
-import com.bytecause.data.repository.abstractions.AnchorageAlarmRepository
-import com.bytecause.domain.model.RunningAnchorageAlarmModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import kotlin.math.round
 
+data class RunningAnchorageAlarm(
+    val isRunning: Boolean = false,
+    val radius: Float = 5f,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
+)
 
-// TODO("Finish implementation")
 @AndroidEntryPoint
 class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
-    private var radius: Float = 0f
-    private var centerLat: Double = 0.0
-    private var centerLng: Double = 0.0
-    private lateinit var locationManager: LocationManager
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val locationRequest: LocationRequest = LocationRequest.Builder(
+        Priority.PRIORITY_HIGH_ACCURACY, 10000L // Update interval 10 seconds
+    )
+        .setMinUpdateIntervalMillis(2000L)
+        .setWaitForAccurateLocation(true)
+        .build()
+
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(p0: LocationResult) {
+            super.onLocationResult(p0)
+
+            p0.lastLocation?.let {
+                checkIfWithinRadius(it)
+            }
+        }
+    }
 
     private var ringtone: Ringtone? = null
 
-    @Inject
-    lateinit var anchorageAlarmRepository: AnchorageAlarmRepository
-
     companion object {
+        private val _runningAnchorageAlarm: MutableStateFlow<RunningAnchorageAlarm> =
+            MutableStateFlow(
+                RunningAnchorageAlarm()
+            )
+        val runningAnchorageAlarm: StateFlow<RunningAnchorageAlarm> =
+            _runningAnchorageAlarm.asStateFlow()
+
         private const val NOTIFICATION_ID = 4
         private const val CHANNEL_ID = "anchorage_alarm_channel"
 
@@ -55,21 +84,44 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     override fun onCreate() {
         super.onCreate()
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        resetState()
+    }
+
+    private fun loadState(intent: Intent) {
+        lifecycleScope.launch {
+            _runningAnchorageAlarm.emit(
+                RunningAnchorageAlarm(
+                    isRunning = true,
+                    radius = intent.getFloatExtra(EXTRA_RADIUS, 5f),
+                    latitude = intent.getDoubleExtra(EXTRA_LATITUDE, 0.0),
+                    longitude = intent.getDoubleExtra(EXTRA_LONGITUDE, 0.0)
+                )
+            )
+        }
+    }
+
+    private fun resetState() {
+        lifecycleScope.launch {
+            _runningAnchorageAlarm.emit(RunningAnchorageAlarm())
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
-        // Get radius and center location from intent extras
-        radius = intent?.getFloatExtra(EXTRA_RADIUS, 0f) ?: 0f
-        centerLat = intent?.getDoubleExtra(EXTRA_LATITUDE, 0.0) ?: 0.0
-        centerLng = intent?.getDoubleExtra(EXTRA_LONGITUDE, 0.0) ?: 0.0
-
         when (intent?.action) {
             Actions.START.toString() -> {
+                // load state only if service is starting
+                loadState(intent)
+
                 startForegroundService()
                 startLocationUpdates()
             }
@@ -86,28 +138,9 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.anchorage_alarm),
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_LOW
             )
             notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun saveRunningAnchorageAlarm() {
-        lifecycleScope.launch {
-            anchorageAlarmRepository.saveRunningAnchorageAlarm(
-                RunningAnchorageAlarmModel(
-                    isRunning = true,
-                    latitude = centerLat,
-                    longitude = centerLng,
-                    radius = radius
-                )
-            )
-        }
-    }
-
-    private fun removeRunningAnchorageAlarm() {
-        lifecycleScope.launch {
-            anchorageAlarmRepository.deleteRunningAnchorageAlarm()
         }
     }
 
@@ -115,13 +148,10 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     @Suppress("MissingPermission")
     private fun startLocationUpdates() {
         try {
-            // Request location updates from GPS or network provider
-            locationManager.requestLocationUpdates(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) LocationManager.FUSED_PROVIDER
-                else LocationManager.GPS_PROVIDER,
-                5000L, // Minimum time interval between location updates (10 seconds)
-                2f,    // Minimum distance between location updates (10 meters)
-                this
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
             // Permission not granted
@@ -130,7 +160,7 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     private fun triggerAlarmNotification() {
         notificationBuilder
-            .setContentText("You have moved outside the defined radius!")
+            .setContentText(getString(R.string.you_have_moved_outside_the_defined_radius))
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
 
         playAlarmSound()
@@ -157,18 +187,22 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     // Check if current location is within the radius of the center
     private fun checkIfWithinRadius(currentLocation: Location) {
         val centerLocation = Location("").apply {
-            latitude = centerLat
-            longitude = centerLng
+            latitude = runningAnchorageAlarm.value.latitude
+            longitude = runningAnchorageAlarm.value.longitude
         }
 
         val distance = currentLocation.distanceTo(centerLocation) // Distance in meters
 
-        if (distance > radius) {
+        if (distance > runningAnchorageAlarm.value.radius) {
             triggerAlarmNotification()
         } else {
             if (ringtone != null) {
-                triggerDefaultNotification()
+                stopRingtone()
             }
+            updateNotificationTextContent(
+                location = currentLocation,
+                distanceFromCenterPoint = round(distance * 10) / 10 // rounds on first decimal place
+            )
         }
     }
 
@@ -193,15 +227,18 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
             .setOngoing(true)
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
-        saveRunningAnchorageAlarm()
     }
 
-    private fun triggerDefaultNotification() {
-        notificationBuilder
-            .setContentText(null)
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
 
-        stopRingtone()
+    private fun updateNotificationTextContent(location: Location, distanceFromCenterPoint: Float) {
+        notificationBuilder
+            .setContentText(
+                getString(R.string.radius) + " ${runningAnchorageAlarm.value.radius.toInt()} M"
+                        + " | "
+                        + getString(R.string.accuracy) + " ${location.accuracy.toInt()}" + " M |"
+                        + "\n" + getString(R.string.distance_from_anchor) + " $distanceFromCenterPoint M"
+            )
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
     private fun stopRingtone() {
@@ -211,8 +248,7 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     private fun stopService() {
         ringtone?.stop()
-        locationManager.removeUpdates(this)
-        removeRunningAnchorageAlarm()
+        fusedLocationClient.removeLocationUpdates(locationCallback)
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
