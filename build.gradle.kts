@@ -12,6 +12,6 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
 }
 
-extra["appVersionCode"] = 1
-extra["appVersionName"] = "0.1.0-beta1"
+extra["appVersionCode"] = 2
+extra["appVersionName"] = "0.2.0-beta1"
 
