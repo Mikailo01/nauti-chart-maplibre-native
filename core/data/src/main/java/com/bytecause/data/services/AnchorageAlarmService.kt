@@ -24,6 +24,8 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,10 +49,13 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
     @Inject
-    private lateinit var anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
+    lateinit var anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var fusedLocationClient: FusedLocationProviderClient? = null
     private lateinit var locationRequest: LocationRequest
+
+    private var alarmDelay: Long = 0L
+    private var alarmJob: Job? = null
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
@@ -86,10 +91,14 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     override fun onCreate() {
         super.onCreate()
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
+
+        lifecycleScope.launch {
+            anchorageAlarmPreferencesRepository.getAlarmDelay().collect { delay ->
+                alarmDelay = delay
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -146,23 +155,10 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         }
     }
 
-    // Start location updates
     @Suppress("MissingPermission")
     private fun startLocationUpdates() {
-        try {
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
-        } catch (e: SecurityException) {
-            // Permission not granted
-        }
-    }
-
-    // TODO("Finish observer")
-    @Suppress("MissingPermission")
-    private fun observeLocationSettings() {
+        // if update interval is changed, then this observer will create new location request with
+        // updated intervals
         combine(
             anchorageAlarmPreferencesRepository.getMaxUpdateInterval(),
             anchorageAlarmPreferencesRepository.getMinUpdateInterval()
@@ -175,21 +171,38 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
                 .setWaitForAccurateLocation(true)
                 .build()
 
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
+            fusedLocationClient?.let { locationClient ->
+                locationClient.removeLocationUpdates(locationCallback)
+                locationClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+            } ?: run {
+                // fusedLocationClient is null, make initialization
+                fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+                    .apply {
+                        requestLocationUpdates(
+                            locationRequest,
+                            locationCallback,
+                            Looper.getMainLooper()
+                        )
+                    }
+            }
         }
             .launchIn(lifecycleScope)
     }
 
     private fun triggerAlarmNotification() {
-        notificationBuilder
-            .setContentText(getString(R.string.you_have_moved_outside_the_defined_radius))
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+        alarmJob = lifecycleScope.launch {
+            delay(alarmDelay)
 
-        playAlarmSound()
+            notificationBuilder
+                .setContentText(getString(R.string.you_have_moved_outside_the_defined_radius))
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+
+            playAlarmSound()
+        }
     }
 
     private fun playAlarmSound() {
@@ -220,8 +233,17 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         val distance = currentLocation.distanceTo(centerLocation) // Distance in meters
 
         if (distance > runningAnchorageAlarm.value.radius) {
+            // don't trigger alarm notification if alarm alert is scheduled, because it would be
+            // rescheduled again and alarm alert would never start
+            if (alarmJob?.isActive == true) return
             triggerAlarmNotification()
         } else {
+            // if there is scheduled alarm alert and location has been correctly aligned back inside
+            // the radius, cancel it
+            if (alarmJob != null) {
+                alarmJob?.cancel()
+                alarmJob = null
+            }
             if (ringtone != null) {
                 stopRingtone()
             }
@@ -274,7 +296,7 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
 
     private fun stopService() {
         ringtone?.stop()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
+        fusedLocationClient?.removeLocationUpdates(locationCallback)
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
