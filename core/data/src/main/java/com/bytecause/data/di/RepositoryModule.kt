@@ -13,6 +13,7 @@ import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
+import com.bytecause.data.repository.AnchorageAlarmPreferencesRepositoryImpl
 import com.bytecause.data.repository.CountryRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineRasterTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineVectorTileSourceRepositoryImpl
@@ -26,6 +27,7 @@ import com.bytecause.data.repository.RadiusPoiCacheRepositoryImpl
 import com.bytecause.data.repository.RadiusPoiMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
+import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
@@ -48,6 +50,10 @@ import javax.inject.Singleton
 
 private val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "user_preferences"
+)
+
+private val Context.anchorageAlarmDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "anchorage_alarm_preferences"
 )
 
 @Module
@@ -116,6 +122,13 @@ object RepositoryModule {
     fun providesUserPreferencesRepository(@ApplicationContext context: Context): UserPreferencesRepository =
         UserPreferencesRepositoryImpl(
             context.userDataStore
+        )
+
+    @Provides
+    @Singleton
+    fun providesAnchorageAlarmPreferencesRepository(@ApplicationContext context: Context): AnchorageAlarmPreferencesRepository =
+        AnchorageAlarmPreferencesRepositoryImpl(
+            context.anchorageAlarmDataStore
         )
 
     @Provides

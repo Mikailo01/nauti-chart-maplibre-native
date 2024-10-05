@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
+import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -26,7 +27,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import kotlin.math.round
 
 data class RunningAnchorageAlarm(
@@ -42,13 +46,11 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
+    @Inject
+    private lateinit var anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val locationRequest: LocationRequest = LocationRequest.Builder(
-        Priority.PRIORITY_HIGH_ACCURACY, 10000L // Update interval 10 seconds
-    )
-        .setMinUpdateIntervalMillis(2000L)
-        .setWaitForAccurateLocation(true)
-        .build()
+    private lateinit var locationRequest: LocationRequest
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
@@ -156,6 +158,30 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         } catch (e: SecurityException) {
             // Permission not granted
         }
+    }
+
+    // TODO("Finish observer")
+    @Suppress("MissingPermission")
+    private fun observeLocationSettings() {
+        combine(
+            anchorageAlarmPreferencesRepository.getMaxUpdateInterval(),
+            anchorageAlarmPreferencesRepository.getMinUpdateInterval()
+        ) { maxInterval, minInterval ->
+
+            locationRequest = LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY, maxInterval // Update interval 10 seconds
+            )
+                .setMinUpdateIntervalMillis(minInterval)
+                .setWaitForAccurateLocation(true)
+                .build()
+
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        }
+            .launchIn(lifecycleScope)
     }
 
     private fun triggerAlarmNotification() {

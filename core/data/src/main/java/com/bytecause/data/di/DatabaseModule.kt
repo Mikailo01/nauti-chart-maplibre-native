@@ -31,7 +31,7 @@ object DatabaseModule {
         klass = AppDatabase::class.java,
         name = "app_database"
     )
-        .createFromAsset("database/continents_with_countries.db")
+        .createFromAsset("database/continents_countries_anchorages.db")
         .addCallback(InitialPoiCategoryCallback(context))
         .build()
 
@@ -61,6 +61,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideOsmDatasetDao(db: AppDatabase) = db.osmRegionMetadataDatasetDao()
+
+    @Provides
+    @Singleton
+    fun provideAnchoragesDao(db: AppDatabase) = db.anchoragesDao()
 
     @Provides
     @Singleton

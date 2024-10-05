@@ -174,7 +174,6 @@ nautichart-android-library = { id = "nautichart.android.library", version = "uns
 nautichart-android-library-compose = { id = "nautichart.android.library.compose", version = "unspecified" }
 nautichart-android-hilt = { id = "nautichart.android.hilt", version = "unspecified" }
 nautichart-android-feature = { id = "nautichart.android.feature", version = "unspecified" }
-nautichart-android-appsearchapi = { id = "nautichart.android.appsearchapi", version = "unspecified"}
 nautichart-android-library-resources = { id = "nautichart.android.library.resources", version = "unspecified" }
 nautichart-android-feature-compose = { id = "nautichart.android.feature.compose", version = "unspecified" }
 nautichart-android-application-compose = { id = "nautichart.android.application.compose", version = "unspecified" }

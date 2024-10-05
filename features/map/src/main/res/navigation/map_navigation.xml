@@ -26,6 +26,9 @@
         <action
             android:id="@+id/action_mapFragment_to_locationDialogFragment"
             app:destination="@id/locationDialogFragment" />
+        <action
+            android:id="@+id/action_mapFragment_to_anchorageAlarmSettingsDialog"
+            app:destination="@id/anchorageAlarmSettingsComposedDialog" />
     </fragment>
     <dialog
         android:id="@+id/mapBottomSheetFragment"
@@ -73,4 +76,8 @@
         android:name="com.bytecause.map.ui.dialog.LocationDialogFragment"
         android:label="LocationDialogFragment"
         tools:layout="@layout/location_alert_dialog" />
+    <fragment
+        android:id="@+id/anchorageAlarmSettingsComposedDialog"
+        android:name="com.bytecause.map.ui.dialog.AnchorageAlarmSettingsComposedDialog"
+        android:label="AnchorageAlarmSettingsComposedDialog" />
 </navigation>

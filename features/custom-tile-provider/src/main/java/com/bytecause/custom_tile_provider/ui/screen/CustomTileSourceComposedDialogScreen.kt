@@ -98,7 +98,6 @@ fun CustomTileSourceComposedDialogContent(
     onScrollToPage: (Int) -> Unit,
     onNavigateBack: () -> Unit
 ) {
-
     Scaffold(topBar = {
         TopAppBar(
             titleRes = R.string.custom_tile_source,

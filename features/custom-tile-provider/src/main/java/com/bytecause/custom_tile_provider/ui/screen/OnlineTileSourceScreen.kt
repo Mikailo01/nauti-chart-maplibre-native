@@ -96,11 +96,9 @@ fun OnlineTileSourceScreen(
                 }
 
                 OnlineTileSourceEffect.ToggleRangeSliderVisibility -> {
-                    coroutineScope.launch {
-                        if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                            bottomSheetScaffoldState.bottomSheetState.hide()
-                        } else bottomSheetScaffoldState.bottomSheetState.show()
-                    }
+                    if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
+                        bottomSheetScaffoldState.bottomSheetState.hide()
+                    } else bottomSheetScaffoldState.bottomSheetState.show()
                 }
             }
         }

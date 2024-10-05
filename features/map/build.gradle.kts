@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.nautichart.android.feature)
+    alias(libs.plugins.nautichart.android.feature.compose)
     alias(libs.plugins.navigation.safeargs)
 }
 

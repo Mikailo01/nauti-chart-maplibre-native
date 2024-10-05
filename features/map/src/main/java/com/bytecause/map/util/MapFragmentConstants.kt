@@ -61,8 +61,14 @@ object MapFragmentConstants {
     const val HARBOUR_GEOJSON_SOURCE = "harbour-geojson-source"
     const val HARBOUR_SYMBOL_LAYER = "harbour-geojson-layer"
     const val HARBOUR_SYMBOL_PROPERTY_SELECTED_KEY = "harbour_selected"
+    const val HARBOUR_ICON = "harbour_icon"
     const val HARBOUR_SYMBOL_SELECTED_SIZE = 1.2f
     const val HARBOUR_SYMBOL_DEFAULT_SIZE = 1f
+
+    const val ANCHORAGES_GEOJSON_SOURCE = "anchorages-geojson-source"
+    const val ANCHORAGES_SYMBOL_LAYER = "anchorages-symbol-layer"
+    const val ANCHORAGE_ICON = "anchorage-icon"
+    const val ANCHORAGE_SYMBOL_DEFAULT_SIZE = 0.6f
 
     const val CUSTOM_POI_GEOJSON_SOURCE = "custom-poi-geojson-source"
     const val CUSTOM_POI_SYMBOL_LAYER = "custom-poi-symbol-layer"

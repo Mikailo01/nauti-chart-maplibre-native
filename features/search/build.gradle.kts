@@ -6,9 +6,19 @@ plugins {
 }
 
 android {
+    android.buildFeatures.buildConfig = true
+
     namespace = "com.bytecause.features.search"
     buildFeatures {
         viewBinding = true
+    }
+
+    defaultConfig {
+        buildConfigField(
+            "String",
+            "APP_VERSION",
+            "\"${rootProject.extra["appVersionName"] as String}\""
+        )
     }
 }
 

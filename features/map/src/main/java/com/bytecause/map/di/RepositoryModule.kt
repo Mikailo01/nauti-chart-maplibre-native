@@ -2,13 +2,16 @@ package com.bytecause.map.di
 
 import android.content.Context
 import com.bytecause.data.di.DatabaseModule
+import com.bytecause.data.local.room.dao.AnchoragesDao
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsPositionsRemoteRepository
 import com.bytecause.map.data.remote.VesselsPositionsRemoteDataSource
+import com.bytecause.map.data.repository.AnchoragesRepositoryImpl
 import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsRemoteRepositoryImpl
+import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -49,4 +52,9 @@ object RepositoryModule {
     @Singleton
     fun providesVesselsRemoteDataSource(): VesselsPositionsRemoteDataSource =
         VesselsPositionsRemoteDataSource()
+
+    @Provides
+    @Singleton
+    fun providesAnchoragesRepository(anchoragesDao: AnchoragesDao): AnchoragesRepository =
+        AnchoragesRepositoryImpl(anchoragesDao)
 }

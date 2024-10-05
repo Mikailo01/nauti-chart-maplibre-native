@@ -3,6 +3,7 @@
 
     <string name="app_name">NautiChart</string>
     <string name="settings">Settings</string>
+    <string name="anchorage_alarm_settings">Anchorage alarm settings</string>
     <string name="clear">Clear</string>
     <string name="are_you_sure">Are you sure?</string>
     <string name="title_activity_navigation"> Navigation Activity </string>
@@ -189,6 +190,13 @@
     <string name="clear_filters">Clear filters</string>
     <string name="incorrect_file_type_selected_message">Oops, make sure you selected the correct file type, only MBTiles are supported.</string>
     <string name="tile_size_not_selected">Tile size not selected.</string>
+    <string name="minimum_update_interval">Minimum update interval</string>
+    <string name="maximum_update_interval">Maximum update interval</string>
+    <string name="alarm_delay">Alarm delay</string>
+    <string name="placeholder_with_seconds">%1s seconds</string>
+    <string name="anchorage_locations">Anchorage locations</string>
+    <string name="anchorage_history">Anchorage history</string>
+    <string name="show_anchorages">Show anchorages</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>

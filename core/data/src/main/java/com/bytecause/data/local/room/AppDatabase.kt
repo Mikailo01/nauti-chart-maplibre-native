@@ -2,6 +2,7 @@ package com.bytecause.data.local.room
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.bytecause.data.local.room.dao.AnchoragesDao
 import com.bytecause.data.local.room.dao.ContinentDao
 import com.bytecause.data.local.room.dao.CountryDao
 import com.bytecause.data.local.room.dao.CustomPoiDao
@@ -14,6 +15,7 @@ import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.RegionDao
 import com.bytecause.data.local.room.dao.VesselInfoDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
+import com.bytecause.data.local.room.tables.AnchoragesEntity
 import com.bytecause.data.local.room.tables.ContinentEntity
 import com.bytecause.data.local.room.tables.CountryEntity
 import com.bytecause.data.local.room.tables.CustomPoiCategoryEntity
@@ -42,7 +44,8 @@ import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
         RadiusPoiCacheEntity::class,
         CountryEntity::class,
         ContinentEntity::class,
-        RegionEntity::class
+        RegionEntity::class,
+        AnchoragesEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -73,4 +76,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun vesselsMetadataDatasetDao(): VesselsMetadataDatasetDao
 
     abstract fun radiusPoiCacheMetadataDatasetDao(): RadiusPoiMetadataDatasetDao
+
+    abstract fun anchoragesDao(): AnchoragesDao
 }

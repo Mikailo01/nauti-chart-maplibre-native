@@ -57,10 +57,6 @@ gradlePlugin {
             id = "nautichart.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
-        register("androidAppSearchApi") {
-            id = "nautichart.android.appsearchapi"
-            implementationClass = "AndroidAppSearchApiConventionPlugin"
-        }
         register("androidResourcesLibrary") {
             id = "nautichart.android.library.resources"
             implementationClass = "AndroidResourcesConventionPlugin"

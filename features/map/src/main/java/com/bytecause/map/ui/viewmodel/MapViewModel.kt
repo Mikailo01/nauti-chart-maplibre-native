@@ -2,7 +2,9 @@ package com.bytecause.map.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.local.room.tables.AnchoragesEntity
 import com.bytecause.data.local.room.tables.CustomPoiEntity
+import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
@@ -18,6 +20,7 @@ import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
+import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
@@ -69,6 +72,8 @@ constructor(
     private val vesselsDatabaseRepository: VesselsDatabaseRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
+    private val anchoragesRepository: AnchoragesRepository,
+    private val anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
 ) : ViewModel() {
 
     private var _locationButtonStateFlow = MutableStateFlow<Int?>(null)
@@ -76,6 +81,7 @@ constructor(
 
     private val vesselsBbox = Channel<LatLngBounds>(Channel.CONFLATED)
     private val harboursBbox = Channel<LatLngBounds>(Channel.CONFLATED)
+    private val anchoragesBbox = Channel<LatLngBounds>(Channel.CONFLATED)
     private val poisBbox = MutableStateFlow<LatLngBounds?>(null)
 
     private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType?>(null)
@@ -91,6 +97,10 @@ constructor(
 
     val areHarboursVisible: StateFlow<Boolean> = userPreferencesRepository.getAreHarboursVisible()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val areAnchoragesVisible: StateFlow<Boolean> =
+        anchorageAlarmPreferencesRepository.getAnchorageLocationsVisible()
+            .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     var isMeasuring = false
         private set
@@ -117,10 +127,7 @@ constructor(
 
                 } ?: emptyList()
             } else emptyList()
-            /*vessels.data?.let {
-                filterVisible(bbox, it)
-            } ?: emptyList()*/
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        }
 
     val harboursFlow: Flow<List<HarboursUiModel>> =
         combine(
@@ -137,11 +144,38 @@ constructor(
                     }
                 } ?: emptyList()
             } else emptyList()
+        }
 
-            /* harbours.data?.let { harboursList ->
-                 filterVisible(bbox, harboursList.map { it.asHarbourUiModel() })
-             } ?: emptyList()*/
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val anchoragesFlow: Flow<List<AnchoragesEntity>> =
+        combine(
+            areAnchoragesVisible,
+            anchoragesBbox.receiveAsFlow()
+        ) { anchoragesVisible, bbox ->
+
+            if (anchoragesVisible) {
+                bbox.run {
+                    getAnchoragesByBbox(
+                        minLat = latitudeSouth,
+                        maxLat = latitudeNorth,
+                        minLon = longitudeWest,
+                        maxLon = longitudeEast
+                    ).firstOrNull() ?: emptyList()
+                }
+            } else emptyList()
+        }
+
+    private fun getAnchoragesByBbox(
+        minLat: Double,
+        maxLat: Double,
+        minLon: Double,
+        maxLon: Double
+    ): Flow<List<AnchoragesEntity>> =
+        anchoragesRepository.getByBoundingBox(
+            minLat = minLat,
+            maxLat = maxLat,
+            minLon = minLon,
+            maxLon = maxLon
+        )
 
     fun insertTextIntoSearchBoxTextPlaceholder(text: SearchBoxTextType) {
         viewModelScope.launch {
@@ -200,6 +234,12 @@ constructor(
 
     fun updatePoiBbox(bounds: LatLngBounds?) {
         poisBbox.update { bounds }
+    }
+
+    fun updateAnchoragesBbox(bounds: LatLngBounds) {
+        viewModelScope.launch {
+            anchoragesBbox.send(bounds)
+        }
     }
 
     fun setIsMeasuring(boolean: Boolean) {
