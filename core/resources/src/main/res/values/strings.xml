@@ -197,6 +197,7 @@
     <string name="anchorage_locations">Anchorage locations</string>
     <string name="anchorage_history">Anchorage history</string>
     <string name="show_anchorages">Show anchorages</string>
+    <string name="empty_history">Empty history</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>

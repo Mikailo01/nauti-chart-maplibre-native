@@ -52,7 +52,7 @@ private val Context.userDataStore: DataStore<Preferences> by preferencesDataStor
     name = "user_preferences"
 )
 
-private val Context.anchorageAlarmDataStore: DataStore<Preferences> by preferencesDataStore(
+private val Context.anchorageAlarmSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "anchorage_alarm_preferences"
 )
 
@@ -128,7 +128,7 @@ object RepositoryModule {
     @Singleton
     fun providesAnchorageAlarmPreferencesRepository(@ApplicationContext context: Context): AnchorageAlarmPreferencesRepository =
         AnchorageAlarmPreferencesRepositoryImpl(
-            context.anchorageAlarmDataStore
+            context.anchorageAlarmSettingsDataStore
         )
 
     @Provides

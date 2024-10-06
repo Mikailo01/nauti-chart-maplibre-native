@@ -1,5 +1,6 @@
 [versions]
 # Dependencies
+desugar_jdk_libs = "2.1.2"
 maplibreSdk = "11.0.0"
 maplibreAnnotationPlugin = "3.0.0"
 room = "2.6.1"
@@ -63,6 +64,9 @@ androidx-constraintLayout = { group = "androidx.constraintlayout", name = "const
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity" }
 
 androidx-splashScreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashScreen" }
+
+# Desugaring libs
+desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }

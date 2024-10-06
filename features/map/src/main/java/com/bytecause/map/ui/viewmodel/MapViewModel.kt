@@ -20,10 +20,14 @@ import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
+import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
+import com.bytecause.map.ui.mappers.asAnchorageHistory
+import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
+import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.PoiUiModel
@@ -73,7 +77,8 @@ constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
     private val anchoragesRepository: AnchoragesRepository,
-    private val anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
+    anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository,
+    private val anchorageHistoryRepository: AnchorageHistoryRepository
 ) : ViewModel() {
 
     private var _locationButtonStateFlow = MutableStateFlow<Int?>(null)
@@ -179,7 +184,6 @@ constructor(
 
     fun insertTextIntoSearchBoxTextPlaceholder(text: SearchBoxTextType) {
         viewModelScope.launch {
-
             when (text) {
                 is SearchBoxTextType.PoiName -> {
                     _searchBoxTextPlaceholder.emit(searchBoxTextPlaceholder.value.filterIsInstance<SearchBoxTextType.Coordinates>() + text)
@@ -211,6 +215,16 @@ constructor(
             }
         }
     }
+
+    fun saveAnchorageToHistory(anchorage: AnchorageHistoryUiModel) {
+        viewModelScope.launch {
+            anchorageHistoryRepository.saveAnchorageHistory(anchorage.asAnchorageHistory())
+        }
+    }
+
+    suspend fun getAnchorageHistoryById(id: String): AnchorageHistoryUiModel? =
+        anchorageHistoryRepository.getAnchorageHistoryById(id).firstOrNull()
+            ?.asAnchorageHistoryUiModel()
 
     fun setAnchorageCenterPoint(latLng: LatLng?) {
         anchorageCenterPoint = latLng

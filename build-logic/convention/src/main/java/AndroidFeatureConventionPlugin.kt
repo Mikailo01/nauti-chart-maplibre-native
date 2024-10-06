@@ -1,4 +1,5 @@
 import com.bytecause.convention.androidTestImplementation
+import com.bytecause.convention.coreLibraryDesugaring
 import com.bytecause.convention.implementation
 import com.bytecause.convention.libs
 import org.gradle.api.Plugin
@@ -20,6 +21,9 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 // Testing
                 androidTestImplementation(libs.findLibrary("junit").get())
                 androidTestImplementation(libs.findLibrary("androidx-junit").get())
+
+                // desugaring libs
+                coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())
             }
         }
     }

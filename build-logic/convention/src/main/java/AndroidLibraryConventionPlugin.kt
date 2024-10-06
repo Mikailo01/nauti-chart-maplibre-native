@@ -1,6 +1,7 @@
 import com.android.build.gradle.LibraryExtension
 import com.bytecause.convention.androidTestImplementation
 import com.bytecause.convention.configureKotlinAndroid
+import com.bytecause.convention.coreLibraryDesugaring
 import com.bytecause.convention.libs
 import com.bytecause.convention.testImplementation
 import org.gradle.api.Plugin
@@ -26,6 +27,9 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 testImplementation(kotlin("test"))
                 androidTestImplementation(libs.findLibrary("androidx-junit").get())
                 androidTestImplementation(libs.findLibrary("androidx-espresso").get())
+
+                // desugaring libs
+                coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())
             }
         }
     }

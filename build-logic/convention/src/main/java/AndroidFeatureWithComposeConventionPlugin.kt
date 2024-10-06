@@ -1,5 +1,6 @@
 import com.android.build.api.dsl.LibraryExtension
 import com.bytecause.convention.configureAndroidCompose
+import com.bytecause.convention.coreLibraryDesugaring
 import com.bytecause.convention.implementation
 import com.bytecause.convention.libs
 import org.gradle.api.Plugin
@@ -23,6 +24,9 @@ class AndroidFeatureWithComposeConventionPlugin : Plugin<Project> {
                 // add dependencies for all features
                 implementation(libs.findLibrary("androidx-navigation-fragmentKtx").get())
                 implementation(libs.findLibrary("androidx-compose-lifecycle").get())
+
+                // desugaring libs
+                coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())
             }
         }
     }

@@ -1,12 +1,14 @@
 package com.bytecause.map.ui.dialog
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,15 +18,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -45,14 +51,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
@@ -60,11 +69,14 @@ import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.AnchorageAlarmSettingsDialogLayoutBinding
 import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
-import com.bytecause.map.ui.event.IntervalType
+import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
 import com.bytecause.map.ui.viewmodel.AnchorageAlarmSettingsViewModel
+import com.bytecause.map.util.MapUtil
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
+import com.bytecause.presentation.viewmodels.MapSharedViewModel
+import com.bytecause.util.common.getDateTimeFromTimestamp
 import com.bytecause.util.delegates.viewBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -78,13 +90,16 @@ class AnchorageAlarmSettingsComposedDialog :
 
     private val viewModel by viewModels<AnchorageAlarmSettingsViewModel>()
 
+    private val mapSharedViewModel by activityViewModels<MapSharedViewModel>()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.anchorageAlarmSettingsComposeView.setContent {
             AppTheme {
                 AnchorageSettingsScreen(
-                    viewModel,
+                    viewModel = viewModel,
+                    mapSharedViewModel = mapSharedViewModel,
                     onNavigateBack = { findNavController().popBackStack() })
             }
         }
@@ -95,28 +110,48 @@ class AnchorageAlarmSettingsComposedDialog :
 @Composable
 fun AnchorageSettingsScreen(
     viewModel: AnchorageAlarmSettingsViewModel,
+    mapSharedViewModel: MapSharedViewModel,
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
 
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = SheetState(
-            density = LocalDensity.current,
-            skipPartiallyExpanded = false,
-            initialValue = SheetValue.Hidden,
-            skipHiddenState = false
-        )
+        bottomSheetState = remember {
+            SheetState(
+                density = density,
+                skipPartiallyExpanded = false,
+                initialValue = SheetValue.Hidden,
+                skipHiddenState = false
+            )
+        }
     )
+
+    val coroutineScope = rememberCoroutineScope()
+
+    BackHandler(
+        enabled = bottomSheetScaffoldState.bottomSheetState.isVisible
+    ) {
+        coroutineScope.launch {
+            bottomSheetScaffoldState.bottomSheetState.hide()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 AnchorageAlarmSettingsEffect.NavigateBack -> onNavigateBack()
-                AnchorageAlarmSettingsEffect.OnShowIntervalBottomSheet -> {
-                    if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                        bottomSheetScaffoldState.bottomSheetState.hide()
-                    } else bottomSheetScaffoldState.bottomSheetState.show()
-                        .also { Log.d("idk", "showed") }
+                AnchorageAlarmSettingsEffect.OnShowNumberPickerBottomSheet -> {
+                    bottomSheetScaffoldState.bottomSheetState.expand()
+                }
+
+                AnchorageAlarmSettingsEffect.OnHideNumberPickerBottomSheet -> {
+                    bottomSheetScaffoldState.bottomSheetState.hide()
+                }
+
+                is AnchorageAlarmSettingsEffect.AnchorageHistoryItemClick -> {
+                    mapSharedViewModel.setAnchorageLocationFromHistoryId(effect.id)
+                    onNavigateBack()
                 }
             }
         }
@@ -129,7 +164,6 @@ fun AnchorageSettingsScreen(
     )
 }
 
-// TODO("Fix recompositions")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnchorageSettingsScreenContent(
@@ -137,8 +171,6 @@ fun AnchorageSettingsScreenContent(
     bottomSheetScaffoldState: BottomSheetScaffoldState,
     onEvent: (AnchorageAlarmSettingsEvent) -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -159,109 +191,53 @@ fun AnchorageSettingsScreenContent(
                     .padding(15.dp),
                 verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
-                Column {
-                    Text(
-                        "GPS",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    HorizontalDivider(
-                        thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-
-                        GpsRowItem(
-                            textRes = com.bytecause.core.resources.R.string.maximum_update_interval,
-                            interval = state.maxGpsUpdateInterval,
-                            onItemClick = {
-                                coroutineScope.launch {
-                                    if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                                        bottomSheetScaffoldState.bottomSheetState.hide()
-                                    } else {
-                                        bottomSheetScaffoldState.bottomSheetState.expand()
-                                        // save interval type to be able to infer which property should be updated
-                                        onEvent(
-                                            AnchorageAlarmSettingsEvent.OnUpdateIntervalType(
-                                                IntervalType.MAX_UPDATE_INTERVAL
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        )
-
-                        GpsRowItem(
-                            textRes = com.bytecause.core.resources.R.string.minimum_update_interval,
-                            interval = state.minGpsUpdateInterval,
-                            onItemClick = {
-                                coroutineScope.launch {
-                                    if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                                        bottomSheetScaffoldState.bottomSheetState.hide()
-                                    } else {
-                                        bottomSheetScaffoldState.bottomSheetState.expand()
-                                        // save interval type to be able to infer which property should be updated
-                                        onEvent(
-                                            AnchorageAlarmSettingsEvent.OnUpdateIntervalType(
-                                                IntervalType.MIN_UPDATE_INTERVAL
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        )
-
-                        GpsRowItem(
-                            textRes = com.bytecause.core.resources.R.string.alarm_delay,
-                            interval = state.alarmDelay,
-                            onItemClick = {
-                                coroutineScope.launch {
-                                    if (bottomSheetScaffoldState.bottomSheetState.isVisible) {
-                                        bottomSheetScaffoldState.bottomSheetState.hide()
-                                    } else {
-                                        bottomSheetScaffoldState.bottomSheetState.expand()
-                                        // save interval type to be able to infer which property should be updated
-                                        onEvent(
-                                            AnchorageAlarmSettingsEvent.OnUpdateIntervalType(
-                                                IntervalType.ALARM_DELAY
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = stringResource(com.bytecause.core.resources.R.string.anchorage_locations),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    HorizontalDivider(
-                        thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
+                Card(
+                    colors = CardDefaults.cardColors()
+                        .copy(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                    border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
+                ) {
+                    Column {
+                        Column(modifier = Modifier.padding(10.dp)) {
                             Text(
-                                text = stringResource(com.bytecause.core.resources.R.string.show_anchorages),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.bodyMedium
+                                "GPS",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall
                             )
-                            Switch(
-                                checked = state.areAnchorageLocationsVisible,
-                                onCheckedChange = { boolean ->
+                            HorizontalDivider(
+                                thickness = 2.dp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                        Column {
+                            GpsRowItem(
+                                textRes = com.bytecause.core.resources.R.string.maximum_update_interval,
+                                interval = state.maxGpsUpdateInterval,
+                                onItemClick = {
                                     onEvent(
-                                        AnchorageAlarmSettingsEvent.OnAnchorageVisibilityChange(
-                                            boolean
-                                        )
+                                        AnchorageAlarmSettingsEvent.OnMaximumUpdateIntervalClick
+                                    )
+                                }
+                            )
+
+                            GpsRowItem(
+                                textRes = com.bytecause.core.resources.R.string.minimum_update_interval,
+                                interval = state.minGpsUpdateInterval,
+                                onItemClick = {
+                                    onEvent(
+                                        AnchorageAlarmSettingsEvent.OnMinimumUpdateIntervalClick
+                                    )
+                                }
+                            )
+
+                            GpsRowItem(
+                                textRes = com.bytecause.core.resources.R.string.alarm_delay,
+                                interval = state.alarmDelay,
+                                onItemClick = {
+                                    onEvent(
+                                        AnchorageAlarmSettingsEvent.OnAlarmDelayClick
                                     )
                                 }
                             )
@@ -269,23 +245,107 @@ fun AnchorageSettingsScreenContent(
                     }
                 }
 
-                Column {
-                    Text(
-                        text = stringResource(com.bytecause.core.resources.R.string.anchorage_history),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    HorizontalDivider(
-                        thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // Lazy column
+                Card(
+                    colors = CardDefaults.cardColors()
+                        .copy(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                    border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = stringResource(com.bytecause.core.resources.R.string.anchorage_locations),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(com.bytecause.core.resources.R.string.show_anchorages),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Switch(
+                                    checked = state.areAnchorageLocationsVisible,
+                                    onCheckedChange = { boolean ->
+                                        onEvent(
+                                            AnchorageAlarmSettingsEvent.OnAnchorageVisibilityChange(
+                                                boolean
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors()
+                        .copy(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                    border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = stringResource(com.bytecause.core.resources.R.string.anchorage_history),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        if (state.anchorageHistory.isEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = stringResource(com.bytecause.core.resources.R.string.empty_history),
+                                    fontStyle = FontStyle.Italic,
+                                    modifier = Modifier.alpha(0.3f)
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 0.dp, max = 200.dp)
+                            ) {
+                                items(state.anchorageHistory) { item ->
+                                    AnchorageHistoryItem(
+                                        item = item,
+                                        onItemClick = {
+                                            onEvent(
+                                                AnchorageAlarmSettingsEvent.OnAnchorageHistoryItemClick(
+                                                    it
+                                                )
+                                            )
+                                        }
+                                    )
+                                    if (item != state.anchorageHistory.last()) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-
 
             BottomSheetScaffold(
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -323,16 +383,16 @@ fun GpsRowItem(
         .fillMaxWidth()
         .clickable { onItemClick() }) {
         Text(
-            stringResource(textRes),
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            style = MaterialTheme.typography.bodyMedium
+            text = stringResource(textRes),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 10.dp)
         )
         Text(
             stringResource(com.bytecause.core.resources.R.string.placeholder_with_seconds)
                 .format(interval),
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = 10.dp, bottom = 10.dp)
         )
     }
 }
@@ -349,6 +409,8 @@ fun NumberPicker(
     }
     val listState = rememberLazyListState()
     var selectedInt by remember { mutableIntStateOf(minValue) }
+
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier,
@@ -387,12 +449,12 @@ fun NumberPicker(
 
             // Number picker LazyColumn
             LazyColumn(
-                modifier = Modifier.height(150.dp),
+                modifier = Modifier.fillMaxSize(),
                 state = listState,
                 verticalArrangement = Arrangement.Center,
                 contentPadding = PaddingValues(vertical = 60.dp) // Add padding to center items
             ) {
-                items(numbers) { number ->
+                itemsIndexed(numbers) { index, number ->
                     // Animation based on selection
                     val alpha by animateFloatAsState(if (selectedInt == number) 1f else 0.3f)
                     val scale by animateFloatAsState(if (selectedInt == number) 1.2f else 1f)
@@ -405,6 +467,15 @@ fun NumberPicker(
                                 alpha = alpha,
                                 scaleX = scale,
                                 scaleY = scale
+                            )
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(index)
+                                    }
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -437,6 +508,41 @@ fun NumberPicker(
             Text(
                 stringResource(com.bytecause.core.resources.R.string.done),
                 color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnchorageHistoryItem(
+    item: AnchorageHistoryUiModel,
+    modifier: Modifier = Modifier,
+    onItemClick: (String) -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                onItemClick(item.id)
+            }
+    ) {
+        Text(text = getDateTimeFromTimestamp(item.timestamp))
+        Text(
+            text = stringResource(
+                com.bytecause.core.resources.R.string.split_two_strings_formatter,
+                MapUtil.latitudeToDMS(item.latitude),
+                MapUtil.longitudeToDMS(item.longitude)
+            )
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(text = stringResource(com.bytecause.core.resources.R.string.radius))
+            Text(
+                text = stringResource(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                    item.radius,
+                    "M"
+                )
             )
         }
     }

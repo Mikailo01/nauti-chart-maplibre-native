@@ -12,6 +12,7 @@ sealed interface AnchorageAlarmSettingsEvent {
         AnchorageAlarmSettingsEvent
 
     data class OnUpdateIntervalType(val type: IntervalType) : AnchorageAlarmSettingsEvent
+    data class OnAnchorageHistoryItemClick(val id: String) : AnchorageAlarmSettingsEvent
 
     data object OnNavigateBack : AnchorageAlarmSettingsEvent
     data object OnMaximumUpdateIntervalClick : AnchorageAlarmSettingsEvent

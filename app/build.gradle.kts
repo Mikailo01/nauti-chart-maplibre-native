@@ -9,7 +9,18 @@ plugins {
 android {
     packaging {
         resources {
-            excludes += listOf("META-INF/DEPENDENCIES", "META-INF/LICENSE", "META-INF/LICENSE.txt", "META-INF/license.txt", "META-INF/NOTICE", "META-INF/NOTICE.txt", "META-INF/notice.txt", "META-INF/ASL2.0", "META-INF/*.kotlin_module", "mozilla/public-suffix-list.txt")
+            excludes += listOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module",
+                "mozilla/public-suffix-list.txt"
+            )
         }
     }
 
@@ -41,7 +52,6 @@ android {
 }
 
 dependencies {
-
     // Features
     implementation(projects.features.settings)
     implementation(projects.features.pois)
@@ -51,7 +61,7 @@ dependencies {
     implementation(projects.features.customTileProvider)
     implementation(projects.features.map)
 
-   // Core dependencies
+    // Core dependencies
     implementation(projects.core.util)
     implementation(projects.core.domain)
     implementation(projects.core.resources)

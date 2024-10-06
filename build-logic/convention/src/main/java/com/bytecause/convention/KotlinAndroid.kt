@@ -23,6 +23,8 @@ internal fun Project.configureKotlinAndroid(
         }
 
         compileOptions {
+            // Enable desugaring to be able to use newer Java APIs on older devices
+            isCoreLibraryDesugaringEnabled = true
             sourceCompatibility = JavaVersion.VERSION_1_8
             targetCompatibility = JavaVersion.VERSION_1_8
         }

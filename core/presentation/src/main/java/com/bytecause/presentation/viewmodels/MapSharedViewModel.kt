@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.model.PointType
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraPosition
@@ -48,9 +50,19 @@ class MapSharedViewModel : ViewModel() {
     private val _showAnchorageAlarmBottomSheet = MutableStateFlow(false)
     val showAnchorageAlarmBottomSheet = _showAnchorageAlarmBottomSheet.asStateFlow()
 
+    private val _anchorageLocationFromHistoryId: Channel<String> =
+        Channel(capacity = Channel.CONFLATED)
+    val anchorageLocationFromHistoryId = _anchorageLocationFromHistoryId.receiveAsFlow()
+
     fun setShowAnchorageAlarmBottomSheet(boolean: Boolean) {
         viewModelScope.launch {
             _showAnchorageAlarmBottomSheet.emit(boolean)
+        }
+    }
+
+    fun setAnchorageLocationFromHistoryId(id: String) {
+        viewModelScope.launch {
+            _anchorageLocationFromHistoryId.send(id)
         }
     }
 

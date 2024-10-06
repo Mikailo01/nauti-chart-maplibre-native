@@ -43,6 +43,7 @@ import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
+import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.SearchBoxTextType
@@ -199,6 +200,7 @@ import org.maplibre.geojson.Point
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.round
 import kotlin.properties.Delegates
@@ -2106,6 +2108,27 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
                             }
 
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.anchorageLocationFromHistoryId.collect { id ->
+                                        viewModel.getAnchorageHistoryById(id)?.let { location ->
+                                            showAnchorageAlarmBottomSheet(
+                                                style = style,
+                                                mapLibreMap = mapLibreMap,
+                                                latLng = LatLng(
+                                                    latitude = location.latitude,
+                                                    longitude = location.longitude
+                                                ),
+                                                anchorageHistoryUiModel = location
+                                            )
+
+                                            binding.anchorageAlarmBottomSheet.radiusSlider.value =
+                                                location.radius.toFloat()
+                                        }
+                                    }
+                                }
+                            }
+
                             if (mapSharedViewModel.geoIntentFlow.replayCache.lastOrNull() == null) {
                                 viewLifecycleOwner.lifecycleScope.launch {
                                     // if anchorage alarm is on, navigate to anchorage location,
@@ -2498,7 +2521,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     private fun showAnchorageRadius(style: Style, radiusInPixels: Float, latLng: LatLng) {
-        if (style.getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE) != null) return
+        if (style.getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE) != null) {
+            removeAnchorageRadius(style)
+        }
 
         val radiusBorderSource = GeoJsonSource(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE).apply {
             setGeoJson(
@@ -2944,7 +2969,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private fun showAnchorageAlarmBottomSheet(
         style: Style,
         mapLibreMap: MapLibreMap,
-        latLng: LatLng
+        latLng: LatLng,
+        // if null, current anchorage is not saved in anchorage's history and should be cached
+        anchorageHistoryUiModel: AnchorageHistoryUiModel? = null
     ) {
         shouldInterceptBackEvent = true
 
@@ -3045,8 +3072,29 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
                         requireActivity().startService(it)
                     }
-                } else activityResultLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
 
+                    // id and timestamp are omitted from equals and hashCode methods, so only latitude,
+                    // longitude and radius are checked for equality
+                    if (anchorageHistoryUiModel != AnchorageHistoryUiModel(
+                            id = "",
+                            latitude = latLng.latitude,
+                            longitude = latLng.longitude,
+                            radius = radiusSlider.value.toInt(),
+                            timestamp = 0L
+                        )
+                    ) {
+                        // save current anchorage location to persistent proto datastore
+                        viewModel.saveAnchorageToHistory(
+                            AnchorageHistoryUiModel(
+                                id = UUID.randomUUID().toString(),
+                                latitude = latLng.latitude,
+                                longitude = latLng.longitude,
+                                radius = radiusSlider.value.toInt(),
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                } else activityResultLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
 
             stopButton.setOnClickListener {

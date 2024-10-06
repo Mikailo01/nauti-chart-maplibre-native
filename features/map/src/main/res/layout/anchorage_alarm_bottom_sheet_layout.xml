@@ -49,7 +49,8 @@
                 android:layout_height="wrap_content"
                 android:background="@null"
                 android:contentDescription="@string/settings"
-                android:src="@drawable/settings" />
+                android:src="@drawable/settings"
+                app:tint="@color/md_theme_onSurface" />
 
         </LinearLayout>
 

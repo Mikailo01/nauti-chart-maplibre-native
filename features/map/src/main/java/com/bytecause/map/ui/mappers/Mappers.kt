@@ -3,9 +3,11 @@ package com.bytecause.map.ui.mappers
 import com.bytecause.domain.model.HarboursModel
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.model.RadiusPoiCacheModel
+import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
+import com.bytecause.nautichart.AnchorageHistory
 
 internal fun PoiCacheModel.asPoiUiModel(): PoiUiModel = PoiUiModel(
     id = placeId,
@@ -42,3 +44,21 @@ internal fun HarboursModel.asHarbourUiModel(): HarboursUiModel = HarboursUiModel
     latitude = latitude,
     longitude = longitude
 )
+
+internal fun AnchorageHistoryUiModel.asAnchorageHistory(): AnchorageHistory =
+    AnchorageHistory.newBuilder()
+        .setId(id)
+        .setLatitude(latitude)
+        .setLongitude(longitude)
+        .setRadius(radius)
+        .setTimestamp(timestamp)
+        .build()
+
+internal fun AnchorageHistory.asAnchorageHistoryUiModel(): AnchorageHistoryUiModel =
+    AnchorageHistoryUiModel(
+        id = id,
+        latitude = latitude,
+        longitude = longitude,
+        radius = radius,
+        timestamp = timestamp
+    )

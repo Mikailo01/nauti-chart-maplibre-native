@@ -3,38 +3,59 @@ package com.bytecause.map.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
+import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
 import com.bytecause.map.ui.event.IntervalType
+import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
+import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AnchorageAlarmSettingsViewModel @Inject constructor(
-    private val anchoragesAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
+    private val anchoragesAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository,
+    private val anchorageHistoryRepository: AnchorageHistoryRepository
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<AnchorageAlarmSettingsState> =
         MutableStateFlow(AnchorageAlarmSettingsState())
-    val uiState: StateFlow<AnchorageAlarmSettingsState> = _uiState.asStateFlow()
+    val uiState: StateFlow<AnchorageAlarmSettingsState> = _uiState
+        .onStart {
+            observeUiChanges()
+            loadAnchorageHistory()
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            AnchorageAlarmSettingsState()
+        )
 
     private val _effect: Channel<AnchorageAlarmSettingsEffect> =
         Channel(capacity = Channel.CONFLATED)
     val effect: Flow<AnchorageAlarmSettingsEffect> = _effect.receiveAsFlow()
 
-    init {
-        combine(
+    private var observeJob: Job? = null
+
+    private fun observeUiChanges() {
+        observeJob?.cancel()
+        observeJob = combine(
             anchoragesAlarmPreferencesRepository.getAlarmDelay(),
             anchoragesAlarmPreferencesRepository.getAnchorageLocationsVisible(),
             anchoragesAlarmPreferencesRepository.getMaxUpdateInterval(),
@@ -55,14 +76,9 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     fun uiEventHandler(event: AnchorageAlarmSettingsEvent) {
         when (event) {
             AnchorageAlarmSettingsEvent.OnNavigateBack -> sendEffect(AnchorageAlarmSettingsEffect.NavigateBack)
-            AnchorageAlarmSettingsEvent.OnMaximumUpdateIntervalClick -> {
-                sendEffect(AnchorageAlarmSettingsEffect.OnShowIntervalBottomSheet)
-            }
-
-            AnchorageAlarmSettingsEvent.OnAlarmDelayClick -> sendEffect(AnchorageAlarmSettingsEffect.OnShowIntervalBottomSheet)
-            AnchorageAlarmSettingsEvent.OnMinimumUpdateIntervalClick -> sendEffect(
-                AnchorageAlarmSettingsEffect.OnShowIntervalBottomSheet
-            )
+            AnchorageAlarmSettingsEvent.OnMaximumUpdateIntervalClick -> onGpsRowClick(IntervalType.MAX_UPDATE_INTERVAL)
+            AnchorageAlarmSettingsEvent.OnAlarmDelayClick -> onGpsRowClick(IntervalType.ALARM_DELAY)
+            AnchorageAlarmSettingsEvent.OnMinimumUpdateIntervalClick -> onGpsRowClick(IntervalType.MIN_UPDATE_INTERVAL)
 
             is AnchorageAlarmSettingsEvent.OnAnchorageVisibilityChange -> onAnchorageVisibilityChange(
                 event.value
@@ -74,6 +90,9 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
             )
 
             is AnchorageAlarmSettingsEvent.OnUpdateIntervalType -> onUpdateIntervalType(event.type)
+            is AnchorageAlarmSettingsEvent.OnAnchorageHistoryItemClick -> sendEffect(
+                AnchorageAlarmSettingsEffect.AnchorageHistoryItemClick(event.id)
+            )
         }
     }
 
@@ -83,10 +102,39 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun loadAnchorageHistory() {
+        viewModelScope.launch {
+            getAnchorageHistoryList().firstOrNull()?.let {
+                _uiState.update { state ->
+                    state.copy(anchorageHistory = it)
+                }
+            }
+        }
+    }
+
+    private fun getAnchorageHistoryList(): Flow<List<AnchorageHistoryUiModel>> =
+        anchorageHistoryRepository.getAnchorageHistoryList()
+            .map { historyList ->
+                historyList.anchorageHistoryList.map {
+                    it.asAnchorageHistoryUiModel()
+                }
+                    .sortedWith(compareByDescending {
+                        it.timestamp
+                    })
+            }
+
     private fun onAnchorageVisibilityChange(boolean: Boolean) {
         viewModelScope.launch {
             anchoragesAlarmPreferencesRepository.saveAnchorageLocationsVisible(boolean)
         }
+    }
+
+    private fun onGpsRowClick(type: IntervalType) {
+        // save interval type to be able to infer which property should be updated
+        _uiState.update {
+            it.copy(selectedIntervalType = type)
+        }
+        sendEffect(AnchorageAlarmSettingsEffect.OnShowNumberPickerBottomSheet)
     }
 
     private fun onUpdateIntervalType(intervalType: IntervalType) {
@@ -110,6 +158,11 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
                     anchoragesAlarmPreferencesRepository.saveAlarmDelay((interval * 1000).toLong())
                 }
             }
+
+            _uiState.update {
+                it.copy(selectedIntervalType = null)
+            }
+            sendEffect(AnchorageAlarmSettingsEffect.OnHideNumberPickerBottomSheet)
         }
     }
 }

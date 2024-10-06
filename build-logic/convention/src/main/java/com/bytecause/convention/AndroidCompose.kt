@@ -19,6 +19,9 @@ internal fun Project.configureAndroidCompose(
             implementation(libs.findLibrary("androidx-compose-ui-tooling-preview").get())
             implementation(libs.findLibrary("navigation-hilt-compose-navigation").get())
 
+            // desugaring libs
+            coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())
+
             androidTestImplementation(libs.findLibrary("junit").get())
             androidTestImplementation(libs.findLibrary("androidx-junit").get())
         }
