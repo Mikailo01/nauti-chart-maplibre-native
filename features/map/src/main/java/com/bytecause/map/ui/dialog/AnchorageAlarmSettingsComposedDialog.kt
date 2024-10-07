@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.BottomSheetScaffold
@@ -48,6 +50,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +74,7 @@ import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
+import com.bytecause.map.ui.state.BottomSheetType
 import com.bytecause.map.ui.viewmodel.AnchorageAlarmSettingsViewModel
 import com.bytecause.map.util.MapUtil
 import com.bytecause.presentation.components.compose.TopAppBar
@@ -127,34 +131,28 @@ fun AnchorageSettingsScreen(
         }
     )
 
-    val coroutineScope = rememberCoroutineScope()
-
     BackHandler(
         enabled = bottomSheetScaffoldState.bottomSheetState.isVisible
     ) {
-        coroutineScope.launch {
-            bottomSheetScaffoldState.bottomSheetState.hide()
-        }
+        viewModel.uiEventHandler(AnchorageAlarmSettingsEvent.OnShowBottomSheet(null))
     }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 AnchorageAlarmSettingsEffect.NavigateBack -> onNavigateBack()
-                AnchorageAlarmSettingsEffect.OnShowNumberPickerBottomSheet -> {
-                    bottomSheetScaffoldState.bottomSheetState.expand()
-                }
-
-                AnchorageAlarmSettingsEffect.OnHideNumberPickerBottomSheet -> {
-                    bottomSheetScaffoldState.bottomSheetState.hide()
-                }
-
                 is AnchorageAlarmSettingsEffect.AnchorageHistoryItemClick -> {
                     mapSharedViewModel.setAnchorageLocationFromHistoryId(effect.id)
                     onNavigateBack()
                 }
             }
         }
+    }
+
+    LaunchedEffect(state.bottomSheetType) {
+        if (state.bottomSheetType == null) {
+            bottomSheetScaffoldState.bottomSheetState.hide()
+        } else bottomSheetScaffoldState.bottomSheetState.expand()
     }
 
     AnchorageSettingsScreenContent(
@@ -188,7 +186,8 @@ fun AnchorageSettingsScreenContent(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(15.dp),
+                    .padding(15.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
                 Card(
@@ -217,7 +216,9 @@ fun AnchorageSettingsScreenContent(
                                 interval = state.maxGpsUpdateInterval,
                                 onItemClick = {
                                     onEvent(
-                                        AnchorageAlarmSettingsEvent.OnMaximumUpdateIntervalClick
+                                        AnchorageAlarmSettingsEvent.OnShowBottomSheet(
+                                            BottomSheetType.MAX_UPDATE_INTERVAL
+                                        )
                                     )
                                 }
                             )
@@ -227,7 +228,9 @@ fun AnchorageSettingsScreenContent(
                                 interval = state.minGpsUpdateInterval,
                                 onItemClick = {
                                     onEvent(
-                                        AnchorageAlarmSettingsEvent.OnMinimumUpdateIntervalClick
+                                        AnchorageAlarmSettingsEvent.OnShowBottomSheet(
+                                            BottomSheetType.MIN_UPDATE_INTERVAL
+                                        )
                                     )
                                 }
                             )
@@ -237,7 +240,9 @@ fun AnchorageSettingsScreenContent(
                                 interval = state.alarmDelay,
                                 onItemClick = {
                                     onEvent(
-                                        AnchorageAlarmSettingsEvent.OnAlarmDelayClick
+                                        AnchorageAlarmSettingsEvent.OnShowBottomSheet(
+                                            BottomSheetType.ALARM_DELAY
+                                        )
                                     )
                                 }
                             )
@@ -355,18 +360,14 @@ fun AnchorageSettingsScreenContent(
                         verticalArrangement = Arrangement.spacedBy(15.dp)
                     ) {
                         NumberPicker(onValueSelected = { value: Int ->
-                            state.selectedIntervalType?.let { intervalType ->
-                                onEvent(
-                                    AnchorageAlarmSettingsEvent.OnSelectedIntervalValueChange(
-                                        intervalType,
-                                        value
-                                    )
-                                )
-                            }
+                            onEvent(
+                                AnchorageAlarmSettingsEvent.OnSelectedIntervalValueChange(value)
+                            )
                         })
                     }
                 },
-                scaffoldState = bottomSheetScaffoldState
+                scaffoldState = bottomSheetScaffoldState,
+                sheetSwipeEnabled = false
             ) {}
         }
     }
@@ -408,7 +409,7 @@ fun NumberPicker(
         (minValue..maxValue).toList()
     }
     val listState = rememberLazyListState()
-    var selectedInt by remember { mutableIntStateOf(minValue) }
+    var selectedInt by rememberSaveable { mutableIntStateOf(minValue) }
 
     val coroutineScope = rememberCoroutineScope()
 

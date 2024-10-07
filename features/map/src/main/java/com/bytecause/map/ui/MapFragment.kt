@@ -3093,6 +3093,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 timestamp = System.currentTimeMillis()
                             )
                         )
+                    } else {
+                        viewModel.updateAnchorageHistoryTimestamp(
+                            id = anchorageHistoryUiModel.id,
+                            timestamp = System.currentTimeMillis()
+                        )
                     }
                 } else activityResultLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }

@@ -1,21 +1,13 @@
 package com.bytecause.map.ui.event
 
-enum class IntervalType {
-    MAX_UPDATE_INTERVAL,
-    MIN_UPDATE_INTERVAL,
-    ALARM_DELAY
-}
+import com.bytecause.map.ui.state.BottomSheetType
 
 sealed interface AnchorageAlarmSettingsEvent {
     data class OnAnchorageVisibilityChange(val value: Boolean) : AnchorageAlarmSettingsEvent
-    data class OnSelectedIntervalValueChange(val type: IntervalType, val value: Int) :
+    data class OnSelectedIntervalValueChange(val value: Int) :
         AnchorageAlarmSettingsEvent
-
-    data class OnUpdateIntervalType(val type: IntervalType) : AnchorageAlarmSettingsEvent
     data class OnAnchorageHistoryItemClick(val id: String) : AnchorageAlarmSettingsEvent
+    data class OnShowBottomSheet(val type: BottomSheetType?) : AnchorageAlarmSettingsEvent
 
     data object OnNavigateBack : AnchorageAlarmSettingsEvent
-    data object OnMaximumUpdateIntervalClick : AnchorageAlarmSettingsEvent
-    data object OnMinimumUpdateIntervalClick : AnchorageAlarmSettingsEvent
-    data object OnAlarmDelayClick : AnchorageAlarmSettingsEvent
 }

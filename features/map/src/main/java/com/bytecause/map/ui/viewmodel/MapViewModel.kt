@@ -222,6 +222,15 @@ constructor(
         }
     }
 
+    fun updateAnchorageHistoryTimestamp(id: String, timestamp: Long) {
+        viewModelScope.launch {
+            anchorageHistoryRepository.updateAnchorageHistoryTimestamp(
+                id = id,
+                timestamp = timestamp
+            )
+        }
+    }
+
     suspend fun getAnchorageHistoryById(id: String): AnchorageHistoryUiModel? =
         anchorageHistoryRepository.getAnchorageHistoryById(id).firstOrNull()
             ?.asAnchorageHistoryUiModel()

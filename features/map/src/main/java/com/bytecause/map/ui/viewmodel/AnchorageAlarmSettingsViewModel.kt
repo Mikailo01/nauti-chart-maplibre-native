@@ -6,10 +6,10 @@ import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepos
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
-import com.bytecause.map.ui.event.IntervalType
 import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
+import com.bytecause.map.ui.state.BottomSheetType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -76,23 +76,20 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     fun uiEventHandler(event: AnchorageAlarmSettingsEvent) {
         when (event) {
             AnchorageAlarmSettingsEvent.OnNavigateBack -> sendEffect(AnchorageAlarmSettingsEffect.NavigateBack)
-            AnchorageAlarmSettingsEvent.OnMaximumUpdateIntervalClick -> onGpsRowClick(IntervalType.MAX_UPDATE_INTERVAL)
-            AnchorageAlarmSettingsEvent.OnAlarmDelayClick -> onGpsRowClick(IntervalType.ALARM_DELAY)
-            AnchorageAlarmSettingsEvent.OnMinimumUpdateIntervalClick -> onGpsRowClick(IntervalType.MIN_UPDATE_INTERVAL)
 
             is AnchorageAlarmSettingsEvent.OnAnchorageVisibilityChange -> onAnchorageVisibilityChange(
                 event.value
             )
 
             is AnchorageAlarmSettingsEvent.OnSelectedIntervalValueChange -> onSelectedIntervalValueChange(
-                intervalType = event.type,
                 interval = event.value
             )
 
-            is AnchorageAlarmSettingsEvent.OnUpdateIntervalType -> onUpdateIntervalType(event.type)
             is AnchorageAlarmSettingsEvent.OnAnchorageHistoryItemClick -> sendEffect(
                 AnchorageAlarmSettingsEffect.AnchorageHistoryItemClick(event.id)
             )
+
+            is AnchorageAlarmSettingsEvent.OnShowBottomSheet -> onShowBottomSheet(event.type)
         }
     }
 
@@ -129,40 +126,31 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
         }
     }
 
-    private fun onGpsRowClick(type: IntervalType) {
-        // save interval type to be able to infer which property should be updated
+    private fun onShowBottomSheet(type: BottomSheetType?) {
         _uiState.update {
-            it.copy(selectedIntervalType = type)
-        }
-        sendEffect(AnchorageAlarmSettingsEffect.OnShowNumberPickerBottomSheet)
-    }
-
-    private fun onUpdateIntervalType(intervalType: IntervalType) {
-        _uiState.update {
-            it.copy(selectedIntervalType = intervalType)
+            it.copy(bottomSheetType = type)
         }
     }
 
-    private fun onSelectedIntervalValueChange(intervalType: IntervalType, interval: Int) {
+    private fun onSelectedIntervalValueChange(interval: Int) {
         viewModelScope.launch {
-            when (intervalType) {
-                IntervalType.MAX_UPDATE_INTERVAL -> {
+            when (uiState.value.bottomSheetType ?: return@launch) {
+                BottomSheetType.MAX_UPDATE_INTERVAL -> {
                     anchoragesAlarmPreferencesRepository.saveMaxUpdateInterval((interval * 1000).toLong())
                 }
 
-                IntervalType.MIN_UPDATE_INTERVAL -> {
+                BottomSheetType.MIN_UPDATE_INTERVAL -> {
                     anchoragesAlarmPreferencesRepository.saveMinUpdateInterval((interval * 1000).toLong())
                 }
 
-                IntervalType.ALARM_DELAY -> {
+                BottomSheetType.ALARM_DELAY -> {
                     anchoragesAlarmPreferencesRepository.saveAlarmDelay((interval * 1000).toLong())
                 }
             }
 
             _uiState.update {
-                it.copy(selectedIntervalType = null)
+                it.copy(bottomSheetType = null)
             }
-            sendEffect(AnchorageAlarmSettingsEffect.OnHideNumberPickerBottomSheet)
         }
     }
 }

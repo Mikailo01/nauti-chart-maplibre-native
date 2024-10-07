@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -31,6 +32,29 @@ class AnchorageHistoryRepositoryImpl @Inject constructor(
                 datastore.toBuilder()
                     .addAnchorageHistory(anchorage)
                     .build()
+            }
+        }
+    }
+
+    override suspend fun updateAnchorageHistoryTimestamp(id: String, timestamp: Long) {
+        withContext(coroutineDispatcher) {
+            applicationContext.anchorageHistoryDataStore.data.firstOrNull()?.let { datastore ->
+                datastore.anchorageHistoryList.find { it.id == id }
+                    ?.let { anchorageLocation ->
+                        val index = datastore.anchorageHistoryList.indexOf(anchorageLocation)
+
+                        applicationContext.anchorageHistoryDataStore.updateData {
+                            it.toBuilder()
+                                .removeAnchorageHistory(index)
+                                .addAnchorageHistory(
+                                    anchorageLocation.toBuilder()
+                                        .setTimestamp(timestamp)
+                                        .build()
+                                )
+                                .build()
+                        }
+                    }
+
             }
         }
     }
