@@ -15,6 +15,7 @@ data class AnchorageAlarmSettingsState(
     val minGpsUpdateInterval: Int = 0,
     val alarmDelay: Int = 0,
     val areAnchorageLocationsVisible: Boolean = false,
+    val isEditMode: Boolean = false,
     val bottomSheetType: BottomSheetType? = null,
     val anchorageHistory: List<AnchorageHistoryUiModel> = emptyList()
 )

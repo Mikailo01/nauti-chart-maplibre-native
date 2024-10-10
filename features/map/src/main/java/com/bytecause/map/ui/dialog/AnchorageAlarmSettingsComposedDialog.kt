@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,15 +21,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.ButtonDefaults
@@ -36,6 +39,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
@@ -62,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -81,8 +88,11 @@ import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
 import com.bytecause.util.common.getDateTimeFromTimestamp
+import com.bytecause.util.compose.swipeToDismiss
+import com.bytecause.util.compose.then
 import com.bytecause.util.delegates.viewBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -112,7 +122,7 @@ class AnchorageAlarmSettingsComposedDialog :
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnchorageSettingsScreen(
+private fun AnchorageSettingsScreen(
     viewModel: AnchorageAlarmSettingsViewModel,
     mapSharedViewModel: MapSharedViewModel,
     onNavigateBack: () -> Unit
@@ -164,7 +174,7 @@ fun AnchorageSettingsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnchorageSettingsScreenContent(
+private fun AnchorageSettingsScreenContent(
     state: AnchorageAlarmSettingsState,
     bottomSheetScaffoldState: BottomSheetScaffoldState,
     onEvent: (AnchorageAlarmSettingsEvent) -> Unit
@@ -301,11 +311,35 @@ fun AnchorageSettingsScreenContent(
                     border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            text = stringResource(com.bytecause.core.resources.R.string.anchorage_history),
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleSmall
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(com.bytecause.core.resources.R.string.anchorage_history),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            if (state.anchorageHistory.isNotEmpty()) {
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = {
+                                        onEvent(AnchorageAlarmSettingsEvent.OnToggleEditMode)
+                                    },
+                                    colors = if (state.isEditMode) {
+                                        IconButtonDefaults.iconButtonColors()
+                                            .copy(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                    } else IconButtonDefaults.iconButtonColors()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource(com.bytecause.core.resources.R.string.edit)
+                                    )
+                                }
+                            }
+                        }
                         HorizontalDivider(
                             thickness = 2.dp,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -328,12 +362,23 @@ fun AnchorageSettingsScreenContent(
                                     .fillMaxWidth()
                                     .heightIn(min = 0.dp, max = 200.dp)
                             ) {
-                                items(state.anchorageHistory) { item ->
+                                itemsIndexed(
+                                    state.anchorageHistory,
+                                    key = { _, item -> item.id }) { index, item ->
                                     AnchorageHistoryItem(
                                         item = item,
+                                        index = index,
+                                        isEditEnabled = state.isEditMode,
                                         onItemClick = {
                                             onEvent(
                                                 AnchorageAlarmSettingsEvent.OnAnchorageHistoryItemClick(
+                                                    it
+                                                )
+                                            )
+                                        },
+                                        onRemove = {
+                                            onEvent(
+                                                AnchorageAlarmSettingsEvent.OnRemoveAnchorageHistoryItem(
                                                     it
                                                 )
                                             )
@@ -374,7 +419,7 @@ fun AnchorageSettingsScreenContent(
 }
 
 @Composable
-fun GpsRowItem(
+private fun GpsRowItem(
     @StringRes textRes: Int,
     interval: Int,
     modifier: Modifier = Modifier,
@@ -399,7 +444,7 @@ fun GpsRowItem(
 }
 
 @Composable
-fun NumberPicker(
+private fun NumberPicker(
     modifier: Modifier = Modifier,
     minValue: Int = 1,
     maxValue: Int = 15,
@@ -517,15 +562,49 @@ fun NumberPicker(
 @Composable
 private fun AnchorageHistoryItem(
     item: AnchorageHistoryUiModel,
+    isEditEnabled: Boolean,
+    index: Int,
     modifier: Modifier = Modifier,
-    onItemClick: (String) -> Unit
+    onItemClick: (String) -> Unit,
+    onRemove: (String) -> Unit
 ) {
+    // Animatable for horizontal offset
+    val offsetX = remember {
+        Animatable(0f)
+    }
+
+    var hasFinished by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(isEditEnabled) {
+        if (isEditEnabled && hasFinished.not()) {
+            delay(100L * index) // animate incrementally
+
+            offsetX.animateTo(
+                targetValue = 100f,
+                animationSpec = tween(durationMillis = 300)
+            )
+
+            delay(100L)
+
+            offsetX.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 300)
+            )
+
+            hasFinished = true
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clickable {
                 onItemClick(item.id)
             }
+            .offset { IntOffset(offsetX.value.toInt(), 0) }
+            .then(isEditEnabled, onTrue = { swipeToDismiss { onRemove(item.id) } })
     ) {
         Text(text = getDateTimeFromTimestamp(item.timestamp))
         Text(

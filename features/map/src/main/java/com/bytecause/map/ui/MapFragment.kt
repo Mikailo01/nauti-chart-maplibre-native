@@ -2042,7 +2042,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                             val (latitude, longitude) = if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
                                                 AnchorageAlarmService.runningAnchorageAlarm.value.run { latitude to longitude }
-                                            } else viewModel.anchorageCenterPoint!!.run { latitude to longitude }
+                                            } else viewModel.anchorageCenterPoint?.run { latitude to longitude } ?: run {
+                                                latLng.latitude to latLng.longitude
+                                            }
 
                                             if (style.getSourceAs<GeoJsonSource>(
                                                     ANCHOR_CHAIN_LINE_GEOJSON_SOURCE

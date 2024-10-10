@@ -26,12 +26,40 @@ class AnchorageHistoryRepositoryImpl @Inject constructor(
     private val applicationContext: Context,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AnchorageHistoryRepository {
+
     override suspend fun saveAnchorageHistory(anchorage: AnchorageHistory) {
         withContext(coroutineDispatcher) {
-            applicationContext.anchorageHistoryDataStore.updateData { datastore ->
-                datastore.toBuilder()
-                    .addAnchorageHistory(anchorage)
-                    .build()
+            applicationContext.anchorageHistoryDataStore.data.firstOrNull().let { datastore ->
+                // check if item is already cached
+                datastore?.anchorageHistoryList?.find {
+                    it.latitude == anchorage.latitude
+                            && it.longitude == anchorage.longitude
+                            && it.radius == anchorage.radius
+                } ?: run {
+                    // item is not cached, so save it
+                    applicationContext.anchorageHistoryDataStore.updateData { datastore ->
+                        datastore.toBuilder()
+                            .addAnchorageHistory(anchorage)
+                            .build()
+                    }
+                }
+            }
+        }
+    }
+
+    override suspend fun removeAnchorageHistory(id: String) {
+        withContext(coroutineDispatcher) {
+            applicationContext.anchorageHistoryDataStore.data.firstOrNull()?.let { datastore ->
+                datastore.anchorageHistoryList.find { it.id == id }
+                    ?.let { anchorageItem ->
+                        val index = datastore.anchorageHistoryList.indexOf(anchorageItem)
+
+                        applicationContext.anchorageHistoryDataStore.updateData {
+                            it.toBuilder()
+                                .removeAnchorageHistory(index)
+                                .build()
+                        }
+                    }
             }
         }
     }
@@ -40,14 +68,14 @@ class AnchorageHistoryRepositoryImpl @Inject constructor(
         withContext(coroutineDispatcher) {
             applicationContext.anchorageHistoryDataStore.data.firstOrNull()?.let { datastore ->
                 datastore.anchorageHistoryList.find { it.id == id }
-                    ?.let { anchorageLocation ->
-                        val index = datastore.anchorageHistoryList.indexOf(anchorageLocation)
+                    ?.let { anchorageItem ->
+                        val index = datastore.anchorageHistoryList.indexOf(anchorageItem)
 
                         applicationContext.anchorageHistoryDataStore.updateData {
                             it.toBuilder()
                                 .removeAnchorageHistory(index)
                                 .addAnchorageHistory(
-                                    anchorageLocation.toBuilder()
+                                    anchorageItem.toBuilder()
                                         .setTimestamp(timestamp)
                                         .build()
                                 )

@@ -161,6 +161,7 @@
     <string name="change_icon">Change icon</string>
     <string name="fetching_regions">Fetching regions…</string>
     <string name="region_update_success">Region updated successfully.</string>
+    <string name="edit">Edit</string>
     <string name="download_started">Download started. This can take few minutes.</string>
     <string name="vessels_ais">Vessels AIS</string>
     <string name="show_all">Show all</string>

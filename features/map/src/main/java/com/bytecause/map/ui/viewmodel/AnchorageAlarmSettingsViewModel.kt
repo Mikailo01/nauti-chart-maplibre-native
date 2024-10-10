@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -39,7 +38,7 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     val uiState: StateFlow<AnchorageAlarmSettingsState> = _uiState
         .onStart {
             observeUiChanges()
-            loadAnchorageHistory()
+            observeAnchorageHistory()
         }
         .stateIn(
             viewModelScope,
@@ -52,6 +51,7 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     val effect: Flow<AnchorageAlarmSettingsEffect> = _effect.receiveAsFlow()
 
     private var observeJob: Job? = null
+    private var anchorageHistoryObserveJob: Job? = null
 
     private fun observeUiChanges() {
         observeJob?.cancel()
@@ -75,7 +75,6 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
 
     fun uiEventHandler(event: AnchorageAlarmSettingsEvent) {
         when (event) {
-            AnchorageAlarmSettingsEvent.OnNavigateBack -> sendEffect(AnchorageAlarmSettingsEffect.NavigateBack)
 
             is AnchorageAlarmSettingsEvent.OnAnchorageVisibilityChange -> onAnchorageVisibilityChange(
                 event.value
@@ -90,6 +89,12 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
             )
 
             is AnchorageAlarmSettingsEvent.OnShowBottomSheet -> onShowBottomSheet(event.type)
+            is AnchorageAlarmSettingsEvent.OnRemoveAnchorageHistoryItem -> onRemoveAnchorageHistoryItem(
+                event.id
+            )
+
+            AnchorageAlarmSettingsEvent.OnNavigateBack -> sendEffect(AnchorageAlarmSettingsEffect.NavigateBack)
+            AnchorageAlarmSettingsEvent.OnToggleEditMode -> onToggleEditMode()
         }
     }
 
@@ -99,9 +104,10 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
         }
     }
 
-    private fun loadAnchorageHistory() {
-        viewModelScope.launch {
-            getAnchorageHistoryList().firstOrNull()?.let {
+    private fun observeAnchorageHistory() {
+        anchorageHistoryObserveJob?.cancel()
+        anchorageHistoryObserveJob = viewModelScope.launch {
+            getAnchorageHistoryList().collect {
                 _uiState.update { state ->
                     state.copy(anchorageHistory = it)
                 }
@@ -129,6 +135,18 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     private fun onShowBottomSheet(type: BottomSheetType?) {
         _uiState.update {
             it.copy(bottomSheetType = type)
+        }
+    }
+
+    private fun onToggleEditMode() {
+        _uiState.update {
+            it.copy(isEditMode = !it.isEditMode)
+        }
+    }
+
+    private fun onRemoveAnchorageHistoryItem(id: String) {
+        viewModelScope.launch {
+            anchorageHistoryRepository.removeAnchorageHistory(id)
         }
     }
 

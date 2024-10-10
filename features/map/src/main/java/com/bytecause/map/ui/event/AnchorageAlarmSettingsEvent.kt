@@ -7,7 +7,9 @@ sealed interface AnchorageAlarmSettingsEvent {
     data class OnSelectedIntervalValueChange(val value: Int) :
         AnchorageAlarmSettingsEvent
     data class OnAnchorageHistoryItemClick(val id: String) : AnchorageAlarmSettingsEvent
+    data class OnRemoveAnchorageHistoryItem(val id: String) : AnchorageAlarmSettingsEvent
     data class OnShowBottomSheet(val type: BottomSheetType?) : AnchorageAlarmSettingsEvent
 
+    data object OnToggleEditMode : AnchorageAlarmSettingsEvent
     data object OnNavigateBack : AnchorageAlarmSettingsEvent
 }
