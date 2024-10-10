@@ -253,6 +253,18 @@
 # keep the specified class members from being renamed only
 -keepclassmembernames class com.bytecause.nautichart.CustomOfflineVectorTileSourceList { *; }
 
+# only if the class is preserved
+-keepclassmembers class com.bytecause.nautichart.AnchorageHistory { *; }
+
+# keep the class and specified members from being renamed only
+-keepnames class com.bytecause.nautichart.AnchorageHistory { *; }
+
+# keep the specified class members from being renamed only
+-keepclassmembernames class com.bytecause.nautichart.AnchorageHistoryList { *; }
+
+# keep the class and specified members from being removed or renamed
+-keep class com.bytecause.nautichart.AnchorageHistoryList { *; }
+
 # keep everything in this package from being removed or renamed
 -keep class org.osmdroid.** { *; }
 
