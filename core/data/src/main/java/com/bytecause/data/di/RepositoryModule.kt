@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.bytecause.data.local.room.dao.AnchorageMovementTrackDao
 import com.bytecause.data.local.room.dao.CountryDao
 import com.bytecause.data.local.room.dao.CustomPoiDao
 import com.bytecause.data.local.room.dao.HarboursMetadataDatasetDao
@@ -14,6 +15,7 @@ import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.remote.retrofit.OverpassRestApiService
 import com.bytecause.data.repository.AnchorageAlarmPreferencesRepositoryImpl
+import com.bytecause.data.repository.AnchorageMovementTrackRepositoryImpl
 import com.bytecause.data.repository.CountryRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineRasterTileSourceRepositoryImpl
 import com.bytecause.data.repository.CustomOfflineVectorTileSourceRepositoryImpl
@@ -28,6 +30,7 @@ import com.bytecause.data.repository.RadiusPoiMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.UserPreferencesRepositoryImpl
 import com.bytecause.data.repository.VesselsMetadataDatasetRepositoryImpl
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
+import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
 import com.bytecause.data.repository.abstractions.CountryRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.CustomOfflineRasterTileSourceRepository
@@ -135,4 +138,9 @@ object RepositoryModule {
     @Singleton
     fun providesCountryRepository(countryDao: CountryDao): CountryRepository =
         CountryRepositoryImpl(countryDao)
+
+    @Provides
+    @Singleton
+    fun providesAnchorageMovementTrackRepository(anchorageMovementTrackDao: AnchorageMovementTrackDao): AnchorageMovementTrackRepository =
+        AnchorageMovementTrackRepositoryImpl(anchorageMovementTrackDao)
 }

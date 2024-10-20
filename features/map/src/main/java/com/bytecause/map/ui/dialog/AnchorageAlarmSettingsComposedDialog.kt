@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -46,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -61,15 +63,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -79,11 +85,13 @@ import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.AnchorageAlarmSettingsDialogLayoutBinding
 import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
+import com.bytecause.map.ui.model.AnchorageHistoryDeletionInterval
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
+import com.bytecause.map.ui.model.BottomSheetType
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
-import com.bytecause.map.ui.state.BottomSheetType
 import com.bytecause.map.ui.viewmodel.AnchorageAlarmSettingsViewModel
 import com.bytecause.map.util.MapUtil
+import com.bytecause.presentation.components.compose.ConfirmationDialog
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
@@ -130,6 +138,8 @@ private fun AnchorageSettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
 
+    val context = LocalContext.current
+
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = remember {
             SheetState(
@@ -154,6 +164,21 @@ private fun AnchorageSettingsScreen(
                 is AnchorageAlarmSettingsEffect.AnchorageHistoryItemClick -> {
                     mapSharedViewModel.setAnchorageLocationFromHistoryId(effect.id)
                     onNavigateBack()
+                }
+
+                is AnchorageAlarmSettingsEffect.AnchorageHistoryDeletionIntervalClick -> {
+                    state.snackbarHostState.showSnackbar(
+                        if (effect.intervalType == AnchorageHistoryDeletionInterval.INFINITE) {
+                            context.getString(
+                                com.bytecause.core.resources.R.string.anchorage_history_will_not_be_deleted_automatically
+                            )
+                        } else {
+                            context.getString(
+                                com.bytecause.core.resources.R.string.anchorage_history_will_be_deleted_automatically_after_value_days
+                            )
+                                .format(effect.intervalType.displayText)
+                        }
+                    )
                 }
             }
         }
@@ -186,6 +211,9 @@ private fun AnchorageSettingsScreenContent(
                 navigationIcon = Icons.AutoMirrored.Default.ArrowBack,
                 onNavigationIconClick = { onEvent(AnchorageAlarmSettingsEvent.OnNavigateBack) }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(state.snackbarHostState)
         },
         containerColor = MaterialTheme.colorScheme.primaryContainer
     ) { innerPadding ->
@@ -311,6 +339,83 @@ private fun AnchorageSettingsScreenContent(
                     border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = stringResource(com.bytecause.core.resources.R.string.tracking),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        text = stringResource(com.bytecause.core.resources.R.string.track_movement),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = stringResource(com.bytecause.core.resources.R.string.track_movement_hint),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                }
+                                Switch(
+                                    checked = state.trackMovement,
+                                    onCheckedChange = { boolean ->
+                                        onEvent(
+                                            AnchorageAlarmSettingsEvent.OnTrackMovementStateChange(
+                                                boolean
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        text = stringResource(com.bytecause.core.resources.R.string.track_battery_state),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    Text(
+                                        text = stringResource(com.bytecause.core.resources.R.string.track_battery_state_hint),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                }
+                                Switch(
+                                    checked = state.trackBatteryState,
+                                    onCheckedChange = { boolean ->
+                                        onEvent(
+                                            AnchorageAlarmSettingsEvent.OnTrackBatteryStateChange(
+                                                boolean
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors()
+                        .copy(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                    border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -319,8 +424,39 @@ private fun AnchorageSettingsScreenContent(
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleSmall
                             )
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        onEvent(
+                                            AnchorageAlarmSettingsEvent.OnAnchorageHistoryDeletionIntervalClick
+                                        )
+                                    }
+                            ) {
+                                Icon(
+                                    painter = painterResource(com.bytecause.core.resources.R.drawable.interval),
+                                    contentDescription = if (state.anchorageHistoryDeletionInterval == AnchorageHistoryDeletionInterval.INFINITE) {
+                                        stringResource(com.bytecause.core.resources.R.string.anchorage_history_will_not_be_deleted_automatically)
+                                    } else {
+                                        stringResource(com.bytecause.core.resources.R.string.anchorage_history_will_be_deleted_automatically_after_value_days)
+                                            .format(state.anchorageHistoryDeletionInterval.displayText)
+                                    },
+                                    modifier = Modifier.padding(5.dp)
+                                )
+                                Text(
+                                    text = state.anchorageHistoryDeletionInterval.displayText,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.then(
+                                        state.anchorageHistoryDeletionInterval == AnchorageHistoryDeletionInterval.INFINITE,
+                                        onTrue = { padding(bottom = 2.dp) })
+                                )
+                            }
+
                             if (state.anchorageHistory.isNotEmpty()) {
-                                Spacer(modifier = Modifier.weight(1f))
                                 IconButton(
                                     onClick = {
                                         onEvent(AnchorageAlarmSettingsEvent.OnToggleEditMode)
@@ -336,6 +472,19 @@ private fun AnchorageSettingsScreenContent(
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = stringResource(com.bytecause.core.resources.R.string.edit)
+                                    )
+                                }
+
+                                IconButton(onClick = {
+                                    onEvent(
+                                        AnchorageAlarmSettingsEvent.OnClearHistoryConfirmDialogStateChange(
+                                            true
+                                        )
+                                    )
+                                }) {
+                                    Icon(
+                                        painter = painterResource(com.bytecause.core.resources.R.drawable.baseline_clear_all_24),
+                                        contentDescription = null
                                     )
                                 }
                             }
@@ -414,6 +563,26 @@ private fun AnchorageSettingsScreenContent(
                 scaffoldState = bottomSheetScaffoldState,
                 sheetSwipeEnabled = false
             ) {}
+
+            if (state.showDeleteHistoryConfirmationDialog) {
+                ConfirmationDialog(
+                    modifier = Modifier.align(Alignment.Center),
+                    onDismiss = {
+                        onEvent(
+                            AnchorageAlarmSettingsEvent.OnClearHistoryConfirmDialogStateChange(
+                                false
+                            )
+                        )
+                    }, onConfirm = {
+                        onEvent(AnchorageAlarmSettingsEvent.OnDeleteAnchorageHistory)
+                    }
+                ) {
+                    Text(
+                        text = "Entire anchorage history list will be cleared.",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         }
     }
 }

@@ -54,6 +54,8 @@ import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_GEOJS
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_BORDER_RADIUS_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_CENTER_SYMBOL_ICON
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_ICON
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_MOVEMENT_LINE_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_SYMBOL_DEFAULT_SIZE
@@ -456,9 +458,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                 anchorageAlarmBottomSheetLayout.id -> {
                                     anchorageAlarmBottomSheetLayout.visibility = View.GONE
-                                    if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) removeAnchorageRadius(
-                                        mapStyle
-                                    )
+                                    if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) {
+                                        removeAnchorageRadius(mapStyle)
+                                        mapSharedViewModel.setAnchorageLocationFromHistoryId(null)
+                                    }
                                 }
 
                                 measureBottomSheetLayout.id -> {
@@ -704,6 +707,41 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 binding.measureDistanceBottomSheet.distanceTextview.text =
                                                     distanceTextViewText
                                             }
+                                    }
+                                }
+                            }
+
+                            fun addMarker(point: PointType) {
+                                if (markerSymbol != null) {
+                                    symbolManager?.delete(markerSymbol)
+                                }
+
+                                val latLng = (point as? PointType.Marker)?.latLng
+                                    ?: (point as? PointType.Poi)?.latLng
+                                    ?: (point as PointType.Address).latLng
+
+                                // Add a new symbol at specified lat/lon.
+                                markerSymbol =
+                                    symbolManager?.create(
+                                        SymbolOptions()
+                                            .withLatLng(latLng)
+                                            .withIconImage(MAP_MARKER)
+                                            .withIconSize(SYMBOL_ICON_SIZE)
+                                            .withIconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
+                                    )
+
+                                // Disable symbol collisions and update symbol
+                                symbolManager?.apply {
+                                    iconAllowOverlap = true
+                                    iconIgnorePlacement = true
+                                    update(markerSymbol)
+                                }
+
+                                when (point) {
+                                    is PointType.Poi -> showPoiInfo(poiId = point.id)
+                                    is PointType.Marker -> openBottomSheetLayout(point.latLng)
+                                    is PointType.Address -> {
+                                        // nothing
                                     }
                                 }
                             }
@@ -1931,12 +1969,38 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
                             }
 
-                            // State of the anchorage alarm bottom sheet should be altered ONLY
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.anchorageLocationFromHistoryId.collect { id ->
+                                        id ?: return@collect
+                                        if (!mapSharedViewModel.showAnchorageAlarmBottomSheet.value) return@collect
+
+                                        viewModel.getAnchorageHistoryById(id)?.let { location ->
+                                            showAnchorageAlarmBottomSheet(
+                                                style = style,
+                                                mapLibreMap = mapLibreMap,
+                                                latLng = LatLng(
+                                                    latitude = location.latitude,
+                                                    longitude = location.longitude
+                                                ),
+                                                anchorageHistoryUiModel = location
+                                            )
+
+                                            binding.anchorageAlarmBottomSheet.radiusSlider.value =
+                                                location.radius.toFloat()
+                                        }
+                                    }
+                                }
+                            }
+
+                            // The state of the anchorage alarm bottom sheet should be altered ONLY
                             // by this collector to respect SSOT principle
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     mapSharedViewModel.showAnchorageAlarmBottomSheet.collect { show ->
                                         if (show) {
+                                            if (anchorageAlarmBottomSheetLayout.visibility == View.VISIBLE) return@collect
+
                                             val centerPoint =
                                                 AnchorageAlarmService.runningAnchorageAlarm.value.takeIf { it.isRunning }
                                                     ?.run {
@@ -2042,9 +2106,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                                             val (latitude, longitude) = if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
                                                 AnchorageAlarmService.runningAnchorageAlarm.value.run { latitude to longitude }
-                                            } else viewModel.anchorageCenterPoint?.run { latitude to longitude } ?: run {
-                                                latLng.latitude to latLng.longitude
-                                            }
+                                            } else viewModel.anchorageCenterPoint?.run { latitude to longitude }
+                                                ?: run {
+                                                    latLng.latitude to latLng.longitude
+                                                }
 
                                             if (style.getSourceAs<GeoJsonSource>(
                                                     ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
@@ -2112,20 +2177,51 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    mapSharedViewModel.anchorageLocationFromHistoryId.collect { id ->
-                                        viewModel.getAnchorageHistoryById(id)?.let { location ->
-                                            showAnchorageAlarmBottomSheet(
-                                                style = style,
-                                                mapLibreMap = mapLibreMap,
-                                                latLng = LatLng(
-                                                    latitude = location.latitude,
-                                                    longitude = location.longitude
-                                                ),
-                                                anchorageHistoryUiModel = location
+                                    viewModel.trackedPoints.collect { points ->
+                                        if (points.isEmpty()) {
+                                            mapStyle.apply {
+                                                getSourceAs<GeoJsonSource>(
+                                                    ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE
+                                                )?.let {
+                                                    removeLayer(ANCHORAGE_MOVEMENT_LINE_LAYER)
+                                                    removeSource(it.id)
+                                                }
+                                            }
+
+                                            return@collect
+                                        }
+
+                                        val feature =
+                                            Feature.fromGeometry(LineString.fromLngLats(points))
+
+                                        mapStyle.getSourceAs<GeoJsonSource>(
+                                            ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE
+                                        )?.setGeoJson(feature) ?: run {
+                                            val lineSource = GeoJsonSource(
+                                                ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE,
+                                                FeatureCollection.fromFeature(feature)
                                             )
 
-                                            binding.anchorageAlarmBottomSheet.radiusSlider.value =
-                                                location.radius.toFloat()
+                                            val lineLayer = LineLayer(
+                                                ANCHORAGE_MOVEMENT_LINE_LAYER,
+                                                ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE
+                                            ).apply {
+                                                setProperties(
+                                                    lineColor(
+                                                        requireContext().getColor(com.bytecause.core.resources.R.color.yellow)
+                                                            .toHexString()
+                                                    ),
+                                                    lineWidth(2f)
+                                                )
+                                            }
+
+                                            style.apply {
+                                                addSource(lineSource)
+                                                addLayerBelow(
+                                                    lineLayer,
+                                                    ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -2283,7 +2379,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
-// Search box settings.
+        // Search box settings.
         binding.searchMapBox.searchMapEditText.apply {
             setOnClickListener {
                 if (!lastClick.lastClick(1000)) return@setOnClickListener
@@ -3459,45 +3555,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         bottomSheetBehavior.state = STATE_HIDDEN
     }
 
-    /**
-     * DON'T USE DIRECTLY
-     * To add marker on map, call setLatLng() function with LatLng argument inside MapSharedViewModel
-     * */
-    private fun addMarker(point: PointType) {
-        if (markerSymbol != null) {
-            symbolManager?.delete(markerSymbol)
-        }
-
-        val latLng = (point as? PointType.Marker)?.latLng
-            ?: (point as? PointType.Poi)?.latLng
-            ?: (point as PointType.Address).latLng
-
-        // Add a new symbol at specified lat/lon.
-        markerSymbol =
-            symbolManager?.create(
-                SymbolOptions()
-                    .withLatLng(latLng)
-                    .withIconImage(MAP_MARKER)
-                    .withIconSize(SYMBOL_ICON_SIZE)
-                    .withIconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
-            )
-
-        // Disable symbol collisions and update symbol
-        symbolManager?.apply {
-            iconAllowOverlap = true
-            iconIgnorePlacement = true
-            update(markerSymbol)
-        }
-
-        when (point) {
-            is PointType.Poi -> showPoiInfo(poiId = point.id)
-            is PointType.Marker -> openBottomSheetLayout(point.latLng)
-            is PointType.Address -> {
-                // nothing
-            }
-        }
-    }
-
     private fun addMeasurePoint() {
         // Calculate the screen position of the center
         val center = PointF(mapView!!.width / 2f, mapView!!.height / 2f)
@@ -3620,7 +3677,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 isLocationComponentEnabled = true
                 renderMode = RenderMode.COMPASS
 
-                val request = LocationEngineRequest.Builder(10000)
+                val request = LocationEngineRequest.Builder(5000)
                     .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
                     .setFastestInterval(2000)
                     .build()

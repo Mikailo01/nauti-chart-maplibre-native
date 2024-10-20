@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.bytecause.data.local.room.AppDatabase
 import com.bytecause.data.local.room.callbacks.InitialPoiCategoryCallback
+import com.bytecause.data.local.room.tables.AnchorageMovementTrackEntity
 import com.bytecause.data.local.room.tables.ContinentCountriesRelation
 import com.bytecause.data.local.room.tables.CustomPoiCategoryEntity
 import com.bytecause.data.local.room.tables.CustomPoiEntity
@@ -94,6 +95,10 @@ object DatabaseModule {
     @Singleton
     fun provideRadiusPoiMetadataDatasetDao(db: AppDatabase) = db.radiusPoiCacheMetadataDatasetDao()
 
+    @Provides
+    @Singleton
+    fun provideAnchorageMovementTrackDao(db: AppDatabase) = db.anchorageMovementTrackDao()
+
     // Provide entities.
     @Provides
     fun provideHarboursEntity() = HarboursEntity()
@@ -121,4 +126,7 @@ object DatabaseModule {
 
     @Provides
     fun provideCountryRegions() = CountryRegionsRelation()
+
+    @Provides
+    fun provideAnchorageMovementTrackEntity() = AnchorageMovementTrackEntity()
 }

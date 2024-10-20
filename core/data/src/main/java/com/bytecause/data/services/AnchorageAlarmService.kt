@@ -3,20 +3,30 @@ package com.bytecause.data.services
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.location.Location
-import android.location.LocationListener
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
+import com.bytecause.data.model.AnchorageMovementTrackModel
+import com.bytecause.data.model.RunningAnchorageAlarm
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
+import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
+import com.bytecause.util.map.MapUtil
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -32,18 +42,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
+import org.maplibre.android.geometry.LatLng
 import javax.inject.Inject
 import kotlin.math.round
 
-data class RunningAnchorageAlarm(
-    val isRunning: Boolean = false,
-    val radius: Float = 5f,
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0
-)
 
 @AndroidEntryPoint
-class AnchorageAlarmService : LifecycleService(), LocationListener {
+class AnchorageAlarmService : LifecycleService() {
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
@@ -51,23 +56,78 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     @Inject
     lateinit var anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository
 
+    @Inject
+    lateinit var anchorageMovementTrackRepository: AnchorageMovementTrackRepository
+
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private lateinit var locationRequest: LocationRequest
 
     private var alarmDelay: Long = 0L
     private var alarmJob: Job? = null
 
+    private var ringtone: Ringtone? = null
+    private var vibrator: Vibrator? = null
+    private val vibratePattern = longArrayOf(0L, 1000L, 1000L)
+
+    private var shouldTrackMovement: Boolean = false
+
+    private lateinit var batteryReceiver: BroadcastReceiver
+
+    private val handler = Handler(Looper.getMainLooper())
+
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
             super.onLocationResult(p0)
 
-            p0.lastLocation?.let {
-                checkIfWithinRadius(it)
+            p0.lastLocation?.let { lastLocation ->
+                checkIfWithinRadius(lastLocation)
+
+                if (shouldTrackMovement) {
+                    // check if list contains at least 2 elements to be able to compare them
+                    p0.locations.takeIf { locationList -> locationList.size >= 2 }
+                        ?.let { locations ->
+                            val previousLocation = locations[locations.size - 2]
+
+                            if (!MapUtil.arePointsWithinDelta(
+                                    LatLng(
+                                        latitude = previousLocation.latitude,
+                                        longitude = previousLocation.longitude
+                                    ),
+                                    LatLng(
+                                        latitude = lastLocation.latitude,
+                                        longitude = lastLocation.longitude
+                                    )
+                                )
+                            ) {
+                                saveCurrentPositionForTracking(lastLocation)
+                            }
+                        } ?: run {
+                        saveCurrentPositionForTracking(lastLocation)
+                    }
+                }
             }
         }
     }
 
-    private var ringtone: Ringtone? = null
+    private val checkRingtoneRunnable = object : Runnable {
+        override fun run() {
+            if (ringtone?.isPlaying != true) {
+                ringtone?.play()
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun saveCurrentPositionForTracking(position: Location) {
+        lifecycleScope.launch {
+            anchorageMovementTrackRepository.insertPosition(
+                AnchorageMovementTrackModel(
+                    latitude = position.latitude,
+                    longitude = position.longitude
+                )
+            )
+        }
+    }
 
     companion object {
         private val _runningAnchorageAlarm: MutableStateFlow<RunningAnchorageAlarm> =
@@ -85,18 +145,58 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         const val EXTRA_LONGITUDE = "EXTRA_LONGITUDE"
     }
 
-    override fun onLocationChanged(p0: Location) {
-        checkIfWithinRadius(p0)
-    }
-
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
 
         lifecycleScope.launch {
-            anchorageAlarmPreferencesRepository.getAlarmDelay().collect { delay ->
-                alarmDelay = delay
+            launch {
+                anchorageAlarmPreferencesRepository.getAlarmDelay().collect { delay ->
+                    alarmDelay = delay
+                }
+            }
+
+            launch {
+                anchorageAlarmPreferencesRepository.getTrackBatteryState()
+                    .collect { trackBatteryState ->
+                        if (trackBatteryState) {
+                            if (::batteryReceiver.isInitialized) return@collect
+
+                            batteryReceiver = object : BroadcastReceiver() {
+                                override fun onReceive(context: Context, intent: Intent) {
+                                    val batteryLevel =
+                                        intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                                    val batteryScale =
+                                        intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                                    val batteryPct = batteryLevel / batteryScale.toFloat() * 100
+
+                                    // if battery's level is under 20 % start alarm
+                                    if (batteryPct < 20) {
+                                        startAlarmSoundAndVibration()
+                                    }
+                                }
+                            }
+
+                            val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                            registerReceiver(batteryReceiver, batteryIntentFilter)
+                        } else {
+                            if (!::batteryReceiver.isInitialized) return@collect
+
+                            unregisterReceiver(batteryReceiver)
+                        }
+                    }
+            }
+
+            launch {
+                anchorageAlarmPreferencesRepository.getTrackMovementState().collect { shouldTrack ->
+                    shouldTrackMovement = shouldTrack
+                }
+            }
+
+            launch {
+                // clear previously cached vessel's movement points
+                anchorageMovementTrackRepository.clear()
             }
         }
     }
@@ -122,6 +222,10 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
     private fun resetState() {
         lifecycleScope.launch {
             _runningAnchorageAlarm.emit(RunningAnchorageAlarm())
+
+            launch {
+                anchorageMovementTrackRepository.clear()
+            }
         }
     }
 
@@ -141,6 +245,7 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
                 stopService()
             }
         }
+
         return START_REDELIVER_INTENT
     }
 
@@ -165,7 +270,7 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         ) { maxInterval, minInterval ->
 
             locationRequest = LocationRequest.Builder(
-                Priority.PRIORITY_HIGH_ACCURACY, maxInterval // Update interval 10 seconds
+                Priority.PRIORITY_HIGH_ACCURACY, maxInterval
             )
                 .setMinUpdateIntervalMillis(minInterval)
                 .setWaitForAccurateLocation(true)
@@ -201,11 +306,12 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
                 .setContentText(getString(R.string.you_have_moved_outside_the_defined_radius))
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
 
-            playAlarmSound()
+            startAlarmSoundAndVibration()
         }
     }
 
-    private fun playAlarmSound() {
+    @Suppress("MissingPermission")
+    private fun startAlarmSoundAndVibration() {
         if (ringtone == null) {
             val ringtoneUri =
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) // Default alarm sound
@@ -219,8 +325,54 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
                 0
             )
 
+            // setup vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibrator = vibratorManager.defaultVibrator
+            } else {
+                // backward compatibility for Android API < 31,
+                // VibratorManager was only added on API level 31 release.
+                @Suppress("Deprecation")
+                vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+            }
+
+            // start vibration
+            if (vibrator?.hasVibrator() == true) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(
+                        VibrationEffect.createWaveform(
+                            vibratePattern,
+                            0
+                        )
+                    )
+                } else {
+                    @Suppress("Deprecation")
+                    vibrator?.vibrate(vibratePattern, 0)
+                }
+            }
+
+            // set looping
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ringtone?.isLooping = true
+            } else {
+                // isLooping is available from API 28 and above, so on lower APIs we need to use looper,
+                // which will check every second if ringtone is playing or not
+                handler.post(checkRingtoneRunnable)
+            }
+
             ringtone?.play()
         }
+    }
+
+    @Suppress("MissingPermission")
+    private fun stopAlarmSoundAndVibration() {
+        handler.removeCallbacks(checkRingtoneRunnable)
+
+        vibrator?.cancel()
+        vibrator = null
+
+        ringtone?.stop()
+        ringtone = null
     }
 
     // Check if current location is within the radius of the center
@@ -243,10 +395,9 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
             if (alarmJob != null) {
                 alarmJob?.cancel()
                 alarmJob = null
+                stopAlarmSoundAndVibration()
             }
-            if (ringtone != null) {
-                stopRingtone()
-            }
+
             updateNotificationTextContent(
                 location = currentLocation,
                 distanceFromCenterPoint = round(distance * 10) / 10 // rounds on first decimal place
@@ -289,13 +440,8 @@ class AnchorageAlarmService : LifecycleService(), LocationListener {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
-    private fun stopRingtone() {
-        ringtone?.stop()
-        ringtone = null
-    }
-
     private fun stopService() {
-        ringtone?.stop()
+        stopAlarmSoundAndVibration()
         fusedLocationClient?.removeLocationUpdates(locationCallback)
 
         stopForeground(STOP_FOREGROUND_REMOVE)

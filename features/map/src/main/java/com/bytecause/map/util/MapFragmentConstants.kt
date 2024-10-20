@@ -37,6 +37,9 @@ object MapFragmentConstants {
     const val ANCHOR_CHAIN_LINE_GEOJSON_SOURCE = "anchor_chain_line_geojson_source"
     const val ANCHOR_CHAIN_LINE_LAYER = "anchor_chain_line_layer"
 
+    const val ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE = "anchorage_movement_line_geojson_source"
+    const val ANCHORAGE_MOVEMENT_LINE_LAYER = "anchorage_movement_line_layer"
+
     const val SYMBOL_TYPE = "symbol-type"
 
     const val POI_GEOJSON_SOURCE = "poi-geojson-source"

@@ -36,9 +36,6 @@ dependencies {
 
     implementation(libs.androidx.activity.ktx)
 
-    // WorkManager
-    implementation(libs.androidx.workManager)
-
     implementation(libs.hilt.work)
 
     // Lifecycle service

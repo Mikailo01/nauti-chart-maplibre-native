@@ -71,6 +71,9 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.workManager)
 
+    // Google services location
+    implementation(libs.gms.playServicesLocation)
+
     implementation(libs.hilt.work)
 
     // Lifecycle service
@@ -89,6 +92,9 @@ dependencies {
 
     // SplashScreen
     implementation(libs.androidx.splashScreen)
+
+    // DataStore
+    implementation(libs.google.protobuf.javalite)
 
     // Testing
     testImplementation(libs.androidx.junit)

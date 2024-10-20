@@ -1,5 +1,6 @@
 package com.bytecause.data.mappers
 
+import com.bytecause.data.local.room.tables.AnchorageMovementTrackEntity
 import com.bytecause.data.local.room.tables.ContinentCountriesRelation
 import com.bytecause.data.local.room.tables.ContinentEntity
 import com.bytecause.data.local.room.tables.CountryEntity
@@ -13,6 +14,7 @@ import com.bytecause.data.local.room.tables.RegionEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.relations.CountryRegionsRelation
+import com.bytecause.data.model.AnchorageMovementTrackModel
 import com.bytecause.domain.model.ContinentCountriesModel
 import com.bytecause.domain.model.ContinentModel
 import com.bytecause.domain.model.CountryModel
@@ -198,4 +200,16 @@ fun RadiusPoiMetadataDatasetModel.asRadiusPoiMetadataDatasetEntity(): RadiusPoiM
         longitude = longitude,
         radius = radius,
         timestamp = timestamp
+    )
+
+fun AnchorageMovementTrackModel.asAnchorageMovementTrackEntity(): AnchorageMovementTrackEntity =
+    AnchorageMovementTrackEntity(
+        latitude = latitude,
+        longitude = longitude
+    )
+
+fun AnchorageMovementTrackEntity.asAnchorageMovementTrackModel(): AnchorageMovementTrackModel =
+    AnchorageMovementTrackModel(
+        latitude = latitude,
+        longitude = longitude
     )

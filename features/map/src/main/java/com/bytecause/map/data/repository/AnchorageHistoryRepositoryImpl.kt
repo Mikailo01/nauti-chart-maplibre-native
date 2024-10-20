@@ -87,6 +87,14 @@ class AnchorageHistoryRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun clearAnchorageHistory() {
+        withContext(coroutineDispatcher) {
+            applicationContext.anchorageHistoryDataStore.updateData {
+                it.toBuilder().clearAnchorageHistory().build()
+            }
+        }
+    }
+
     override fun getAnchorageHistoryList(): Flow<AnchorageHistoryList> =
         applicationContext.anchorageHistoryDataStore.data
             .catch { e ->

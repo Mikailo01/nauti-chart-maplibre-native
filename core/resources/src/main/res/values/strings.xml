@@ -199,6 +199,13 @@
     <string name="anchorage_history">Anchorage history</string>
     <string name="show_anchorages">Show anchorages</string>
     <string name="empty_history">Empty history</string>
+    <string name="track_movement">Track movement</string>
+    <string name="track_movement_hint">(Track the vessel\'s movement while anchored.)</string>
+    <string name="track_battery_state">Track battery state</string>
+    <string name="track_battery_state_hint">(Alert when battery state is below 20 %)</string>
+    <string name="tracking">Tracking</string>
+    <string name="anchorage_history_will_not_be_deleted_automatically">Anchorage history won\'t be deleted automatically.</string>
+    <string name="anchorage_history_will_be_deleted_automatically_after_value_days">Anchorage history will be deleted automatically after %1s days.</string>
 
     <string name="vessel_type_1">Non-moving object</string>
     <string name="vessel_type_3">Tug or Special craft</string>

@@ -2,14 +2,16 @@ package com.bytecause.map.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bytecause.data.model.AnchorageHistoryDeletionIntervalModel
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.ui.effect.AnchorageAlarmSettingsEffect
 import com.bytecause.map.ui.event.AnchorageAlarmSettingsEvent
 import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
+import com.bytecause.map.ui.model.AnchorageHistoryDeletionInterval
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
+import com.bytecause.map.ui.model.BottomSheetType
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
-import com.bytecause.map.ui.state.BottomSheetType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -56,17 +58,35 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     private fun observeUiChanges() {
         observeJob?.cancel()
         observeJob = combine(
-            anchoragesAlarmPreferencesRepository.getAlarmDelay(),
-            anchoragesAlarmPreferencesRepository.getAnchorageLocationsVisible(),
-            anchoragesAlarmPreferencesRepository.getMaxUpdateInterval(),
-            anchoragesAlarmPreferencesRepository.getMinUpdateInterval()
-        ) { alarmDelay, anchorageLocationsVisible, maxUpdateInterval, minUpdateInterval ->
-            _uiState.update {
-                it.copy(
+            listOf(
+                anchoragesAlarmPreferencesRepository.getAlarmDelay(),
+                anchoragesAlarmPreferencesRepository.getAnchorageLocationsVisible(),
+                anchoragesAlarmPreferencesRepository.getMaxUpdateInterval(),
+                anchoragesAlarmPreferencesRepository.getMinUpdateInterval(),
+                anchoragesAlarmPreferencesRepository.getTrackMovementState(),
+                anchoragesAlarmPreferencesRepository.getTrackBatteryState(),
+                anchoragesAlarmPreferencesRepository.getAnchorageHistoryDeletionInterval()
+            )
+        ) {
+            val alarmDelay = it[0] as Long
+            val anchorageLocationsVisible = it[1] as Boolean
+            val maxUpdateInterval = it[2] as Long
+            val minUpdateInterval = it[3] as Long
+            val trackMovementState = it[4] as Boolean
+            val trackBatteryState = it[5] as Boolean
+            val anchorageHistoryDeletionInterval = it[6] as AnchorageHistoryDeletionIntervalModel
+
+            _uiState.update { state ->
+                state.copy(
                     maxGpsUpdateInterval = (maxUpdateInterval / 1000).toInt(),
                     minGpsUpdateInterval = (minUpdateInterval / 1000).toInt(),
                     alarmDelay = (alarmDelay / 1000).toInt(),
-                    areAnchorageLocationsVisible = anchorageLocationsVisible
+                    areAnchorageLocationsVisible = anchorageLocationsVisible,
+                    trackMovement = trackMovementState,
+                    trackBatteryState = trackBatteryState,
+                    anchorageHistoryDeletionInterval = AnchorageHistoryDeletionInterval.valueOf(
+                        anchorageHistoryDeletionInterval.name
+                    )
                 )
             }
         }
@@ -93,8 +113,19 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
                 event.id
             )
 
+            is AnchorageAlarmSettingsEvent.OnTrackBatteryStateChange -> onTrackBatteryStateChange(
+                event.boolean
+            )
+
+            is AnchorageAlarmSettingsEvent.OnTrackMovementStateChange -> onTrackMovementChange(event.boolean)
+            is AnchorageAlarmSettingsEvent.OnClearHistoryConfirmDialogStateChange -> onClearHistoryConfirmDialogStateChange(
+                event.value
+            )
+
             AnchorageAlarmSettingsEvent.OnNavigateBack -> sendEffect(AnchorageAlarmSettingsEffect.NavigateBack)
             AnchorageAlarmSettingsEvent.OnToggleEditMode -> onToggleEditMode()
+            AnchorageAlarmSettingsEvent.OnDeleteAnchorageHistory -> onClearAnchorageHistory()
+            AnchorageAlarmSettingsEvent.OnAnchorageHistoryDeletionIntervalClick -> onAnchorageHistoryDeletionIntervalClick()
         }
     }
 
@@ -135,6 +166,53 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
     private fun onShowBottomSheet(type: BottomSheetType?) {
         _uiState.update {
             it.copy(bottomSheetType = type)
+        }
+    }
+
+    private fun onAnchorageHistoryDeletionIntervalClick() {
+        viewModelScope.launch {
+            val index =
+                AnchorageHistoryDeletionInterval.valueOf(uiState.value.anchorageHistoryDeletionInterval.name).ordinal
+
+            val interval =
+                if (index != AnchorageHistoryDeletionInterval.entries.lastIndex) {
+                    AnchorageHistoryDeletionInterval.entries[index + 1]
+                } else AnchorageHistoryDeletionInterval.entries[0]
+
+            anchoragesAlarmPreferencesRepository.saveAnchorageHistoryDeletionInterval(
+                AnchorageHistoryDeletionIntervalModel.valueOf(interval.name)
+            )
+
+            sendEffect(
+                AnchorageAlarmSettingsEffect.AnchorageHistoryDeletionIntervalClick(
+                    interval
+                )
+            )
+        }
+    }
+
+    private fun onClearHistoryConfirmDialogStateChange(b: Boolean) {
+        _uiState.update {
+            it.copy(showDeleteHistoryConfirmationDialog = b)
+        }
+    }
+
+    private fun onClearAnchorageHistory() {
+        viewModelScope.launch {
+            anchorageHistoryRepository.clearAnchorageHistory()
+            _uiState.update { it.copy(showDeleteHistoryConfirmationDialog = false) }
+        }
+    }
+
+    private fun onTrackMovementChange(boolean: Boolean) {
+        viewModelScope.launch {
+            anchoragesAlarmPreferencesRepository.saveTrackMovementState(boolean)
+        }
+    }
+
+    private fun onTrackBatteryStateChange(boolean: Boolean) {
+        viewModelScope.launch {
+            anchoragesAlarmPreferencesRepository.saveTrackBatteryState(boolean)
         }
     }
 

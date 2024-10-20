@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.AnchoragesEntity
 import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
+import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
+import com.bytecause.data.services.AnchorageAlarmService
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
@@ -59,6 +61,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.geojson.Point
 import javax.inject.Inject
 import kotlin.math.round
 
@@ -78,6 +81,7 @@ constructor(
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
     private val anchoragesRepository: AnchoragesRepository,
     anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository,
+    anchorageMovementTrackRepository: AnchorageMovementTrackRepository,
     private val anchorageHistoryRepository: AnchorageHistoryRepository
 ) : ViewModel() {
 
@@ -106,6 +110,16 @@ constructor(
     val areAnchoragesVisible: StateFlow<Boolean> =
         anchorageAlarmPreferencesRepository.getAnchorageLocationsVisible()
             .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val trackedPoints: Flow<List<Point>> =
+        combine(
+            anchorageAlarmPreferencesRepository.getTrackMovementState(),
+            anchorageMovementTrackRepository.getTracks()
+        ) { shouldTrack, tracks ->
+            if (shouldTrack && AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
+                mapList(tracks) { Point.fromLngLat(it.longitude, it.latitude) }
+            } else emptyList()
+        }
 
     var isMeasuring = false
         private set

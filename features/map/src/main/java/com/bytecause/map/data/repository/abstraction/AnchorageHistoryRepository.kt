@@ -8,6 +8,7 @@ interface AnchorageHistoryRepository {
     suspend fun saveAnchorageHistory(anchorage: AnchorageHistory)
     suspend fun removeAnchorageHistory(id: String)
     suspend fun updateAnchorageHistoryTimestamp(id: String, timestamp: Long)
+    suspend fun clearAnchorageHistory()
     fun getAnchorageHistoryList(): Flow<AnchorageHistoryList>
     fun getAnchorageHistoryById(id: String): Flow<AnchorageHistory?>
 }

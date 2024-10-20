@@ -1,5 +1,6 @@
 package com.bytecause.data.repository.abstractions
 
+import com.bytecause.data.model.AnchorageHistoryDeletionIntervalModel
 import kotlinx.coroutines.flow.Flow
 
 interface AnchorageAlarmPreferencesRepository {
@@ -14,4 +15,13 @@ interface AnchorageAlarmPreferencesRepository {
 
     suspend fun saveAnchorageLocationsVisible(boolean: Boolean)
     fun getAnchorageLocationsVisible(): Flow<Boolean>
+
+    suspend fun saveTrackMovementState(boolean: Boolean)
+    fun getTrackMovementState(): Flow<Boolean>
+
+    suspend fun saveTrackBatteryState(boolean: Boolean)
+    fun getTrackBatteryState(): Flow<Boolean>
+
+    suspend fun saveAnchorageHistoryDeletionInterval(interval: AnchorageHistoryDeletionIntervalModel)
+    fun getAnchorageHistoryDeletionInterval(): Flow<AnchorageHistoryDeletionIntervalModel>
 }
