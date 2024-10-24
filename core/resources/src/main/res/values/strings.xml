@@ -41,6 +41,18 @@
     <string name="offline_vector">Offline vector</string>
     <string name="additional_overlay">Additional overlay</string>
 
+    <string name="latitude">Latitude °</string>
+    <string name="latitude_edit_text_hint">e.g.: 30.46050</string>
+    <string name="longitude">Longitude °</string>
+    <string name="longitude_edit_text_hint">e.g.: 122.46050</string>
+    <string name="bearing">Bearing</string>
+    <string name="distance">Distance</string>
+    <string name="coordinates_out_of_bounds_error_message">Please check if typed coordinates are within bounds! \n\n Latitude must be between -90° and 90° \n Longitude must be between -180° and 180°</string>
+    <string name="entire_anchorage_history_list_will_be_cleared">Entire anchorage history list will be cleared.</string>
+    <string name="cannot_be_empty">Cannot be empty!</string>
+    <string name="reposition_by_distance_from_anchor">Re-position by distance from anchor</string>
+    <string name="manual_reposition">Manual re-position</string>
+    <string name="reposition_by_coordinates">Re-position by coordinates</string>
     <string name="vessel_title">%1s (%2s)</string>
     <string name="vessel_info_description">Flag: %1s \nMMSI: %2s \nLength: %3s \nSpeed: %4s (Kn) \nHeading:%5s \nType: %6s \nReceived: %7s UTC</string>
     <string name="move_map_to_download_desired_area">Move map to download desired area.</string>

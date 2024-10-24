@@ -578,7 +578,7 @@ private fun AnchorageSettingsScreenContent(
                     }
                 ) {
                     Text(
-                        text = "Entire anchorage history list will be cleared.",
+                        text = stringResource(com.bytecause.core.resources.R.string.entire_anchorage_history_list_will_be_cleared),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }

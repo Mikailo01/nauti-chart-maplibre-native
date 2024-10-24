@@ -4,13 +4,21 @@ import android.Manifest
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.content.Context.SENSOR_SERVICE
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.drawable.Drawable
+import android.hardware.Sensor
+import android.hardware.Sensor.TYPE_ACCELEROMETER
+import android.hardware.Sensor.TYPE_MAGNETIC_FIELD
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -47,6 +55,7 @@ import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.SearchBoxTextType
+import com.bytecause.map.ui.viewmodel.AnchorageRepositionType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGES_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGES_SYMBOL_LAYER
@@ -58,6 +67,7 @@ import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_MOVEMENT_LINE_GEOJS
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_MOVEMENT_LINE_LAYER
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_RADIUS_MOVE_BY
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGE_SYMBOL_DEFAULT_SIZE
 import com.bytecause.map.util.MapFragmentConstants.ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHOR_CHAIN_LINE_LAYER
@@ -124,11 +134,14 @@ import com.bytecause.presentation.interfaces.DrawerController
 import com.bytecause.presentation.model.PlaceType
 import com.bytecause.presentation.model.PointType
 import com.bytecause.presentation.viewmodels.MapSharedViewModel
+import com.bytecause.util.KeyboardUtils
 import com.bytecause.util.color.toHexString
 import com.bytecause.util.common.LastClick
 import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.map.MapUtil.Companion.areCoordinatesValid
 import com.bytecause.util.map.MapUtil.Companion.bearingTo
+import com.bytecause.util.map.MapUtil.Companion.newLatLngFromDistance
 import com.bytecause.util.map.TileSourceLoader
 import com.bytecause.util.map.TileSourceLoader.MAIN_LAYER_ID
 import com.bytecause.util.poi.PoiUtil
@@ -250,6 +263,65 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             updateAnchorageRadius(mapStyle, latitude = it.latitude)
         }
     }
+
+    private var accelerometer: Sensor? = null
+    private var magnetometer: Sensor? = null
+    private val magnetometerReading = FloatArray(3)
+    private val accelerometerReading = FloatArray(3)
+    private val rotationMatrix = FloatArray(9)
+    private val orientationAngles = FloatArray(3)
+    private var sensorManager: SensorManager? = null
+    private val sensorListener =
+        object : SensorEventListener {
+            override fun onSensorChanged(p0: SensorEvent?) {
+                p0 ?: return
+
+                if (p0.sensor.type == TYPE_ACCELEROMETER) {
+                    System.arraycopy(
+                        p0.values,
+                        0,
+                        accelerometerReading,
+                        0,
+                        accelerometerReading.size
+                    )
+                } else if (p0.sensor.type == TYPE_MAGNETIC_FIELD) {
+                    System.arraycopy(p0.values, 0, magnetometerReading, 0, magnetometerReading.size)
+                }
+
+                // Check if we can calculate the rotation matrix
+                if (SensorManager.getRotationMatrix(
+                        rotationMatrix,
+                        null,
+                        accelerometerReading,
+                        magnetometerReading
+                    )
+                ) {
+                    // Get orientation from the rotation matrix
+                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
+
+                    // orientationAngles[0] is the azimuth (bearing) in radians, so convert to degrees
+                    val azimuthInRadians = orientationAngles[0]
+                    val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble()).toFloat()
+
+                    // Normalize azimuth to [0, 360] range
+                    val bearing = Math.round(
+                        if (azimuthInDegrees < 0) azimuthInDegrees + 360 else azimuthInDegrees
+                    )
+
+                    // update view directly
+                    binding.anchorageAlarmBottomSheet
+                        .anchorageAlarmBottomSheetRepositionLayout
+                        .bearingEditText
+                        .setText(bearing.toString())
+                }
+            }
+
+            override fun onAccuracyChanged(
+                p0: Sensor?,
+                p1: Int
+            ) {
+            }
+        }
 
     private val maxBottomSheetHeight = Resources.getSystem().displayMetrics.heightPixels / 2
 
@@ -459,9 +531,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 anchorageAlarmBottomSheetLayout.id -> {
                                     anchorageAlarmBottomSheetLayout.visibility = View.GONE
                                     if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) {
+                                        Log.d("idk", "first remove")
                                         removeAnchorageRadius(mapStyle)
                                         mapSharedViewModel.setAnchorageLocationFromHistoryId(null)
                                     }
+                                    viewModel.setIsAnchorageRepositionEnabled(false)
                                 }
 
                                 measureBottomSheetLayout.id -> {
@@ -1986,7 +2060,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 anchorageHistoryUiModel = location
                                             )
 
-                                            binding.anchorageAlarmBottomSheet.radiusSlider.value =
+                                            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.radiusSlider.value =
                                                 location.radius.toFloat()
                                         }
                                     }
@@ -2009,7 +2083,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                             longitude = longitude
                                                         )
                                                     }
-                                                    ?: viewModel.anchorageCenterPoint
+                                                    ?: viewModel.anchorageCenterPoint.value
                                                     ?: mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
 
                                             centerPoint?.let {
@@ -2066,10 +2140,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     )
                                                 }
                                             }
-                                            binding.anchorageAlarmBottomSheet.apply {
+                                            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                                                 startButton.isEnabled = false
                                                 stopButton.isEnabled = true
                                                 radiusSlider.isEnabled = false
+                                                moveImageButton.isEnabled = false
                                                 radiusSlider.value = anchorageAlarm.radius
                                                 radiusValueTextView.text =
                                                     getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
@@ -2081,7 +2156,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         } else {
                                             binding.mapBottomRightPanelLinearLayout.mapBottomRightButtonsLinearLayout.visibility =
                                                 View.GONE
-                                            binding.anchorageAlarmBottomSheet.apply {
+                                            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                                                 if (anchorageAlarmBottomSheetBehavior.state == STATE_HIDDEN) {
                                                     removeAnchorageRadius(style)
                                                 }
@@ -2089,10 +2164,80 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 startButton.isEnabled = true
                                                 stopButton.isEnabled = false
                                                 radiusSlider.isEnabled = true
+                                                moveImageButton.isEnabled = true
                                             }
                                         }
                                     }
                                 }
+                            }
+
+                            fun drawAnchorLine(currentPosition: LatLng) {
+                                val (latitude, longitude) = if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
+                                    AnchorageAlarmService.runningAnchorageAlarm.value.run { latitude to longitude }
+                                } else viewModel.anchorageCenterPoint.value?.run { latitude to longitude }
+                                    ?: run {
+                                        currentPosition.latitude to currentPosition.longitude
+                                    }
+
+                                if (style.getSourceAs<GeoJsonSource>(
+                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                    ) != null
+                                ) {
+                                    style.apply {
+                                        removeLayer(ANCHOR_CHAIN_LINE_LAYER)
+                                        removeSource(
+                                            ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                        )
+                                    }
+                                }
+
+                                val lineFeatures = Feature.fromGeometry(
+                                    LineString.fromLngLats(
+                                        listOf(
+                                            Point.fromLngLat(
+                                                currentPosition.longitude,
+                                                currentPosition.latitude
+                                            ),
+                                            Point.fromLngLat(
+                                                longitude,
+                                                latitude
+                                            )
+                                        )
+                                    )
+                                )
+
+                                val lineSource = GeoJsonSource(
+                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
+                                    FeatureCollection.fromFeature(lineFeatures)
+                                )
+
+                                val lineLayer = LineLayer(
+                                    ANCHOR_CHAIN_LINE_LAYER,
+                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
+                                ).apply {
+                                    setProperties(
+                                        lineDasharray(arrayOf(4f, 3f)),
+                                        lineColor(
+                                            requireContext().getColor(com.bytecause.core.resources.R.color.red)
+                                                .toHexString()
+                                        ),
+                                        lineWidth(2f)
+                                    )
+                                }
+
+                                style.apply {
+                                    addSource(lineSource)
+                                    addLayerBelow(
+                                        lineLayer,
+                                        ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
+                                    )
+                                }
+
+                                updateVesselDistanceFromAnchor(
+                                    currentPosition.distanceTo(
+                                        LatLng(latitude, longitude)
+                                    )
+                                )
                             }
 
                             viewLifecycleOwner.lifecycleScope.launch {
@@ -2103,73 +2248,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                         if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning ||
                                             anchorageAlarmBottomSheetBehavior.state == STATE_EXPANDED
                                         ) {
-
-                                            val (latitude, longitude) = if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning) {
-                                                AnchorageAlarmService.runningAnchorageAlarm.value.run { latitude to longitude }
-                                            } else viewModel.anchorageCenterPoint?.run { latitude to longitude }
-                                                ?: run {
-                                                    latLng.latitude to latLng.longitude
-                                                }
-
-                                            if (style.getSourceAs<GeoJsonSource>(
-                                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                                ) != null
-                                            ) {
-                                                style.apply {
-                                                    removeLayer(ANCHOR_CHAIN_LINE_LAYER)
-                                                    removeSource(
-                                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                                    )
-                                                }
-                                            }
-
-                                            val lineFeatures = Feature.fromGeometry(
-                                                LineString.fromLngLats(
-                                                    listOf(
-                                                        Point.fromLngLat(
-                                                            latLng.longitude,
-                                                            latLng.latitude
-                                                        ),
-                                                        Point.fromLngLat(
-                                                            longitude,
-                                                            latitude
-                                                        )
-                                                    )
-                                                )
-                                            )
-
-                                            val lineSource = GeoJsonSource(
-                                                ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
-                                                FeatureCollection.fromFeature(lineFeatures)
-                                            )
-
-                                            val lineLayer = LineLayer(
-                                                ANCHOR_CHAIN_LINE_LAYER,
-                                                ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                            ).apply {
-                                                setProperties(
-                                                    lineDasharray(arrayOf(4f, 3f)),
-                                                    lineColor(
-                                                        requireContext().getColor(com.bytecause.core.resources.R.color.red)
-                                                            .toHexString()
-                                                    ),
-                                                    lineWidth(2f)
-                                                )
-                                            }
-
-                                            style.apply {
-                                                addSource(lineSource)
-                                                addLayerBelow(
-                                                    lineLayer,
-                                                    ANCHORAGE_RADIUS_CENTER_SYMBOL_LAYER
-                                                )
-                                            }
-
-                                            updateVesselDistanceFromAnchor(
-                                                latLng.distanceTo(
-                                                    LatLng(latitude, longitude)
-                                                )
-                                            )
+                                            drawAnchorLine(latLng)
                                         }
                                     }
                                 }
@@ -2251,6 +2330,324 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 .target(LatLng(0.0, 0.0))
                                                 .zoom(1.0)
                                                 .build()
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.expandedAnchorageRepositionType.collect { type ->
+                                        val viewScope =
+                                            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetRepositionLayout
+
+                                        when (type) {
+                                            AnchorageRepositionType.Coordinates -> {
+                                                viewScope.apply {
+                                                    repositionByCoordinatesLinearLayoutContent.visibility =
+                                                        View.VISIBLE
+                                                    repositionManuallyConstraintLayoutContent.visibility =
+                                                        View.GONE
+                                                    repositionByDistanceLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                }
+                                            }
+
+                                            AnchorageRepositionType.Manual -> {
+                                                viewScope.apply {
+                                                    repositionManuallyConstraintLayoutContent.visibility =
+                                                        View.VISIBLE
+                                                    repositionByDistanceLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                    repositionByCoordinatesLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                }
+                                            }
+
+                                            AnchorageRepositionType.Distance -> {
+                                                viewScope.apply {
+                                                    repositionByDistanceLinearLayoutContent.visibility =
+                                                        View.VISIBLE
+                                                    repositionManuallyConstraintLayoutContent.visibility =
+                                                        View.GONE
+                                                    repositionByCoordinatesLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                }
+                                            }
+
+                                            null -> {
+                                                viewScope.apply {
+                                                    repositionByDistanceLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                    repositionManuallyConstraintLayoutContent.visibility =
+                                                        View.GONE
+                                                    repositionByCoordinatesLinearLayoutContent.visibility =
+                                                        View.GONE
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.anchorageCenterPoint.collect { latLng ->
+                                        latLng ?: return@collect
+
+                                        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
+                                            ?.let {
+                                                drawAnchorLine(it)
+                                            }
+
+                                        moveAnchorageRadius(
+                                            style,
+                                            latLng
+                                        )
+
+                                        updateAnchorageRadiusCenterPositionTextView(
+                                            latLng
+                                        )
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.isAnchorageRepositionEnabled.collect { enabled ->
+                                        if (enabled) {
+                                            binding.anchorageAlarmBottomSheet.apply {
+                                                anchorageAlarmBottomSheetMainContentId.root.visibility =
+                                                    View.GONE
+                                                anchorageAlarmBottomSheetRepositionLayout.apply innerApply@{
+                                                    root.visibility = View.VISIBLE
+
+                                                    updateAnchorageRadiusCenterPositionTextView(
+                                                        viewModel.anchorageCenterPoint.value!!
+                                                    )
+
+                                                    anchorageRepositionCancelButton.setOnClickListener {
+                                                        viewModel.setIsAnchorageRepositionEnabled(
+                                                            false
+                                                        )
+                                                        unregisterSensors()
+                                                    }
+
+                                                    anchorageCoordinatesRepositionDoneButton.setOnClickListener {
+                                                        val (latitudeText, longitudeText) = latitudeEditText.text.toString() to longitudeEditText.text.toString()
+
+                                                        if (latitudeText.isBlank() || longitudeText.isBlank()) {
+                                                            if (latitudeText.isBlank()) {
+                                                                latitudeEditText.error =
+                                                                    getString(com.bytecause.core.resources.R.string.cannot_be_empty)
+                                                            }
+
+                                                            if (longitudeText.isBlank()) {
+                                                                longitudeEditText.error =
+                                                                    getString(com.bytecause.core.resources.R.string.cannot_be_empty)
+                                                            }
+                                                            return@setOnClickListener
+                                                        }
+
+                                                        val latitude = latitudeText.toDouble()
+                                                        val longitude = longitudeText.toDouble()
+
+                                                        areCoordinatesValid(
+                                                            latitude,
+                                                            longitude
+                                                        ).let {
+                                                            if (!it) {
+                                                                coordinatesOutOfBoundsErrorMessage.visibility =
+                                                                    View.VISIBLE
+                                                                return@setOnClickListener
+                                                            } else {
+                                                                if (coordinatesOutOfBoundsErrorMessage.visibility == View.VISIBLE) {
+                                                                    coordinatesOutOfBoundsErrorMessage.visibility =
+                                                                        View.GONE
+                                                                }
+                                                            }
+                                                        }
+
+                                                        val updatedAnchoragePosition =
+                                                            LatLng(
+                                                                latitude,
+                                                                longitude
+                                                            )
+
+                                                        viewModel.setAnchorageCenterPoint(
+                                                            updatedAnchoragePosition
+                                                        )
+                                                        viewModel.setExpandedAnchorageRepositionType(
+                                                            null
+                                                        )
+                                                        resetAnchorageRepositionViewState()
+                                                    }
+
+                                                    anchorageDistanceRepositionDoneButton.setOnClickListener {
+                                                        val currentPosition =
+                                                            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
+                                                                ?: return@setOnClickListener
+
+                                                        val (distanceText, bearingText) = distanceEditText.text.toString() to bearingEditText.text.toString()
+
+                                                        if (distanceText.isBlank() || bearingText.isBlank()) {
+                                                            if (distanceText.isBlank()) {
+                                                                distanceEditText.error = getString(
+                                                                    com.bytecause.core.resources.R.string.cannot_be_empty
+                                                                )
+                                                            }
+                                                            if (bearingText.isBlank()) {
+                                                                bearingEditText.error = getString(
+                                                                    com.bytecause.core.resources.R.string.cannot_be_empty
+                                                                )
+                                                            }
+                                                            return@setOnClickListener
+                                                        }
+
+                                                        val (distance, bearing) = distanceText
+                                                            .toDouble() to bearingText.toDouble()
+                                                        val updatedAnchoragePosition =
+                                                            currentPosition.newLatLngFromDistance(
+                                                                distance = distance,
+                                                                bearing = bearing
+                                                            )
+
+                                                        viewModel.setAnchorageCenterPoint(
+                                                            updatedAnchoragePosition
+                                                        )
+                                                        viewModel.setExpandedAnchorageRepositionType(
+                                                            null
+                                                        )
+                                                        unregisterSensors()
+                                                        resetAnchorageRepositionViewState()
+                                                    }
+
+                                                    currentPositionImageButton.setOnClickListener {
+                                                        mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
+                                                            ?.run {
+                                                                latitudeEditText.setText(latitude.toString())
+                                                                longitudeEditText.setText(longitude.toString())
+                                                            }
+                                                    }
+
+                                                    moveUp.setOnClickListener {
+                                                        viewModel.anchorageCenterPoint.value?.run {
+                                                            viewModel.setAnchorageCenterPoint(
+                                                                LatLng(
+                                                                    latitude = latitude + ANCHORAGE_RADIUS_MOVE_BY,
+                                                                    longitude = longitude
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+
+                                                    getBearingFromCompassImageButton.setOnClickListener {
+                                                        sensorManager?.let {
+                                                            unregisterSensors()
+
+                                                            getBearingFromCompassImageButton.setBackgroundColor(
+                                                                Color.TRANSPARENT
+                                                            )
+                                                        } ?: run {
+                                                            sensorManager =
+                                                                requireActivity().getSystemService(
+                                                                    SENSOR_SERVICE
+                                                                ) as SensorManager
+
+
+                                                            sensorManager?.run {
+                                                                accelerometer =
+                                                                    getDefaultSensor(
+                                                                        TYPE_ACCELEROMETER
+                                                                    )
+                                                                magnetometer =
+                                                                    getDefaultSensor(
+                                                                        TYPE_MAGNETIC_FIELD
+                                                                    )
+
+                                                                registerListener(
+                                                                    sensorListener,
+                                                                    accelerometer,
+                                                                    SensorManager.SENSOR_DELAY_UI
+                                                                )
+                                                                registerListener(
+                                                                    sensorListener,
+                                                                    magnetometer,
+                                                                    SensorManager.SENSOR_DELAY_UI
+                                                                )
+                                                            }
+
+                                                            getBearingFromCompassImageButton.background =
+                                                                ContextCompat.getDrawable(
+                                                                    requireContext(),
+                                                                    com.bytecause.core.resources.R.drawable.rounded_button_background
+                                                                )
+                                                        }
+                                                    }
+
+                                                    moveDown.setOnClickListener {
+                                                        viewModel.anchorageCenterPoint.value?.run {
+                                                            viewModel.setAnchorageCenterPoint(
+                                                                LatLng(
+                                                                    latitude = latitude - ANCHORAGE_RADIUS_MOVE_BY,
+                                                                    longitude = longitude
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+
+                                                    moveLeft.setOnClickListener {
+                                                        viewModel.anchorageCenterPoint.value?.run {
+                                                            viewModel.setAnchorageCenterPoint(
+                                                                LatLng(
+                                                                    latitude = latitude,
+                                                                    longitude = longitude - ANCHORAGE_RADIUS_MOVE_BY
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+
+                                                    moveRight.setOnClickListener {
+                                                        viewModel.anchorageCenterPoint.value?.run {
+                                                            viewModel.setAnchorageCenterPoint(
+                                                                LatLng(
+                                                                    latitude = latitude,
+                                                                    longitude = longitude + ANCHORAGE_RADIUS_MOVE_BY
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+
+                                                    repositionByCoordinatesCardView.setOnClickListener {
+                                                        viewModel.setExpandedAnchorageRepositionType(
+                                                            AnchorageRepositionType.Coordinates
+                                                        )
+                                                    }
+
+                                                    manualRepostionCardView.setOnClickListener {
+                                                        viewModel.setExpandedAnchorageRepositionType(
+                                                            AnchorageRepositionType.Manual
+                                                        )
+                                                    }
+
+                                                    repositionByDistanceFromAnchorCardView.setOnClickListener {
+                                                        viewModel.setExpandedAnchorageRepositionType(
+                                                            AnchorageRepositionType.Distance
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            resetAnchorageRepositionViewState()
+                                            binding.anchorageAlarmBottomSheet.apply {
+                                                KeyboardUtils.forceCloseKeyboard(
+                                                    anchorageAlarmBottomSheetRepositionLayout.root
+                                                )
+                                                anchorageAlarmBottomSheetMainContentId.root.visibility =
+                                                    View.VISIBLE
+                                                anchorageAlarmBottomSheetRepositionLayout.root.visibility =
+                                                    View.GONE
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -2358,7 +2755,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
-// Get last user's position from SharedPreferences on first start if present.
+        // Get last user's position from SharedPreferences on first start if present.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.getUserLocation().firstOrNull()?.let {
                 if (mapSharedViewModel.lastKnownPosition.replayCache.firstOrNull() != null) return@let
@@ -2604,8 +3001,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             }
         }
 
-// Changes location button state, if state == 1 mapView will be rotated based on current
-// device's direction.
+        // Changes location button state, if state == 1 mapView will be rotated based on current
+        // device's direction.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.locationButtonStateFlow.collect {
@@ -2620,7 +3017,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private fun showAnchorageRadius(style: Style, radiusInPixels: Float, latLng: LatLng) {
         if (style.getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE) != null) {
-            removeAnchorageRadius(style)
+            return
         }
 
         val radiusBorderSource = GeoJsonSource(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE).apply {
@@ -2687,11 +3084,22 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             circleRadius(
                 radiusInMetersToRadiusInPixels(
                     mapLibreMap = mapLibre,
-                    radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
+                    radiusInMeters = binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.radiusSlider.value,
                     latitude = latitude
                 )
             )
         )
+    }
+
+    private fun moveAnchorageRadius(style: Style, latLng: LatLng) {
+        style.apply {
+            val centerPoint =
+                getSourceAs<GeoJsonSource>(ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE)
+            val borderRadius = getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
+
+            centerPoint?.setGeoJson(Point.fromLngLat(latLng.longitude, latLng.latitude))
+            borderRadius?.setGeoJson(Point.fromLngLat(latLng.longitude, latLng.latitude))
+        }
     }
 
     private fun removeAnchorageRadius(style: Style) {
@@ -3056,12 +3464,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     private fun updateVesselDistanceFromAnchor(distance: Double) {
-        binding.anchorageAlarmBottomSheet.distanceFromAnchorLinearLayout.visibility = View.VISIBLE
-        binding.anchorageAlarmBottomSheet.distanceFromAnchorTextView.text =
-            getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                round(distance * 10) / 10,
-                "M"
-            )
+        binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
+            distanceFromAnchorLinearLayout.visibility = View.VISIBLE
+            distanceFromAnchorTextView.text =
+                getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
+                    round(distance * 10) / 10,
+                    "M"
+                )
+        }
     }
 
     private fun showAnchorageAlarmBottomSheet(
@@ -3085,7 +3495,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 centerLongitude = latLng.longitude
             )
 
-            binding.anchorageAlarmBottomSheet.apply {
+            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                 radiusValueTextView.text =
                     getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
                         AnchorageAlarmService.runningAnchorageAlarm.value.radius.toInt().toString(),
@@ -3117,7 +3527,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         } else {
             viewModel.setAnchorageCenterPoint(latLng) // save center point only if there is no running service
 
-            binding.anchorageAlarmBottomSheet.apply {
+            binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                 radiusValueTextView.text =
                     getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
                         radiusSlider.value.toInt().toString(),
@@ -3132,15 +3542,18 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 "M"
                             )
 
-                        updateAnchorageRadius(style = mapStyle, latitude = latLng.latitude)
+                        updateAnchorageRadius(
+                            style = mapStyle,
+                            latitude = viewModel.anchorageCenterPoint.value!!.latitude
+                        )
 
                         // update camera based on new rendered radius
                         navigateToAnchorageRadius(
                             style = style,
                             mapLibreMap = mapLibreMap,
                             radiusInMeters = value,
-                            centerLatitude = latLng.latitude,
-                            centerLongitude = latLng.longitude
+                            centerLatitude = viewModel.anchorageCenterPoint.value!!.latitude,
+                            centerLongitude = viewModel.anchorageCenterPoint.value!!.longitude
                         )
                     }
                 }
@@ -3148,26 +3561,32 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 // anchorage center point moved, reset the calculated distance
                 distanceFromAnchorTextView.text = null
                 distanceFromAnchorLinearLayout.visibility = View.GONE
-            }
 
-            navigateToAnchorageRadius(
-                style = style,
-                mapLibreMap = mapLibreMap,
-                radiusInMeters = binding.anchorageAlarmBottomSheet.radiusSlider.value,
-                centerLatitude = latLng.latitude,
-                centerLongitude = latLng.longitude
-            )
+                navigateToAnchorageRadius(
+                    style = style,
+                    mapLibreMap = mapLibreMap,
+                    radiusInMeters = radiusSlider.value,
+                    centerLatitude = viewModel.anchorageCenterPoint.value!!.latitude,
+                    centerLongitude = viewModel.anchorageCenterPoint.value!!.longitude
+                )
+            }
         }
 
-        binding.anchorageAlarmBottomSheet.apply {
+        binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
             startButton.setOnClickListener {
                 if (isLocationPermissionGranted) {
                     // Start service
                     Intent(activity, AnchorageAlarmService::class.java).also {
                         it.setAction(AnchorageAlarmService.Actions.START.toString())
                         it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
-                        it.putExtra(AnchorageAlarmService.EXTRA_LATITUDE, latLng.latitude)
-                        it.putExtra(AnchorageAlarmService.EXTRA_LONGITUDE, latLng.longitude)
+                        it.putExtra(
+                            AnchorageAlarmService.EXTRA_LATITUDE,
+                            viewModel.anchorageCenterPoint.value!!.latitude
+                        )
+                        it.putExtra(
+                            AnchorageAlarmService.EXTRA_LONGITUDE,
+                            viewModel.anchorageCenterPoint.value!!.longitude
+                        )
                         requireActivity().startService(it)
                     }
 
@@ -3175,8 +3594,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                     // longitude and radius are checked for equality
                     if (anchorageHistoryUiModel != AnchorageHistoryUiModel(
                             id = "",
-                            latitude = latLng.latitude,
-                            longitude = latLng.longitude,
+                            latitude = viewModel.anchorageCenterPoint.value!!.latitude,
+                            longitude = viewModel.anchorageCenterPoint.value!!.longitude,
                             radius = radiusSlider.value.toInt(),
                             timestamp = 0L
                         )
@@ -3185,8 +3604,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         viewModel.saveAnchorageToHistory(
                             AnchorageHistoryUiModel(
                                 id = UUID.randomUUID().toString(),
-                                latitude = latLng.latitude,
-                                longitude = latLng.longitude,
+                                latitude = viewModel.anchorageCenterPoint.value!!.latitude,
+                                longitude = viewModel.anchorageCenterPoint.value!!.longitude,
                                 radius = radiusSlider.value.toInt(),
                                 timestamp = System.currentTimeMillis()
                             )
@@ -3215,6 +3634,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
             }
 
+            moveImageButton.setOnClickListener {
+                viewModel.setIsAnchorageRepositionEnabled(true)
+            }
+
             settingsImageButton.setOnClickListener {
                 findNavController().navigate(R.id.action_mapFragment_to_anchorageAlarmSettingsDialog)
             }
@@ -3224,9 +3647,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 radiusInPixels = radiusInMetersToRadiusInPixels(
                     mapLibreMap = mapLibre,
                     radiusInMeters = radiusSlider.value,
-                    latitude = latLng.latitude
+                    latitude = viewModel.anchorageCenterPoint.value!!.latitude
                 ),
-                latLng = latLng
+                latLng = viewModel.anchorageCenterPoint.value!!
             )
         }
     }
@@ -3337,6 +3760,15 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 }
             }
         }
+    }
+
+    private fun updateAnchorageRadiusCenterPositionTextView(latLng: LatLng) {
+        binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetRepositionLayout.anchorageRadiusCenterPositionTextView.text =
+            getString(
+                com.bytecause.core.resources.R.string.split_two_strings_formatter,
+                String.format(Locale.getDefault(), "%.5f", latLng.latitude),
+                String.format(Locale.getDefault(), "%.5f", latLng.longitude)
+            )
     }
 
     private fun loadMarkerBottomSheetPropImages(images: List<Int>) {
@@ -3540,6 +3972,40 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
         binding.measureDistanceBottomSheet.distanceTextview.text = null
         hideTargetOverlay()
+    }
+
+    private fun unregisterSensors() {
+        sensorManager?.run {
+            unregisterListener(sensorListener)
+            sensorManager = null
+
+            // Reset view state
+            binding.anchorageAlarmBottomSheet
+                .anchorageAlarmBottomSheetRepositionLayout
+                .getBearingFromCompassImageButton
+                .setBackgroundColor(Color.TRANSPARENT)
+        }
+    }
+
+    private fun resetAnchorageRepositionViewState() {
+        binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetRepositionLayout.apply {
+            latitudeEditText.apply {
+                text = null
+                error = null
+            }
+            longitudeEditText.apply {
+                text = null
+                error = null
+            }
+            distanceEditText.apply {
+                text = null
+                error = null
+            }
+            bearingEditText.apply {
+                text = null
+                error = null
+            }
+        }
     }
 
     // Shows target in the center of mapView.
@@ -3750,6 +4216,25 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
 
+        sensorManager?.registerListener(
+            sensorListener,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+
+        sensorManager?.run {
+            registerListener(
+                sensorListener,
+                accelerometer,
+                SensorManager.SENSOR_DELAY_UI
+            )
+            registerListener(
+                sensorListener,
+                magnetometer,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
+
         mapView?.onResume()
     }
 
@@ -3760,6 +4245,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+
+        sensorManager?.unregisterListener(sensorListener)
 
         cancelAnimation()
 

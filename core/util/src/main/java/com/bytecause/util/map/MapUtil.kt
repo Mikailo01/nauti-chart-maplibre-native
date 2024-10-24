@@ -6,6 +6,7 @@ import org.maplibre.android.geometry.LatLng
 import java.math.RoundingMode
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -23,6 +24,36 @@ class MapUtil {
             val x = cos(a1) * sin(b1) - sin(a1) * cos(b1) * cos(deltaLon)
             val result = Math.toDegrees(atan2(y, x))
             return (result + 360.0) % 360.0
+        }
+
+        fun LatLng.newLatLngFromDistance(distance: Double, bearing: Double): LatLng {
+            val r = 6371000.0 // Earth radius in meters
+
+            // Convert degrees to radians
+            val lat1Rad = Math.toRadians(latitude)
+            val lon1Rad = Math.toRadians(longitude)
+            val bearingRad = Math.toRadians(bearing)
+
+            // Calculate new latitude
+            val lat2Rad = asin(
+                sin(lat1Rad) * cos(distance / r) + cos(lat1Rad) * sin(distance / r) * cos(bearingRad)
+            )
+
+            // Calculate new longitude
+            val lon2Rad = lon1Rad + atan2(
+                sin(bearingRad) * sin(distance / r) * cos(lat1Rad),
+                cos(distance / r) - sin(lat1Rad) * sin(lat2Rad)
+            )
+
+            // Convert radians back to degrees
+            val lat2 = Math.toDegrees(lat2Rad)
+            val lon2 = Math.toDegrees(lon2Rad)
+
+            return LatLng(lat2, lon2)
+        }
+
+        fun areCoordinatesValid(latitude: Double, longitude: Double): Boolean {
+            return (latitude in -89.9..89.9) && (longitude in -179.9..179.9)
         }
 
         fun arePointsWithinDelta(
@@ -69,7 +100,7 @@ class MapUtil {
 
             val match =
                 ddPattern.matchEntire(input) ?: dmsPattern.matchEntire(input)
-                    ?: decimalPattern.matchEntire(input)
+                ?: decimalPattern.matchEntire(input)
 
             return match != null && validateCoordinatesBounds(match.groupValues)
         }

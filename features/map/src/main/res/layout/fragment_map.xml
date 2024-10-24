@@ -62,13 +62,13 @@
         layout="@layout/map_bottom_right_panel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@id/map_bottom_relative_layout"
+        android:layout_above="@id/map_bottom_constraint_layout"
         android:layout_alignParentEnd="true"
-        android:layout_marginBottom="10dp"
-        android:layout_marginEnd="5dp" />
+        android:layout_marginEnd="5dp"
+        android:layout_marginBottom="10dp" />
 
-    <RelativeLayout
-        android:id="@+id/map_bottom_relative_layout"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/map_bottom_constraint_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true">
@@ -77,28 +77,31 @@
             android:id="@+id/bottomSheetId"
             layout="@layout/map_location_bottom_sheet"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <include
             android:id="@+id/marker_bottom_sheet_id"
             layout="@layout/marker_bottom_sheet_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <include
             android:id="@+id/anchorage_alarm_bottom_sheet"
             layout="@layout/anchorage_alarm_bottom_sheet_layout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <include
             android:id="@+id/measureDistanceBottomSheet"
             layout="@layout/measure_distance_bottom_sheet"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-    </RelativeLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <include
         android:id="@+id/measure_distance_top"

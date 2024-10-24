@@ -8,6 +8,8 @@ object MapFragmentConstants {
     const val DEFAULT_BUTTON_STATE = 0
     const val TRACKING_BUTTON_STATE = 1
 
+    const val ANCHORAGE_RADIUS_MOVE_BY = 0.00001
+
     const val ZOOM_IN_DEFAULT_LEVEL = 17.0
     const val SYMBOL_ICON_SIZE = 1f
     const val PIN_ICON = "pin_icon"

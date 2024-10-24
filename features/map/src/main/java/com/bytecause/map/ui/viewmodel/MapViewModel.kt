@@ -66,6 +66,12 @@ import javax.inject.Inject
 import kotlin.math.round
 
 
+enum class AnchorageRepositionType {
+    Coordinates,
+    Manual,
+    Distance
+}
+
 @HiltViewModel
 class MapViewModel
 @Inject
@@ -121,11 +127,18 @@ constructor(
             } else emptyList()
         }
 
+    private val _isAnchorageRepositionEnabled = MutableStateFlow(false)
+    val isAnchorageRepositionEnabled: StateFlow<Boolean> = _isAnchorageRepositionEnabled
+
+    private val _expandedAnchorageRepositionType = MutableStateFlow<AnchorageRepositionType?>(null)
+    val expandedAnchorageRepositionType: StateFlow<AnchorageRepositionType?> =
+        _expandedAnchorageRepositionType
+
     var isMeasuring = false
         private set
 
-    var anchorageCenterPoint: LatLng? = null
-        private set
+    private val _anchorageCenterPoint = MutableStateFlow<LatLng?>(null)
+    val anchorageCenterPoint: StateFlow<LatLng?> = _anchorageCenterPoint
 
     private val _measurePointsSharedFlow = MutableSharedFlow<List<LatLng>>(replay = 1)
     val measurePointsSharedFlow get() = _measurePointsSharedFlow.asSharedFlow()
@@ -249,8 +262,16 @@ constructor(
         anchorageHistoryRepository.getAnchorageHistoryById(id).firstOrNull()
             ?.asAnchorageHistoryUiModel()
 
+    fun setIsAnchorageRepositionEnabled(b: Boolean) {
+        _isAnchorageRepositionEnabled.value = b
+    }
+
+    fun setExpandedAnchorageRepositionType(type: AnchorageRepositionType?) {
+        _expandedAnchorageRepositionType.value = type
+    }
+
     fun setAnchorageCenterPoint(latLng: LatLng?) {
-        anchorageCenterPoint = latLng
+        _anchorageCenterPoint.value = latLng
     }
 
     fun setSelectedFeatureId(featureType: com.bytecause.map.ui.FeatureType) {

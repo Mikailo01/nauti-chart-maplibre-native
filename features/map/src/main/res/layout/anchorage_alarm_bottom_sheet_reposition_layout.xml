@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/anchorage_reposition_bottom_sheet_scroll_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/reposition_by_coordinates_card_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/md_theme_secondaryContainer"
+            app:cardCornerRadius="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="10dp"
+                    android:text="@string/reposition_by_coordinates"
+                    android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                <LinearLayout
+                    android:id="@+id/reposition_by_coordinates_linear_layout_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content">
+
+                                <androidx.appcompat.widget.AppCompatEditText
+                                    android:id="@+id/latitude_edit_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:hint="@string/latitude_edit_text_hint"
+                                    android:inputType="numberSigned|numberDecimal"
+                                    android:textColor="@color/md_theme_onSecondaryContainer"
+                                    android:textStyle="italic" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="20dp"
+                                    android:text="@string/latitude"
+                                    android:textColor="@color/md_theme_onSecondaryContainer" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content">
+
+                                <androidx.appcompat.widget.AppCompatEditText
+                                    android:id="@+id/longitude_edit_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:hint="@string/longitude_edit_text_hint"
+                                    android:inputType="numberSigned|numberDecimal"
+                                    android:textColor="@color/md_theme_onSecondaryContainer"
+                                    android:textStyle="italic" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="20dp"
+                                    android:text="@string/longitude"
+                                    android:textColor="@color/md_theme_onSecondaryContainer" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/current_position_image_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginEnd="20dp"
+                            android:background="#00000000"
+                            android:scaleX="1.5"
+                            android:scaleY="1.5"
+                            android:src="@drawable/gps_icon"
+                            app:tint="@color/md_theme_onSecondaryContainer" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/coordinates_out_of_bounds_error_message"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/coordinates_out_of_bounds_error_message"
+                        android:textColor="@color/md_theme_error"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <Button
+                        android:id="@+id/anchorage_coordinates_reposition_done_button"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginVertical="10dp"
+                        android:text="@string/done" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/manual_repostion_card_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/md_theme_secondaryContainer"
+            app:cardCornerRadius="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="10dp"
+                    android:text="@string/manual_reposition"
+                    android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/reposition_manually_constraint_layout_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/anchorage_radius_center_position_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:textColor="@color/md_theme_onSecondaryContainer"
+                        android:textStyle="italic"
+                        app:layout_constraintBottom_toTopOf="@id/move_up"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/move_up"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_margin="10dp"
+                        android:background="@color/md_theme_onSecondaryContainer"
+                        android:src="@drawable/arrow_up"
+                        app:layout_constraintBottom_toTopOf="@id/move_down"
+                        app:layout_constraintLeft_toLeftOf="parent"
+                        app:layout_constraintRight_toRightOf="parent"
+                        app:tint="@color/md_theme_onSecondaryContainer_mediumContrast" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/move_left"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_margin="10dp"
+                        android:background="@color/md_theme_onSecondaryContainer"
+                        android:src="@drawable/arrow_left"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintRight_toLeftOf="@id/move_down"
+                        app:tint="@color/md_theme_onSecondaryContainer_mediumContrast" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/move_down"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_margin="10dp"
+                        android:background="@color/md_theme_onSecondaryContainer"
+                        android:src="@drawable/arrow_down"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintLeft_toLeftOf="parent"
+                        app:layout_constraintRight_toRightOf="parent"
+                        app:tint="@color/md_theme_onSecondaryContainer_mediumContrast" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/move_right"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_margin="10dp"
+                        android:background="@color/md_theme_onSecondaryContainer"
+                        android:src="@drawable/arrow_right"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintLeft_toRightOf="@id/move_down"
+                        app:tint="@color/md_theme_onSecondaryContainer_mediumContrast" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/reposition_by_distance_from_anchor_card_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/md_theme_secondaryContainer"
+            app:cardCornerRadius="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="10dp"
+                    android:text="@string/reposition_by_distance_from_anchor"
+                    android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                <LinearLayout
+                    android:id="@+id/reposition_by_distance_linear_layout_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <EditText
+                            android:id="@+id/distance_edit_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.5"
+                            android:hint="@string/distance"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Meters"
+                            android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1" />
+
+                        <EditText
+                            android:id="@+id/bearing_edit_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.5"
+                            android:hint="@string/bearing"
+                            android:inputType="number"
+                            android:maxLength="3"
+                            android:textColor="@color/md_theme_onSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="°"
+                            android:textColor="@color/md_theme_onSecondaryContainer"
+                            android:textSize="22sp" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/get_bearing_from_compass_image_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginStart="10dp"
+                            android:background="#00000000"
+                            android:padding="5dp"
+                            android:src="@drawable/compass"
+                            app:tint="@color/md_theme_onSecondaryContainer" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/anchorage_distance_reposition_done_button"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginVertical="10dp"
+                        android:text="@string/done" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <Button
+            android:id="@+id/anchorage_reposition_cancel_button"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/cancel" />
+
+    </LinearLayout>
+</ScrollView>
