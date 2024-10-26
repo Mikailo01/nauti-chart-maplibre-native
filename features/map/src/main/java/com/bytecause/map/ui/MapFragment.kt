@@ -18,7 +18,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Looper
-import android.util.Log
 import android.util.Range
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -443,8 +442,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         // Init MapLibre
         MapLibre.getInstance(this.requireContext())
 
-        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
-
         // this checks if fragment went through configuration change or not, this will prevent from
         // showing another dialog after device's configuration changes.
         if (savedInstanceState == null) {
@@ -531,7 +528,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 anchorageAlarmBottomSheetLayout.id -> {
                                     anchorageAlarmBottomSheetLayout.visibility = View.GONE
                                     if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) {
-                                        Log.d("idk", "first remove")
                                         removeAnchorageRadius(mapStyle)
                                         mapSharedViewModel.setAnchorageLocationFromHistoryId(null)
                                     }
@@ -4211,6 +4207,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     override fun onResume() {
         super.onResume()
 
+        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
         bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
@@ -4241,6 +4238,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     override fun onPause() {
         super.onPause()
 
+        // don't intercept back events if map is not in the foreground
+        onBackPressedCallback.remove()
         bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
