@@ -1,4 +1,4 @@
-package com.bytecause.util.map
+package com.bytecause.map.util
 
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.LineLayer

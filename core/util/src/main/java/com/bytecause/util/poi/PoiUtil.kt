@@ -34,6 +34,21 @@ object PoiUtil {
             }
     }
 
+    private fun assignDrawableColorToPoiCategory(category: String): Int {
+        return when (category) {
+            "Cafe", "Restaurant", "Fast food" -> R.color.poi_yellow
+            "Public transport" -> R.color.poi_dark_blue
+            "Shop", "Car rent", "Boat rent", "Bicycle rent" -> R.color.poi_medium_blue
+            "Fuel", "Charging station" -> R.color.poi_light_blue
+            "Nightclub", "Cinema", "Theatre", "Tourism", "Park", "Swimming pool" -> R.color.turquoise
+            "Bar", "Pub", "Ferry terminal", "Toilets", "Public shower", "Atm", "Bank", "Library", "Fire station", "Veterinary", "Dentist", "Doctors", "Hospital" -> R.color.poi_dark_red
+            "Health" -> R.color.poi_light_red
+            "Accommodation" -> R.color.poi_pink
+            "Activity" -> R.color.poi_light_green
+            else -> R.color.poi_gray
+        }
+    }
+
     val poiSymbolDrawableMap: Map<String, Int> = mapOf(
         "Bar" to R.drawable.bar,
         "Pub" to R.drawable.pub,
@@ -361,21 +376,6 @@ object PoiUtil {
             "house" -> R.drawable.house_icon
             "town" -> R.drawable.town_icon
             else -> R.drawable.map_marker
-        }
-    }
-
-    private fun assignDrawableColorToPoiCategory(category: String): Int {
-        return when (category) {
-            "Cafe", "Restaurant", "Fast food" -> R.color.poi_yellow
-            "Public transport" -> R.color.poi_dark_blue
-            "Shop", "Car rent", "Boat rent", "Bicycle rent" -> R.color.poi_medium_blue
-            "Fuel", "Charging station" -> R.color.poi_light_blue
-            "Nightclub", "Cinema", "Theatre", "Tourism", "Park", "Swimming pool" -> R.color.turquoise
-            "Bar", "Pub", "Ferry terminal", "Toilets", "Public shower", "Atm", "Bank", "Library", "Fire station", "Veterinary", "Dentist", "Doctors", "Hospital" -> R.color.poi_dark_red
-            "Health" -> R.color.poi_light_red
-            "Accommodation" -> R.color.poi_pink
-            "Activity" -> R.color.poi_light_green
-            else -> R.color.poi_gray
         }
     }
 

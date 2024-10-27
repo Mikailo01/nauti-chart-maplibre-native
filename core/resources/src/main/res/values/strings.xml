@@ -40,6 +40,7 @@
     <string name="online_raster">Online raster</string>
     <string name="offline_vector">Offline vector</string>
     <string name="additional_overlay">Additional overlay</string>
+    <string name="geolocation">Geolocation</string>
 
     <string name="latitude">Latitude °</string>
     <string name="latitude_edit_text_hint">e.g.: 30.46050</string>

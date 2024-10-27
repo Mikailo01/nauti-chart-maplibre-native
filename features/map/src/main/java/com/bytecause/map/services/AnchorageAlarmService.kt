@@ -1,4 +1,4 @@
-package com.bytecause.data.services
+package com.bytecause.map.services
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -26,7 +26,8 @@ import com.bytecause.data.model.AnchorageMovementTrackModel
 import com.bytecause.data.model.RunningAnchorageAlarm
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
-import com.bytecause.util.map.MapUtil
+import com.bytecause.data.services.Actions
+import com.bytecause.map.util.MapUtil
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -89,11 +90,11 @@ class AnchorageAlarmService : LifecycleService() {
                             val previousLocation = locations[locations.size - 2]
 
                             if (!MapUtil.arePointsWithinDelta(
-                                    LatLng(
+                                    point1 = LatLng(
                                         latitude = previousLocation.latitude,
                                         longitude = previousLocation.longitude
                                     ),
-                                    LatLng(
+                                    point2 = LatLng(
                                         latitude = lastLocation.latitude,
                                         longitude = lastLocation.longitude
                                     )
@@ -446,10 +447,5 @@ class AnchorageAlarmService : LifecycleService() {
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-    }
-
-    enum class Actions {
-        START,
-        STOP
     }
 }

@@ -16,7 +16,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bytecause.data.services.RegionPoiDownloadService
+import com.bytecause.data.services.Actions
+import com.bytecause.data.services.REGION_ID_PARAM
+import com.bytecause.data.services.REGION_NAME_PARAM
+import com.bytecause.data.services.REGION_POI_DOWNLOAD_SERVICE_CLASS
 import com.bytecause.domain.util.OverpassQueryBuilder
 import com.bytecause.features.pois.R
 import com.bytecause.features.pois.databinding.DownloadPoiFragmentLayoutBinding
@@ -245,20 +248,18 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
                 val region = viewModel.getRegionFromQueue()
 
                 // Start service
-                Intent(
-                    activity,
-                    RegionPoiDownloadService::class.java
-                ).also {
-                    it.setAction(RegionPoiDownloadService.Actions.START.toString())
-                    it.putExtra(
-                        RegionPoiDownloadService.REGION_ID_PARAM,
+                Intent().apply {
+                    setClassName(requireActivity(), REGION_POI_DOWNLOAD_SERVICE_CLASS)
+                    setAction(Actions.START.toString())
+                    putExtra(
+                        REGION_ID_PARAM,
                         region.first
                     )
-                    it.putExtra(
-                        RegionPoiDownloadService.REGION_NAME_PARAM,
+                    putExtra(
+                        REGION_NAME_PARAM,
                         region.second
                     )
-                    requireActivity().startService(it)
+                    requireActivity().startService(this)
                 }
 
                 setDownloadUiState(true)
@@ -267,12 +268,10 @@ class DownloadPoiSelectCountryFragment : Fragment(R.layout.download_poi_fragment
             false -> {
 
                 // Stop service
-                Intent(
-                    activity,
-                    RegionPoiDownloadService::class.java
-                ).also {
-                    it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
-                    requireActivity().startService(it)
+                Intent().apply {
+                    setClassName(requireActivity(), REGION_POI_DOWNLOAD_SERVICE_CLASS)
+                    setAction(Actions.STOP.toString())
+                    requireActivity().startService(this)
                 }
 
                 viewModel.cancelDownloadJob()

@@ -1,10 +1,10 @@
-package com.bytecause.util.map
+package com.bytecause.map.util
 
 import com.bytecause.domain.tilesources.DefaultTileSources.OPEN_SEA_MAP
 import com.bytecause.domain.tilesources.DefaultTileSources.SATELLITE
 import com.bytecause.domain.tilesources.TileSources
-import com.bytecause.util.map.GeoJsonLoader.loadGeoJsonFromAssets
-import com.bytecause.util.map.GeoJsonLoader.unloadGeoJson
+import com.bytecause.map.util.GeoJsonLoader.loadGeoJsonFromAssets
+import com.bytecause.map.util.GeoJsonLoader.unloadGeoJson
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.sources.RasterSource

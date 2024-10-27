@@ -1,3 +1,5 @@
+import com.bytecause.convention.implementation
+
 plugins {
     alias(libs.plugins.nautichart.android.feature)
     alias(libs.plugins.nautichart.android.feature.compose)
@@ -48,6 +50,12 @@ dependencies {
 
     // Material
     implementation(libs.google.material)
+
+    // Google services location
+    implementation(libs.gms.playServicesLocation)
+
+    // Lifecycle service
+    implementation(libs.androidx.lifecycle.lifecycleService)
 
     // Coil
     implementation(libs.coil)

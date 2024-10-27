@@ -10,15 +10,56 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.plugins.annotation.LineManager
 import org.maplibre.android.plugins.annotation.LineOptions
-import java.math.RoundingMode
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.round
+import kotlin.math.sin
 
 object MapUtil {
+
+    fun LatLng.bearingTo(other: LatLng): Double {
+        val deltaLon = Math.toRadians(other.longitude - longitude)
+
+        val a1 = Math.toRadians(latitude)
+        val b1 = Math.toRadians(other.latitude)
+
+        val y = sin(deltaLon) * cos(b1)
+        val x = cos(a1) * sin(b1) - sin(a1) * cos(b1) * cos(deltaLon)
+        val result = Math.toDegrees(atan2(y, x))
+        return (result + 360.0) % 360.0
+    }
+
+    fun LatLng.newLatLngFromDistance(distance: Double, bearing: Double): LatLng {
+        val r = 6371000.0 // Earth radius in meters
+
+        // Convert degrees to radians
+        val lat1Rad = Math.toRadians(latitude)
+        val lon1Rad = Math.toRadians(longitude)
+        val bearingRad = Math.toRadians(bearing)
+
+        // Calculate new latitude
+        val lat2Rad = asin(
+            sin(lat1Rad) * cos(distance / r) + cos(lat1Rad) * sin(distance / r) * cos(bearingRad)
+        )
+
+        // Calculate new longitude
+        val lon2Rad = lon1Rad + atan2(
+            sin(bearingRad) * sin(distance / r) * cos(lat1Rad),
+            cos(distance / r) - sin(lat1Rad) * sin(lat2Rad)
+        )
+
+        // Convert radians back to degrees
+        val lat2 = Math.toDegrees(lat2Rad)
+        val lon2 = Math.toDegrees(lon2Rad)
+
+        return LatLng(lat2, lon2)
+    }
+
     fun drawLine(
         polylineList: List<LatLng>,
         lineManager: LineManager?,
@@ -69,7 +110,6 @@ object MapUtil {
     ): Boolean {
         if (point1 == null || point2 == null) return false
 
-        // Use the distanceTo method to calculate the distance in meters
         val differenceInMeters = point1.distanceTo(point2)
 
         return differenceInMeters <= deltaInMeters
@@ -137,7 +177,6 @@ object MapUtil {
         }
     }
 
-
     fun radiusInMetersToRadiusInPixels(
         mapLibreMap: MapLibreMap,
         radiusInMeters: Float,
@@ -148,29 +187,6 @@ object MapUtil {
         val radiusInPixels = radiusInMeters / metersPerPixel
 
         return radiusInPixels.toFloat()
-    }
-
-    private fun decimalToDMS(decimal: Double): String {
-        val degrees = decimal.toInt()
-        val minutes = ((decimal - degrees) * 60).toInt()
-        val seconds =
-            ((decimal - degrees - (minutes / 60.0)) * 3600)
-                .toBigDecimal()
-                .setScale(0, RoundingMode.HALF_UP)
-                .toInt()
-        return "${if (degrees < 0) degrees * -1 else degrees}°${if (minutes < 0) minutes * -1 else minutes}'${if (seconds < 0) seconds * -1 else seconds}\""
-    }
-
-    // Degrees Minutes Seconds
-    fun latitudeToDMS(latitude: Double): String {
-        val direction = if (latitude >= 0) "N" else "S"
-        return decimalToDMS(latitude) + direction
-    }
-
-    // Degrees Minutes Seconds
-    fun longitudeToDMS(longitude: Double): String {
-        val direction = if (longitude >= 0) "E" else "W"
-        return decimalToDMS(longitude) + direction
     }
 
     fun areCoordinatesValid(input: String): Boolean {
@@ -184,6 +200,10 @@ object MapUtil {
             ?: decimalPattern.matchEntire(input)
 
         return match != null && validateCoordinatesBounds(match.groupValues)
+    }
+
+    fun areCoordinatesValid(latitude: Double, longitude: Double): Boolean {
+        return (latitude in -89.9..89.9) && (longitude in -179.9..179.9)
     }
 
     // Checks if coordinates are in valid bounds

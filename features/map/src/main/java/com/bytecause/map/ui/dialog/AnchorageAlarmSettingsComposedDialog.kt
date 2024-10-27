@@ -90,7 +90,6 @@ import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.BottomSheetType
 import com.bytecause.map.ui.state.AnchorageAlarmSettingsState
 import com.bytecause.map.ui.viewmodel.AnchorageAlarmSettingsViewModel
-import com.bytecause.map.util.MapUtil
 import com.bytecause.presentation.components.compose.ConfirmationDialog
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
@@ -99,6 +98,8 @@ import com.bytecause.util.common.getDateTimeFromTimestamp
 import com.bytecause.util.compose.swipeToDismiss
 import com.bytecause.util.compose.then
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.map.MapUtil.latitudeToDMS
+import com.bytecause.util.map.MapUtil.longitudeToDMS
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -779,8 +780,8 @@ private fun AnchorageHistoryItem(
         Text(
             text = stringResource(
                 com.bytecause.core.resources.R.string.split_two_strings_formatter,
-                MapUtil.latitudeToDMS(item.latitude),
-                MapUtil.longitudeToDMS(item.longitude)
+                latitudeToDMS(item.latitude),
+                longitudeToDMS(item.longitude)
             )
         )
         Row(

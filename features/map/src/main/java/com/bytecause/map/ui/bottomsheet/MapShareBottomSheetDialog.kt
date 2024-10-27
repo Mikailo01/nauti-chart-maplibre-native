@@ -12,8 +12,9 @@ import android.widget.Toast
 import androidx.navigation.fragment.navArgs
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.ShareBottomSheetFragmentBinding
-import com.bytecause.map.util.MapUtil
 import com.bytecause.util.delegates.viewBinding
+import com.bytecause.util.map.MapUtil.latitudeToDMS
+import com.bytecause.util.map.MapUtil.longitudeToDMS
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.maplibre.android.geometry.LatLng
@@ -40,8 +41,8 @@ class MapShareBottomSheetDialog : BottomSheetDialogFragment(R.layout.share_botto
             // Implicit intent
             val geoInfo =
                 getString(com.bytecause.core.resources.R.string.implicit_geo_info_arg).format(
-                    MapUtil.latitudeToDMS(geoPoint.latitude),
-                    MapUtil.longitudeToDMS(geoPoint.longitude)
+                    latitudeToDMS(geoPoint.latitude),
+                    longitudeToDMS(geoPoint.longitude)
                 )
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
@@ -59,8 +60,8 @@ class MapShareBottomSheetDialog : BottomSheetDialogFragment(R.layout.share_botto
             val myClipboard: ClipboardManager =
                 activity?.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val myClip: ClipData = ClipData.newPlainText(
-                "GeoPoint",
-                MapUtil.latitudeToDMS(geoPoint.latitude) + " " + MapUtil.longitudeToDMS(geoPoint.longitude)
+                getString(com.bytecause.core.resources.R.string.geolocation),
+                latitudeToDMS(geoPoint.latitude) + " " + longitudeToDMS(geoPoint.longitude)
             )
             myClipboard.setPrimaryClip(myClip)
 

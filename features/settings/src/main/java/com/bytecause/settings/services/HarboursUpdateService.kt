@@ -1,4 +1,4 @@
-package com.bytecause.data.services
+package com.bytecause.settings.services
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,38 +10,28 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
+import com.bytecause.data.services.Actions
 import com.bytecause.data.services.communication.ServiceApiResultListener
 import com.bytecause.data.services.communication.ServiceEvent
 import com.bytecause.domain.model.ApiResult
-import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
-import com.bytecause.domain.util.OverpassQueryBuilder
-import com.bytecause.domain.util.Util.excludeAmenityObjectsFilterList
-import com.bytecause.domain.util.Util.searchTypesStringList
+import com.bytecause.domain.usecase.UpdateHarboursUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val NOTIFICATION_ID = 1
+private const val NOTIFICATION_ID = 2
 
 @AndroidEntryPoint
-class RegionPoiDownloadService : LifecycleService() {
+class HarboursUpdateService : LifecycleService() {
 
-    private val channelId = "region_poi_update_channel"
+    private val channelId = "harbours_update_channel"
     private var progress: Int = -1
-
-    private var regionId: Int = -1
-    private var regionName: String = ""
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
     @Inject
-    lateinit var getPoiResultByRegionUseCase: GetPoiResultByRegionUseCase
-
-    companion object {
-        const val REGION_ID_PARAM = "regionId"
-        const val REGION_NAME_PARAM = "regionName"
-    }
+    lateinit var updateHarboursUseCase: UpdateHarboursUseCase
 
     override fun onCreate() {
         super.onCreate()
@@ -54,16 +44,11 @@ class RegionPoiDownloadService : LifecycleService() {
 
         when (intent?.action) {
             Actions.START.toString() -> {
-
-                regionId = intent.getIntExtra(REGION_ID_PARAM, -1)
-                regionName = intent.getStringExtra(REGION_NAME_PARAM) ?: ""
-
                 startForegroundServiceWithProgress()
-                downloadRegionPoisData(regionId = regionId, regionName = regionName)
+                updateHarboursData()
             }
 
             Actions.STOP.toString() -> {
-                ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadCancelled(regionId = regionId))
                 stopService()
             }
         }
@@ -74,7 +59,7 @@ class RegionPoiDownloadService : LifecycleService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                getString(R.string.region_update),
+                getString(R.string.harbours_update),
                 NotificationManager.IMPORTANCE_LOW
             )
             notificationManager.createNotificationChannel(channel)
@@ -83,7 +68,7 @@ class RegionPoiDownloadService : LifecycleService() {
 
     private fun startForegroundServiceWithProgress() {
         // Create an intent that will trigger when the user clicks the "Cancel" action
-        val cancelIntent = Intent(this, RegionPoiDownloadService::class.java).apply {
+        val cancelIntent = Intent(this, HarboursUpdateService::class.java).apply {
             action = Actions.STOP.toString() // Define the action for stopping the service
         }
 
@@ -96,7 +81,7 @@ class RegionPoiDownloadService : LifecycleService() {
         )
 
         notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setContentTitle(getString(R.string.downloading_region).format(regionName))
+            .setContentTitle(getString(R.string.updating_harbours))
             .setContentText(getString(R.string.waiting_for_server_response))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setProgress(0, 0, true)
@@ -106,41 +91,25 @@ class RegionPoiDownloadService : LifecycleService() {
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
     }
 
-    private fun downloadRegionPoisData(regionId: Int, regionName: String) {
+    private fun updateHarboursData() {
         lifecycleScope.launch {
-            val query = OverpassQueryBuilder
-                .format(OverpassQueryBuilder.FormatTypes.JSON)
-                .timeout(240)
-                .region(regionName)
-                .type(OverpassQueryBuilder.Type.Node)
-                .search(
-                    com.bytecause.domain.util.SearchTypes.UnionSet(searchTypesStringList)
-                        .filterNot(
-                            emptyList(),
-                            excludeAmenityObjectsFilterList,
-                            emptyList(),
-                            emptyList(),
-                            emptyList(),
-                            emptyList()
-                        )
-                )
-                .build()
 
-            ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadStarted(regionId))
+            ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdateStarted)
 
-            getPoiResultByRegionUseCase(query = query, regionId = regionId).collect { result ->
+            updateHarboursUseCase(forceUpdate = true).collect { result ->
                 when (result) {
                     is ApiResult.Progress -> {
                         result.progress?.let { progress ->
 
-                            this@RegionPoiDownloadService.progress =
-                                this@RegionPoiDownloadService.progress.takeIf { it != -1 }
+                            this@HarboursUpdateService.progress =
+                                this@HarboursUpdateService.progress.takeIf { it != -1 }
                                     ?.plus(progress) ?: progress
 
                             ServiceApiResultListener.postEvent(
-                                ServiceEvent.RegionPoiDownload(
-                                    regionId,
-                                    ApiResult.Progress<Nothing>(progress = this@RegionPoiDownloadService.progress)
+                                ServiceEvent.HarboursUpdate(
+                                    ApiResult.Progress<Nothing>(
+                                        progress = this@HarboursUpdateService.progress
+                                    )
                                 )
                             )
                             updateNotificationProgress()
@@ -148,22 +117,12 @@ class RegionPoiDownloadService : LifecycleService() {
                     }
 
                     is ApiResult.Success -> {
-                        ServiceApiResultListener.postEvent(
-                            ServiceEvent.RegionPoiDownload(
-                                regionId,
-                                result
-                            )
-                        )
+                        ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdate(result))
                         stopService()
                     }
 
                     is ApiResult.Failure -> {
-                        ServiceApiResultListener.postEvent(
-                            ServiceEvent.RegionPoiDownload(
-                                regionId,
-                                result
-                            )
-                        )
+                        ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdate(result))
                         stopService()
                     }
                 }
@@ -180,13 +139,8 @@ class RegionPoiDownloadService : LifecycleService() {
     }
 
     private fun stopService() {
-        ServiceApiResultListener.postEvent(ServiceEvent.RegionPoiDownloadCancelled(regionId))
+        ServiceApiResultListener.postEvent(ServiceEvent.HarboursUpdateCancelled)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-    }
-
-    enum class Actions {
-        START,
-        STOP
     }
 }

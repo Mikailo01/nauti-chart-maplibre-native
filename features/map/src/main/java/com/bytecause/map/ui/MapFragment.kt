@@ -41,7 +41,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import coil.load
-import com.bytecause.data.services.AnchorageAlarmService
+import com.bytecause.data.services.Actions
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
@@ -50,6 +50,7 @@ import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
+import com.bytecause.map.services.AnchorageAlarmService
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.model.MeasureUnit
@@ -121,10 +122,15 @@ import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_PROPERTY_SELECT
 import com.bytecause.map.util.MapFragmentConstants.VESSEL_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.ZOOM_IN_DEFAULT_LEVEL
 import com.bytecause.map.util.MapUtil
+import com.bytecause.map.util.MapUtil.areCoordinatesValid
+import com.bytecause.map.util.MapUtil.bearingTo
 import com.bytecause.map.util.MapUtil.calculateBoundsForRadius
 import com.bytecause.map.util.MapUtil.calculateZoomForBounds
 import com.bytecause.map.util.MapUtil.drawLine
+import com.bytecause.map.util.MapUtil.newLatLngFromDistance
 import com.bytecause.map.util.MapUtil.radiusInMetersToRadiusInPixels
+import com.bytecause.map.util.TileSourceLoader
+import com.bytecause.map.util.TileSourceLoader.MAIN_LAYER_ID
 import com.bytecause.map.util.navigateToCustomPoiNavigation
 import com.bytecause.map.util.navigateToFirstRunNavigation
 import com.bytecause.map.util.navigateToSearchNavigation
@@ -138,16 +144,19 @@ import com.bytecause.util.color.toHexString
 import com.bytecause.util.common.LastClick
 import com.bytecause.util.context.isLocationPermissionGranted
 import com.bytecause.util.delegates.viewBinding
-import com.bytecause.util.map.MapUtil.Companion.areCoordinatesValid
-import com.bytecause.util.map.MapUtil.Companion.bearingTo
-import com.bytecause.util.map.MapUtil.Companion.newLatLngFromDistance
-import com.bytecause.util.map.TileSourceLoader
-import com.bytecause.util.map.TileSourceLoader.MAIN_LAYER_ID
+import com.bytecause.util.map.MapUtil.latitudeToDMS
+import com.bytecause.util.map.MapUtil.longitudeToDMS
 import com.bytecause.util.poi.PoiUtil
 import com.bytecause.util.poi.PoiUtil.createLayerDrawable
 import com.bytecause.util.poi.PoiUtil.extractPropImagesFromTags
 import com.bytecause.util.poi.PoiUtil.poiSymbolDrawableMap
 import com.bytecause.util.string.StringUtil.replaceHttpWithHttps
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
@@ -166,9 +175,6 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.location.LocationComponent
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
-import org.maplibre.android.location.engine.LocationEngineCallback
-import org.maplibre.android.location.engine.LocationEngineRequest
-import org.maplibre.android.location.engine.LocationEngineResult
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
@@ -263,6 +269,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+    private lateinit var locationRequest: LocationRequest
+
     private var accelerometer: Sensor? = null
     private var magnetometer: Sensor? = null
     private val magnetometerReading = FloatArray(3)
@@ -353,34 +362,31 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         }
     }
 
-    private val locationEngineCallback: LocationEngineCallback<LocationEngineResult> =
-        object : LocationEngineCallback<LocationEngineResult> {
-            override fun onSuccess(p0: LocationEngineResult?) {
-                if (p0 == null) return
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(p0: LocationResult) {
+            super.onLocationResult(p0)
 
-                p0.lastLocation?.run {
-                    LatLng(
-                        latitude = latitude,
-                        longitude = longitude,
-                    ).let {
-                        if (MapUtil.arePointsWithinDelta(
-                                it,
-                                mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull(),
-                            )
-                        ) {
-                            return@let
-                        }
-
-                        // save location into preferences datastore
-                        viewModel.saveUserLocation(it)
-                        mapSharedViewModel.setLastKnownPosition(it)
-                        locationComponent?.forceLocationUpdate(this)
+            p0.lastLocation?.run {
+                LatLng(
+                    latitude = latitude,
+                    longitude = longitude,
+                ).let {
+                    if (MapUtil.arePointsWithinDelta(
+                            it,
+                            mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull(),
+                        )
+                    ) {
+                        return@let
                     }
+
+                    // save location into preferences datastore
+                    viewModel.saveUserLocation(it)
+                    mapSharedViewModel.setLastKnownPosition(it)
+                    locationComponent?.forceLocationUpdate(this)
                 }
             }
-
-            override fun onFailure(p0: java.lang.Exception) {}
         }
+    }
 
     private val activityResultLauncher =
         registerForActivityResult(
@@ -3571,19 +3577,20 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
             startButton.setOnClickListener {
                 if (isLocationPermissionGranted) {
+
                     // Start service
-                    Intent(activity, AnchorageAlarmService::class.java).also {
-                        it.setAction(AnchorageAlarmService.Actions.START.toString())
-                        it.putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
-                        it.putExtra(
+                    Intent(activity, AnchorageAlarmService::class.java).apply {
+                        setAction(Actions.START.toString())
+                        putExtra(AnchorageAlarmService.EXTRA_RADIUS, radiusSlider.value)
+                        putExtra(
                             AnchorageAlarmService.EXTRA_LATITUDE,
                             viewModel.anchorageCenterPoint.value!!.latitude
                         )
-                        it.putExtra(
+                        putExtra(
                             AnchorageAlarmService.EXTRA_LONGITUDE,
                             viewModel.anchorageCenterPoint.value!!.longitude
                         )
-                        requireActivity().startService(it)
+                        requireActivity().startService(this)
                     }
 
                     // id and timestamp are omitted from equals and hashCode methods, so only latitude,
@@ -3620,9 +3627,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 Intent(
                     activity,
                     AnchorageAlarmService::class.java
-                ).also {
-                    it.setAction(AnchorageAlarmService.Actions.STOP.toString())
-                    requireActivity().startService(it)
+                ).apply {
+                    setAction(Actions.STOP.toString())
+                    requireActivity().startService(this)
                 }
             }
 
@@ -3722,8 +3729,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 markerBottomSheetGeopointTextView.text =
                     resources.getString(com.bytecause.core.resources.R.string.split_two_strings_formatter)
                         .format(
-                            MapUtil.latitudeToDMS(position.latitude),
-                            MapUtil.longitudeToDMS(position.longitude),
+                            latitudeToDMS(position.latitude),
+                            longitudeToDMS(position.longitude),
                         )
 
                 mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
@@ -4085,8 +4092,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             binding.bottomSheetId.textPlaceHolder.apply {
                 this.text = text ?: getString(
                     com.bytecause.core.resources.R.string.split_two_strings_formatter,
-                    MapUtil.latitudeToDMS(p.latitude),
-                    MapUtil.longitudeToDMS(p.longitude),
+                    latitudeToDMS(p.latitude),
+                    longitudeToDMS(p.longitude),
                 )
                 setSearchBoxText(SearchBoxTextType.Coordinates(this.text.toString()))
             }
@@ -4095,8 +4102,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             binding.bottomSheetId.textPlaceHolder.apply {
                 this.text = text ?: getString(
                     com.bytecause.core.resources.R.string.split_two_strings_formatter,
-                    MapUtil.latitudeToDMS(p.latitude),
-                    MapUtil.longitudeToDMS(p.longitude),
+                    latitudeToDMS(p.latitude),
+                    longitudeToDMS(p.longitude),
                 )
                 setSearchBoxText(SearchBoxTextType.Coordinates(this.text.toString()))
             }
@@ -4133,25 +4140,30 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 LocationComponentActivationOptions
                     .builder(requireContext(), style)
                     .locationComponentOptions(locationComponentOptions)
-                    .build(),
+                    .build()
             )
             locationComponent?.apply {
                 isLocationComponentEnabled = true
                 renderMode = RenderMode.COMPASS
 
-                val request = LocationEngineRequest.Builder(5000)
-                    .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                    .setFastestInterval(2000)
+                locationRequest = LocationRequest.Builder(
+                    Priority.PRIORITY_HIGH_ACCURACY, 5000
+                )
+                    .setMinUpdateIntervalMillis(2000)
+                    .setWaitForAccurateLocation(true)
                     .build()
 
-                setEnabledLocationDrawable()
+                fusedLocationClient =
+                    LocationServices.getFusedLocationProviderClient(requireActivity())
+                        .apply {
+                            requestLocationUpdates(
+                                locationRequest,
+                                locationCallback,
+                                Looper.getMainLooper()
+                            )
+                        }
 
-                val locationLooper = Looper.getMainLooper()
-                locationEngine?.requestLocationUpdates(
-                    request,
-                    locationEngineCallback,
-                    locationLooper,
-                )
+                setEnabledLocationDrawable()
             }
         }
     }
@@ -4165,7 +4177,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                         longitude,
                     ),
                     ZOOM_IN_DEFAULT_LEVEL,
-                ),
+                )
             )
         }
     }
@@ -4179,12 +4191,6 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         super.onStart()
         mapView?.onStart()
         locationComponent?.onStart()
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onLowMemory() {
-        super.onLowMemory()
-        mapView?.onLowMemory()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -4204,6 +4210,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         locationComponent?.onStop()
     }
 
+    @SuppressLint("MissingPermission")
     override fun onResume() {
         super.onResume()
 
@@ -4217,6 +4224,11 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             sensorListener,
             accelerometer,
             SensorManager.SENSOR_DELAY_UI
+        )
+        fusedLocationClient?.requestLocationUpdates(
+            locationRequest,
+            locationCallback,
+            Looper.getMainLooper()
         )
 
         sensorManager?.run {
@@ -4246,6 +4258,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         anchorageAlarmBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
 
         sensorManager?.unregisterListener(sensorListener)
+        fusedLocationClient?.removeLocationUpdates(locationCallback)
 
         cancelAnimation()
 

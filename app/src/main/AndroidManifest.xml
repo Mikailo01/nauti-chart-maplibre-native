@@ -38,16 +38,16 @@
             tools:node="remove" />
 
         <service
-            android:name="com.bytecause.data.services.HarboursUpdateService"
+            android:name="com.bytecause.settings.services.HarboursUpdateService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name="com.bytecause.data.services.RegionPoiDownloadService"
+            android:name=".services.RegionPoiDownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <service android:name="com.bytecause.data.services.AnchorageAlarmService"
+        <service android:name="com.bytecause.map.services.AnchorageAlarmService"
             android:exported="false"
             android:foregroundServiceType="location" />
 

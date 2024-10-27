@@ -17,7 +17,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.bytecause.core.resources.R
-import com.bytecause.data.services.RegionPoiDownloadService
+import com.bytecause.data.services.Actions
+import com.bytecause.data.services.REGION_ID_PARAM
+import com.bytecause.data.services.REGION_NAME_PARAM
+import com.bytecause.data.services.REGION_POI_DOWNLOAD_SERVICE_CLASS
 import com.bytecause.features.first_run.databinding.FirstRunDialogFragmentLayoutBinding
 import com.bytecause.first_run.ui.viewmodel.FirstRunSharedViewModel
 import com.bytecause.first_run.ui.viewmodel.FirstRunViewModel
@@ -106,20 +109,18 @@ class FirstRunDialogFragment : DialogFragment() {
                     viewModel.region?.let { region ->
 
                         // Start service
-                        Intent(
-                            activity,
-                            RegionPoiDownloadService::class.java
-                        ).also {
-                            it.setAction(RegionPoiDownloadService.Actions.START.toString())
-                            it.putExtra(
-                                RegionPoiDownloadService.REGION_ID_PARAM,
+                        Intent().apply {
+                            setClassName(requireActivity(), REGION_POI_DOWNLOAD_SERVICE_CLASS)
+                            setAction(Actions.START.toString())
+                            putExtra(
+                                REGION_ID_PARAM,
                                 region.regionId
                             )
-                            it.putExtra(
-                                RegionPoiDownloadService.REGION_NAME_PARAM,
+                            putExtra(
+                               REGION_NAME_PARAM,
                                 region.regionName
                             )
-                            requireActivity().startService(it)
+                            requireActivity().startService(this)
                         }
 
                         viewLifecycleOwner.lifecycleScope.launch {
@@ -130,12 +131,10 @@ class FirstRunDialogFragment : DialogFragment() {
 
                 ActionButtonState.Cancel -> {
                     // Stop service
-                    Intent(
-                        activity,
-                        RegionPoiDownloadService::class.java
-                    ).also {
-                        it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
-                        requireActivity().startService(it)
+                    Intent().apply {
+                        setClassName(requireActivity(), REGION_POI_DOWNLOAD_SERVICE_CLASS)
+                        setAction(Actions.STOP.toString())
+                        requireActivity().startService(this)
                     }
 
                     hideLoading()

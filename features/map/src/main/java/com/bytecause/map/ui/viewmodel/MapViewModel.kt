@@ -7,7 +7,7 @@ import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.data.services.AnchorageAlarmService
+import com.bytecause.map.services.AnchorageAlarmService
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository

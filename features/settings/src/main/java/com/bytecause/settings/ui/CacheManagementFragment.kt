@@ -51,8 +51,10 @@ import androidx.fragment.app.Fragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import com.bytecause.data.services.HarboursUpdateService
-import com.bytecause.data.services.RegionPoiDownloadService
+import com.bytecause.data.services.Actions
+import com.bytecause.data.services.REGION_ID_PARAM
+import com.bytecause.data.services.REGION_NAME_PARAM
+import com.bytecause.data.services.REGION_POI_DOWNLOAD_SERVICE_CLASS
 import com.bytecause.domain.model.NetworkType
 import com.bytecause.features.settings.R
 import com.bytecause.features.settings.databinding.CacheManagementLayoutBinding
@@ -60,6 +62,7 @@ import com.bytecause.presentation.components.compose.ConfirmationDialog
 import com.bytecause.presentation.components.compose.StyledFilterChip
 import com.bytecause.presentation.components.compose.TopAppBar
 import com.bytecause.presentation.theme.AppTheme
+import com.bytecause.settings.services.HarboursUpdateService
 import com.bytecause.settings.ui.event.CacheManagementEffect
 import com.bytecause.settings.ui.event.CacheManagementEvent
 import com.bytecause.settings.ui.state.CacheManagementState
@@ -312,7 +315,7 @@ fun CacheManagementContent(
                                 onForceUpdateClick = {
                                     // Start service
                                     Intent(activity, HarboursUpdateService::class.java).also {
-                                        it.setAction(HarboursUpdateService.Actions.START.toString())
+                                        it.setAction(Actions.START.toString())
                                         activity.startService(it)
                                     }
                                 },
@@ -322,7 +325,7 @@ fun CacheManagementContent(
                                         activity,
                                         HarboursUpdateService::class.java
                                     ).also {
-                                        it.setAction(HarboursUpdateService.Actions.STOP.toString())
+                                        it.setAction(Actions.STOP.toString())
                                         activity.startService(it)
                                     }
                                 },
@@ -391,6 +394,7 @@ fun CacheManagementContent(
                                         regionName = name,
                                         timeStamp = item.timestamp,
                                         isUpdating = item.isUpdating,
+                                        isUpdateable = item.isUpdating || state.downloadedRegions.values.all { !it.isUpdating },
                                         progress = item.progress,
                                         onClear = {
                                             onEvent(
@@ -401,30 +405,32 @@ fun CacheManagementContent(
                                         },
                                         onUpdate = { regionId ->
                                             // Start service
-                                            Intent(
-                                                activity,
-                                                RegionPoiDownloadService::class.java
-                                            ).also {
-                                                it.setAction(RegionPoiDownloadService.Actions.START.toString())
-                                                it.putExtra(
-                                                    RegionPoiDownloadService.REGION_ID_PARAM,
+                                            Intent().apply {
+                                                setClassName(
+                                                    activity,
+                                                    REGION_POI_DOWNLOAD_SERVICE_CLASS
+                                                )
+                                                setAction(Actions.START.toString())
+                                                putExtra(
+                                                    REGION_ID_PARAM,
                                                     regionId
                                                 )
-                                                it.putExtra(
-                                                    RegionPoiDownloadService.REGION_NAME_PARAM,
+                                                putExtra(
+                                                    REGION_NAME_PARAM,
                                                     state.downloadedRegions[regionId]?.names?.get("name")
                                                 )
-                                                activity.startService(it)
+                                                activity.startService(this)
                                             }
                                         },
                                         onCancel = {
                                             // Stop service
-                                            Intent(
-                                                activity,
-                                                RegionPoiDownloadService::class.java
-                                            ).also {
-                                                it.setAction(RegionPoiDownloadService.Actions.STOP.toString())
-                                                activity.startService(it)
+                                            Intent().apply {
+                                                setClassName(
+                                                    activity,
+                                                    REGION_POI_DOWNLOAD_SERVICE_CLASS
+                                                )
+                                                setAction(Actions.STOP.toString())
+                                                activity.startService(this)
                                             }
                                         }
                                     )
@@ -619,8 +625,9 @@ fun ChipsRow(
 
 @Composable
 fun ActionButtons(
-    modifier: Modifier = Modifier,
     isUpdating: Boolean,
+    modifier: Modifier = Modifier,
+    isUpdateable: Boolean = true,
     onForceUpdateClick: () -> Unit,
     onCancelUpdateClick: () -> Unit,
     onClearButtonClick: () -> Unit
@@ -629,21 +636,30 @@ fun ActionButtons(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End
     ) {
-        OutlinedButton(
-            onClick = {
-                if (isUpdating) onCancelUpdateClick()
-                else onForceUpdateClick()
-            },
-            modifier = Modifier.wrapContentHeight()
-        ) {
-            if (isUpdating) Text(
-                text = stringResource(id = com.bytecause.core.resources.R.string.cancel),
-                fontSize = 14.sp
-            )
-            else Text(
-                text = stringResource(id = com.bytecause.core.resources.R.string.force_update),
-                fontSize = 14.sp
-            )
+        if (isUpdateable) {
+            OutlinedButton(
+                onClick = {
+                    if (isUpdating) onCancelUpdateClick()
+                    else onForceUpdateClick()
+                },
+                modifier = Modifier.wrapContentHeight()
+            ) {
+                when {
+                    isUpdating -> {
+                        Text(
+                            text = stringResource(id = com.bytecause.core.resources.R.string.cancel),
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    else -> {
+                        Text(
+                            text = stringResource(id = com.bytecause.core.resources.R.string.force_update),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = modifier.width(20.dp))
@@ -668,6 +684,7 @@ fun DownloadedRegionItem(
     regionName: String,
     timeStamp: Long,
     isUpdating: Boolean,
+    isUpdateable: Boolean,
     progress: Int = -1,
     onClear: (Int) -> Unit,
     onUpdate: (Int) -> Unit,
@@ -713,6 +730,7 @@ fun DownloadedRegionItem(
 
         ActionButtons(
             isUpdating = isUpdating,
+            isUpdateable = isUpdateable,
             onForceUpdateClick = { onUpdate(regionId) },
             onCancelUpdateClick = { onCancel(regionId) },
             onClearButtonClick = { onClear(regionId) }
@@ -737,6 +755,7 @@ fun DownloadedRegionItemPreview() {
         regionName = "Jihomoravský kraj",
         timeStamp = 1724861327000L,
         isUpdating = true,
+        isUpdateable = true,
         progress = 10000,
         onClear = {},
         onUpdate = {},

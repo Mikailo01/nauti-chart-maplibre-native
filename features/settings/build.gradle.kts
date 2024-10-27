@@ -1,3 +1,5 @@
+import com.bytecause.convention.implementation
+
 plugins {
     alias(libs.plugins.nautichart.android.feature.compose)
 }
@@ -21,6 +23,9 @@ dependencies {
 
     // AppCompat
     implementation(libs.androidx.appCompat)
+
+    // Lifecycle service
+    implementation(libs.androidx.lifecycle.lifecycleService)
 
     // Material
     implementation(libs.google.material)

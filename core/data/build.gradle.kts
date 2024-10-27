@@ -34,24 +34,8 @@ dependencies {
     implementation(libs.androidx.room)
     ksp(libs.androidx.room.compiler)
 
-    implementation(libs.androidx.activity.ktx)
-
-    implementation(libs.hilt.work)
-
-    // Lifecycle service
-    implementation(libs.androidx.lifecycle.lifecycleService)
-
     // Gson
     implementation(libs.gson)
-
-    // Google services location
-    implementation(libs.gms.playServicesLocation)
-
-    // Moshi
-    implementation(libs.moshi)
-
-    // MapLibre SDK
-    implementation(libs.maplibre)
 
     // Retrofit
     implementation(libs.retrofit)
