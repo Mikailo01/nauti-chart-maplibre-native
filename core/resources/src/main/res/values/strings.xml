@@ -88,7 +88,9 @@
     <string name="region_dataset_is_being_updated">%1s dataset is being updated</string>
     <string name="updating_harbours">Updating Harbours</string>
     <string name="anchorage_alarm">Anchorage Alarm</string>
+    <string name="route_tracker">Route Tracker</string>
     <string name="anchorage_alarm_running">Anchorage Alarm Running</string>
+    <string name="route_tracker_running">Route Tracker Running</string>
     <string name="downloading_region">Downloading %1s Region Dataset</string>
     <string name="update_interval">Update interval</string>
     <string name="data_will_be_permanently_deleted.">Data will be permanently deleted.</string>
@@ -140,7 +142,8 @@
     <string name="download_poi">Download POI</string>
     <string name="customize_map">Customize map</string>
     <string name="custom_map">Custom Map</string>
-    <string name="sailing_route">Sailing Route</string>
+    <string name="plan_route">Plan Route</string>
+    <string name="track_route">Track Route</string>
     <string name="nothing_found_text_place_holder">%1s found in %2s %3s</string>
     <string name="extend_search_radius_text_place_holder">Extend search radius to %1s %2s</string>
     <string name="unknown_location_title">Couldn\'t determine your current location.</string>
@@ -183,7 +186,6 @@
     <string name="choose_icon">Please choose icon.</string>
     <string name="category_present">Category already present!</string>
     <string name="location_not_known_yet">Location not known yet.</string>
-    <string name="press_back_again">Press back again to exit.</string>
     <string name="min_max_zoom">Min %1s | Max %2s</string>
     <string name="tile_size">Tile size</string>
     <string name="confirm">Confirm</string>

@@ -3,6 +3,7 @@ package com.bytecause.map.di
 import android.content.Context
 import com.bytecause.data.di.DatabaseModule
 import com.bytecause.data.local.room.dao.AnchoragesDao
+import com.bytecause.data.local.room.dao.TrackRouteDao
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsPositionsRemoteRepository
@@ -10,10 +11,12 @@ import com.bytecause.map.data.remote.VesselsPositionsRemoteDataSource
 import com.bytecause.map.data.repository.AnchorageHistoryRepositoryImpl
 import com.bytecause.map.data.repository.AnchoragesRepositoryImpl
 import com.bytecause.map.data.repository.HarboursDatabaseRepositoryImpl
+import com.bytecause.map.data.repository.TrackRouteRepositoryImpl
 import com.bytecause.map.data.repository.VesselsDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsRemoteRepositoryImpl
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
+import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -64,4 +67,9 @@ object RepositoryModule {
     @Singleton
     fun providesAnchorageHistoryRepository(@ApplicationContext context: Context): AnchorageHistoryRepository =
         AnchorageHistoryRepositoryImpl(context)
+
+    @Provides
+    @Singleton
+    fun providesTrackRouteRepository(trackRouteDao: TrackRouteDao): TrackRouteRepository =
+        TrackRouteRepositoryImpl(trackRouteDao)
 }

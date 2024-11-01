@@ -97,7 +97,7 @@ class RegionPoiDownloadService : LifecycleService() {
         notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(getString(R.string.downloading_region).format(regionName))
             .setContentText(getString(R.string.waiting_for_server_response))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.region)
             .setProgress(0, 0, true)
             .addAction(R.drawable.cancel, getString(R.string.cancel), cancelPendingIntent)
             .setOngoing(true)

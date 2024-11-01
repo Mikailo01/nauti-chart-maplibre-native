@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,6 +105,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+private const val DEFAULT_ALARM_DELAY = 60
+private const val DEFAULT_DELAY = 15
 
 @AndroidEntryPoint
 class AnchorageAlarmSettingsComposedDialog :
@@ -554,11 +558,15 @@ private fun AnchorageSettingsScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(15.dp)
                     ) {
-                        NumberPicker(onValueSelected = { value: Int ->
-                            onEvent(
-                                AnchorageAlarmSettingsEvent.OnSelectedIntervalValueChange(value)
-                            )
-                        })
+                        NumberPicker(
+                            maxValue =
+                            if (state.bottomSheetType == BottomSheetType.ALARM_DELAY) DEFAULT_ALARM_DELAY
+                            else DEFAULT_DELAY,
+                            onValueSelected = { value: Int ->
+                                onEvent(
+                                    AnchorageAlarmSettingsEvent.OnSelectedIntervalValueChange(value)
+                                )
+                            })
                     }
                 },
                 scaffoldState = bottomSheetScaffoldState,
@@ -620,9 +628,10 @@ private fun NumberPicker(
     maxValue: Int = 15,
     onValueSelected: (Int) -> Unit
 ) {
-    val numbers = remember {
+    val numbers by rememberUpdatedState {
         (minValue..maxValue).toList()
     }
+
     val listState = rememberLazyListState()
     var selectedInt by rememberSaveable { mutableIntStateOf(minValue) }
 
@@ -638,27 +647,21 @@ private fun NumberPicker(
                 .height(150.dp)
                 .fillMaxWidth()
         ) {
-            var isScrolling by remember { mutableStateOf(false) }
-
             // Listen to the scroll state and detect when the user finishes scrolling
             LaunchedEffect(listState.isScrollInProgress) {
-                if (!listState.isScrollInProgress && isScrolling) {
+                if (!listState.isScrollInProgress) {
                     // Determine which item is closest to the center
                     val visibleItems = listState.layoutInfo.visibleItemsInfo
                     if (visibleItems.isNotEmpty()) {
                         selectedInt =
-                            numbers.firstOrNull { it == listState.firstVisibleItemIndex + 1 }
+                            numbers().firstOrNull { it == listState.firstVisibleItemIndex + 1 }
                                 ?: minValue
                     }
-
-                    isScrolling = false
-                } else if (listState.isScrollInProgress) {
-                    isScrolling = true
                 }
             }
 
-            LaunchedEffect(isScrolling) {
-                if (!isScrolling) {
+            LaunchedEffect(listState.isScrollInProgress) {
+                if (!listState.isScrollInProgress) {
                     listState.animateScrollToItem(listState.firstVisibleItemIndex)
                 }
             }
@@ -668,9 +671,9 @@ private fun NumberPicker(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 verticalArrangement = Arrangement.Center,
-                contentPadding = PaddingValues(vertical = 60.dp) // Add padding to center items
+                contentPadding = PaddingValues(vertical = 60.dp)
             ) {
-                itemsIndexed(numbers) { index, number ->
+                itemsIndexed(numbers(), key = { index, _ -> index }) { index, number ->
                     // Animation based on selection
                     val alpha by animateFloatAsState(if (selectedInt == number) 1f else 0.3f)
                     val scale by animateFloatAsState(if (selectedInt == number) 1.2f else 1f)
@@ -709,7 +712,7 @@ private fun NumberPicker(
                     .align(Alignment.Center)
                     .height(50.dp) // Size of the central selection area
                     .fillMaxWidth()
-                    .background(Color.Gray.copy(alpha = 0.2f)) // Optional: semi-transparent background
+                    .background(Color.Gray.copy(alpha = 0.2f))
             )
         }
 

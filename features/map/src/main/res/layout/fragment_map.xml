@@ -95,6 +95,13 @@
             app:layout_constraintBottom_toBottomOf="parent" />
 
         <include
+            android:id="@+id/track_route_bottom_sheet"
+            layout="@layout/track_route_bottom_sheet_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <include
             android:id="@+id/measureDistanceBottomSheet"
             layout="@layout/measure_distance_bottom_sheet"
             android:layout_width="match_parent"

@@ -36,19 +36,27 @@ class MapToolsBottomSheetFragment :
             }
         }
 
-        binding.customTileSourceImagebutton.setOnClickListener {
+        binding.customTileSource.setOnClickListener {
             if (!lastClick.lastClick()) return@setOnClickListener
             findNavController().navigateToCustomTileProviderNavigation()
         }
 
-        binding.anchorageAlarmImageButton.setOnClickListener {
+        binding.anchorageAlarm.setOnClickListener {
             if (!lastClick.lastClick()) return@setOnClickListener
             mapSharedViewModel.setShowAnchorageAlarmBottomSheet(true)
             dismiss()
         }
 
-        binding.sallingRouteImageView.setOnClickListener {
+        binding.planRoute.setOnClickListener {
+            if (!lastClick.lastClick()) return@setOnClickListener
             Toast.makeText(requireContext(), "Not yet implemented.", Toast.LENGTH_SHORT).show()
+            dismiss()
+        }
+
+        binding.trackRoute.setOnClickListener {
+            if (!lastClick.lastClick()) return@setOnClickListener
+            mapSharedViewModel.setShowTrackRouteBottomSheet(true)
+            dismiss()
         }
     }
 }

@@ -3,90 +3,127 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/bottom_sheet_rounded_corners"
+    android:orientation="vertical"
     app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
     <LinearLayout
-        android:id="@+id/map_tools_bottom_sheet_linear_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:baselineAligned="false"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="25dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/custom_tile_source_imagebutton"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:background="@color/transparent"
-                android:src="@drawable/custom_map_source_icon"
-                app:tint="@color/md_theme_onSurface" />
-
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/custom_tile_source"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:textColor="@color/md_theme_onSurface"
-                android:text="@string/custom_map" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
 
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:src="@drawable/custom_map_source_icon"
+                    app:tint="@color/md_theme_onSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/custom_map"
+                    android:textColor="@color/md_theme_onSurface" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/anchorage_alarm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:src="@drawable/anchorage_alarm"
+                    app:tint="@color/md_theme_onSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/anchorage_alarm"
+                    android:textColor="@color/md_theme_onSurface" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/plan_route"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:src="@drawable/route_icon"
+                    app:tint="@color/md_theme_onSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/plan_route"
+                    android:textColor="@color/md_theme_onSurface" />
+
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:layout_marginTop="20dp">
 
-            <ImageButton
-                android:id="@+id/anchorage_alarm_image_button"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/track_route"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:background="@color/transparent"
-                android:src="@drawable/anchorage_alarm"
-                app:tint="@color/md_theme_onSurface" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/md_theme_onSurface"
-                android:text="@string/anchorage_alarm" />
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:scaleX="1.2"
+                    android:scaleY="1.2"
+                    android:src="@drawable/baseline_timeline_24"
+                    app:tint="@color/md_theme_onSurface" />
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/track_route"
+                    android:textColor="@color/md_theme_onSurface" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
+            </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/salling_route_image_view"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_gravity="center"
-                android:background="@color/transparent"
-                android:clickable="true"
-                android:focusable="true"
-                android:scaleX="1.2"
-                android:scaleY="1.2"
-                android:src="@drawable/route_icon"
-                app:tint="@color/md_theme_onSurface" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/md_theme_onSurface"
-                android:text="@string/sailing_route" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
 
         </LinearLayout>
     </LinearLayout>

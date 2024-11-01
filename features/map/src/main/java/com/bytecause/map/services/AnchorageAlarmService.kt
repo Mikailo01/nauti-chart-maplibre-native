@@ -28,6 +28,7 @@ import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepos
 import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
 import com.bytecause.data.services.Actions
 import com.bytecause.map.util.MapUtil
+import com.bytecause.util.extensions.toFirstDecimal
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -45,7 +46,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import javax.inject.Inject
-import kotlin.math.round
 
 
 @AndroidEntryPoint
@@ -401,7 +401,7 @@ class AnchorageAlarmService : LifecycleService() {
 
             updateNotificationTextContent(
                 location = currentLocation,
-                distanceFromCenterPoint = round(distance * 10) / 10 // rounds on first decimal place
+                distanceFromCenterPoint = distance.toFirstDecimal()
             )
         }
     }
@@ -422,7 +422,7 @@ class AnchorageAlarmService : LifecycleService() {
 
         notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.anchorage_alarm_running))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.anchorage_alarm)
             .addAction(R.drawable.cancel, getString(R.string.stop), cancelPendingIntent)
             .setOngoing(true)
 

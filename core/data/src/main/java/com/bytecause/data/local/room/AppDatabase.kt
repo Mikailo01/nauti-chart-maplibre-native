@@ -14,6 +14,7 @@ import com.bytecause.data.local.room.dao.PoiCacheDao
 import com.bytecause.data.local.room.dao.RadiusPoiCacheDao
 import com.bytecause.data.local.room.dao.RadiusPoiMetadataDatasetDao
 import com.bytecause.data.local.room.dao.RegionDao
+import com.bytecause.data.local.room.dao.TrackRouteDao
 import com.bytecause.data.local.room.dao.VesselInfoDao
 import com.bytecause.data.local.room.dao.VesselsMetadataDatasetDao
 import com.bytecause.data.local.room.tables.AnchorageMovementTrackEntity
@@ -29,6 +30,7 @@ import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.RegionEntity
+import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
 
@@ -48,7 +50,8 @@ import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
         ContinentEntity::class,
         RegionEntity::class,
         AnchoragesEntity::class,
-        AnchorageMovementTrackEntity::class
+        AnchorageMovementTrackEntity::class,
+        RouteRecordEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -83,4 +86,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun anchoragesDao(): AnchoragesDao
 
     abstract fun anchorageMovementTrackDao(): AnchorageMovementTrackDao
+
+    abstract fun trackRouteDao(): TrackRouteDao
 }

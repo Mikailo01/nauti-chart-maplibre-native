@@ -4,18 +4,11 @@ import android.Manifest
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.content.Context.SENSOR_SERVICE
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.drawable.Drawable
-import android.hardware.Sensor
-import android.hardware.Sensor.TYPE_ACCELEROMETER
-import android.hardware.Sensor.TYPE_MAGNETIC_FIELD
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Looper
 import android.util.Range
@@ -50,12 +43,16 @@ import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.domain.util.PoiTagsUtil.getPoiType
 import com.bytecause.feature.map.R
 import com.bytecause.feature.map.databinding.FragmentMapBinding
+import com.bytecause.map.sensors.BearingSensor
+import com.bytecause.map.sensors.BearingSensorListener
 import com.bytecause.map.services.AnchorageAlarmService
+import com.bytecause.map.services.TrackRouteService
+import com.bytecause.map.ui.bottomsheet.composable.TrackRoute
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
+import com.bytecause.map.ui.model.AnchorageRepositionType
 import com.bytecause.map.ui.model.MarkerInfoModel
 import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.SearchBoxTextType
-import com.bytecause.map.ui.viewmodel.AnchorageRepositionType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGES_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGES_SYMBOL_LAYER
@@ -241,7 +238,7 @@ private enum class FeatureTypeEnum {
 }
 
 @AndroidEntryPoint
-class MapFragment : Fragment(R.layout.fragment_map) {
+class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
     private val binding by viewBinding(FragmentMapBinding::bind)
 
     private val viewModel: MapViewModel by viewModels()
@@ -272,64 +269,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private lateinit var locationRequest: LocationRequest
 
-    private var accelerometer: Sensor? = null
-    private var magnetometer: Sensor? = null
-    private val magnetometerReading = FloatArray(3)
-    private val accelerometerReading = FloatArray(3)
-    private val rotationMatrix = FloatArray(9)
-    private val orientationAngles = FloatArray(3)
-    private var sensorManager: SensorManager? = null
-    private val sensorListener =
-        object : SensorEventListener {
-            override fun onSensorChanged(p0: SensorEvent?) {
-                p0 ?: return
-
-                if (p0.sensor.type == TYPE_ACCELEROMETER) {
-                    System.arraycopy(
-                        p0.values,
-                        0,
-                        accelerometerReading,
-                        0,
-                        accelerometerReading.size
-                    )
-                } else if (p0.sensor.type == TYPE_MAGNETIC_FIELD) {
-                    System.arraycopy(p0.values, 0, magnetometerReading, 0, magnetometerReading.size)
-                }
-
-                // Check if we can calculate the rotation matrix
-                if (SensorManager.getRotationMatrix(
-                        rotationMatrix,
-                        null,
-                        accelerometerReading,
-                        magnetometerReading
-                    )
-                ) {
-                    // Get orientation from the rotation matrix
-                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
-
-                    // orientationAngles[0] is the azimuth (bearing) in radians, so convert to degrees
-                    val azimuthInRadians = orientationAngles[0]
-                    val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble()).toFloat()
-
-                    // Normalize azimuth to [0, 360] range
-                    val bearing = Math.round(
-                        if (azimuthInDegrees < 0) azimuthInDegrees + 360 else azimuthInDegrees
-                    )
-
-                    // update view directly
-                    binding.anchorageAlarmBottomSheet
-                        .anchorageAlarmBottomSheetRepositionLayout
-                        .bearingEditText
-                        .setText(bearing.toString())
-                }
-            }
-
-            override fun onAccuracyChanged(
-                p0: Sensor?,
-                p1: Int
-            ) {
-            }
-        }
+    private lateinit var bearingSensor: BearingSensor
 
     private val maxBottomSheetHeight = Resources.getSystem().displayMetrics.heightPixels / 2
 
@@ -345,6 +285,9 @@ class MapFragment : Fragment(R.layout.fragment_map) {
 
     private lateinit var anchorageAlarmBottomSheetLayout: LinearLayout
     private lateinit var anchorageAlarmBottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+
+    private lateinit var trackRouteBottomSheetLayout: LinearLayout
+    private lateinit var trackRouteBottomSheetBehavior: BottomSheetBehavior<LinearLayout>
 
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
@@ -406,33 +349,36 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                 when {
                     measureBottomSheetBehavior.state == STATE_EXPANDED -> {
                         leaveMeasureDistanceMode()
+                        shouldInterceptBackEvent = false
                     }
 
                     bottomSheetBehavior.state == STATE_EXPANDED || bottomSheetBehavior.state == STATE_COLLAPSED -> {
                         closeBottomSheetLayout()
+                        shouldInterceptBackEvent = false
                     }
 
                     markerBottomSheetBehavior.state == STATE_EXPANDED || markerBottomSheetBehavior.state == STATE_COLLAPSED -> {
                         closeMarkerBottomSheetLayout()
+                        shouldInterceptBackEvent = false
                     }
 
                     anchorageAlarmBottomSheetBehavior.state == STATE_EXPANDED || anchorageAlarmBottomSheetBehavior.state == STATE_COLLAPSED -> {
                         mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
+                        shouldInterceptBackEvent = false
+                    }
+
+                    trackRouteBottomSheetBehavior.state == STATE_EXPANDED || trackRouteBottomSheetBehavior.state == STATE_COLLAPSED -> {
+                        mapSharedViewModel.setShowTrackRouteBottomSheet(false)
+                        shouldInterceptBackEvent = false
                     }
 
                     mapSharedViewModel.showPoiStateFlow.value != null -> {
                         mapSharedViewModel.setPoiToShow(null)
+                        shouldInterceptBackEvent = false
                     }
 
                     else -> {
-                        if (isEnabled) {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(com.bytecause.core.resources.R.string.press_back_again),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                        isEnabled = false
+                        // Do nothing
                     }
                 }
             }
@@ -447,6 +393,8 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     ): View? {
         // Init MapLibre
         MapLibre.getInstance(this.requireContext())
+
+        bearingSensor = BearingSensor()
 
         // this checks if fragment went through configuration change or not, this will prevent from
         // showing another dialog after device's configuration changes.
@@ -540,6 +488,10 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                     viewModel.setIsAnchorageRepositionEnabled(false)
                                 }
 
+                                trackRouteBottomSheetLayout.id -> {
+                                    mapSharedViewModel.setShowTrackRouteBottomSheet(false)
+                                }
+
                                 measureBottomSheetLayout.id -> {
                                     measureBottomSheetLayout.visibility = View.GONE
                                 }
@@ -600,6 +552,16 @@ class MapFragment : Fragment(R.layout.fragment_map) {
             binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetLayout
         anchorageAlarmBottomSheetBehavior =
             BottomSheetBehavior.from(anchorageAlarmBottomSheetLayout).apply {
+                maxHeight = maxBottomSheetHeight
+                isHideable = true
+                isDraggable = false
+                state = STATE_HIDDEN
+            }
+
+        trackRouteBottomSheetLayout =
+            binding.trackRouteBottomSheet.trackRouteBottomSheetLayout
+        trackRouteBottomSheetBehavior =
+            BottomSheetBehavior.from(trackRouteBottomSheetLayout).apply {
                 maxHeight = maxBottomSheetHeight
                 isHideable = true
                 isDraggable = false
@@ -772,6 +734,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                 val (value, unit) = when (distance) {
                                                     is MeasureUnit.Meters -> distance.value to "M"
                                                     is MeasureUnit.KiloMeters -> distance.value to "KM"
+                                                    is MeasureUnit.NauticalMiles -> distance.value to "NM"
                                                 }
 
                                                 val distanceTextViewText =
@@ -2308,6 +2271,47 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                 }
                             }
 
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    TrackRouteService.isRunning.collect { isRunning ->
+                                        viewModel.setIsRouteServiceRunning(isRunning)
+
+                                        if (isRunning) {
+
+                                        } else {
+
+                                        }
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    mapSharedViewModel.showTrackRouteBottomSheet.collect { show ->
+                                        if (show) {
+                                            trackRouteBottomSheetLayout.visibility = View.VISIBLE
+                                            trackRouteBottomSheetBehavior.state = STATE_EXPANDED
+
+                                            binding.trackRouteBottomSheet
+                                                .trackRouteBottomSheetContent
+                                                .trackRouteBottomSheetContentComposeView
+                                                .setContent {
+                                                    TrackRoute(
+                                                        viewModel = viewModel,
+                                                        onCloseBottomSheet = {
+                                                            mapSharedViewModel.setShowTrackRouteBottomSheet(
+                                                                false
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                        } else {
+                                            trackRouteBottomSheetBehavior.state = STATE_HIDDEN
+                                        }
+                                    }
+                                }
+                            }
+
                             if (mapSharedViewModel.geoIntentFlow.replayCache.lastOrNull() == null) {
                                 viewLifecycleOwner.lifecycleScope.launch {
                                     // if anchorage alarm is on, navigate to anchorage location,
@@ -2543,40 +2547,17 @@ class MapFragment : Fragment(R.layout.fragment_map) {
                                                     }
 
                                                     getBearingFromCompassImageButton.setOnClickListener {
-                                                        sensorManager?.let {
+                                                        bearingSensor.sensorManager?.let {
                                                             unregisterSensors()
 
                                                             getBearingFromCompassImageButton.setBackgroundColor(
                                                                 Color.TRANSPARENT
                                                             )
                                                         } ?: run {
-                                                            sensorManager =
-                                                                requireActivity().getSystemService(
-                                                                    SENSOR_SERVICE
-                                                                ) as SensorManager
-
-
-                                                            sensorManager?.run {
-                                                                accelerometer =
-                                                                    getDefaultSensor(
-                                                                        TYPE_ACCELEROMETER
-                                                                    )
-                                                                magnetometer =
-                                                                    getDefaultSensor(
-                                                                        TYPE_MAGNETIC_FIELD
-                                                                    )
-
-                                                                registerListener(
-                                                                    sensorListener,
-                                                                    accelerometer,
-                                                                    SensorManager.SENSOR_DELAY_UI
-                                                                )
-                                                                registerListener(
-                                                                    sensorListener,
-                                                                    magnetometer,
-                                                                    SensorManager.SENSOR_DELAY_UI
-                                                                )
-                                                            }
+                                                            bearingSensor.register(
+                                                                requireActivity(),
+                                                                this@MapFragment
+                                                            )
 
                                                             getBearingFromCompassImageButton.background =
                                                                 ContextCompat.getDrawable(
@@ -3978,16 +3959,14 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     }
 
     private fun unregisterSensors() {
-        sensorManager?.run {
-            unregisterListener(sensorListener)
-            sensorManager = null
+        bearingSensor.unregister()
 
-            // Reset view state
-            binding.anchorageAlarmBottomSheet
-                .anchorageAlarmBottomSheetRepositionLayout
-                .getBearingFromCompassImageButton
-                .setBackgroundColor(Color.TRANSPARENT)
-        }
+        // Reset view state
+        binding.anchorageAlarmBottomSheet
+            .anchorageAlarmBottomSheetRepositionLayout
+            .getBearingFromCompassImageButton
+            .setBackgroundColor(Color.TRANSPARENT)
+
     }
 
     private fun resetAnchorageRepositionViewState() {
@@ -4187,6 +4166,13 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         circleLayerAnimator = null
     }
 
+    override fun onBearingUpdated(bearing: Int) {
+        binding.anchorageAlarmBottomSheet
+            .anchorageAlarmBottomSheetRepositionLayout
+            .bearingEditText
+            .setText(bearing.toString())
+    }
+
     override fun onStart() {
         super.onStart()
         mapView?.onStart()
@@ -4214,35 +4200,21 @@ class MapFragment : Fragment(R.layout.fragment_map) {
     override fun onResume() {
         super.onResume()
 
-        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
+        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback.apply {
+            isEnabled = false
+        })
         bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
 
-        sensorManager?.registerListener(
-            sensorListener,
-            accelerometer,
-            SensorManager.SENSOR_DELAY_UI
-        )
         fusedLocationClient?.requestLocationUpdates(
             locationRequest,
             locationCallback,
             Looper.getMainLooper()
         )
 
-        sensorManager?.run {
-            registerListener(
-                sensorListener,
-                accelerometer,
-                SensorManager.SENSOR_DELAY_UI
-            )
-            registerListener(
-                sensorListener,
-                magnetometer,
-                SensorManager.SENSOR_DELAY_UI
-            )
-        }
+        bearingSensor.onResume()
 
         mapView?.onResume()
     }
@@ -4257,7 +4229,7 @@ class MapFragment : Fragment(R.layout.fragment_map) {
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
 
-        sensorManager?.unregisterListener(sensorListener)
+        bearingSensor.onPause()
         fusedLocationClient?.removeLocationUpdates(locationCallback)
 
         cancelAnimation()

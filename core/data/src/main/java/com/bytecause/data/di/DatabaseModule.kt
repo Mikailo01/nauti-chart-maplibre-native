@@ -12,6 +12,7 @@ import com.bytecause.data.local.room.tables.HarboursEntity
 import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiMetadataDatasetEntity
+import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.relations.CountryRegionsRelation
 import dagger.Module
@@ -99,6 +100,10 @@ object DatabaseModule {
     @Singleton
     fun provideAnchorageMovementTrackDao(db: AppDatabase) = db.anchorageMovementTrackDao()
 
+    @Provides
+    @Singleton
+    fun provideTrackRouteDao(db: AppDatabase) = db.trackRouteDao()
+
     // Provide entities.
     @Provides
     fun provideHarboursEntity() = HarboursEntity()
@@ -129,4 +134,7 @@ object DatabaseModule {
 
     @Provides
     fun provideAnchorageMovementTrackEntity() = AnchorageMovementTrackEntity()
+
+    @Provides
+    fun provideRouteRecordEntity() = RouteRecordEntity()
 }

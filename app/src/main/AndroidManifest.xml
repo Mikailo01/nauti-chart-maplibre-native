@@ -37,6 +37,10 @@
             android:authorities="${applicationId}.androidx-startup"
             tools:node="remove" />
 
+        <service android:name="com.bytecause.map.services.TrackRouteService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <service
             android:name="com.bytecause.settings.services.HarboursUpdateService"
             android:exported="false"

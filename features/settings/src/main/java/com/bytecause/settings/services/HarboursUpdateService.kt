@@ -83,7 +83,7 @@ class HarboursUpdateService : LifecycleService() {
         notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(getString(R.string.updating_harbours))
             .setContentText(getString(R.string.waiting_for_server_response))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.harbour_marker_icon)
             .setProgress(0, 0, true)
             .addAction(R.drawable.cancel, getString(R.string.cancel), cancelPendingIntent)
             .setOngoing(true)

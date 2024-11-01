@@ -48,12 +48,21 @@ class MapSharedViewModel : ViewModel() {
     private val _showAnchorageAlarmBottomSheet = MutableStateFlow(false)
     val showAnchorageAlarmBottomSheet = _showAnchorageAlarmBottomSheet.asStateFlow()
 
+    private val _showTrackRouteBottomSheet = MutableStateFlow(false)
+    val showTrackRouteBottomSheet = _showTrackRouteBottomSheet.asStateFlow()
+
     private val _anchorageLocationFromHistoryId: MutableStateFlow<String?> = MutableStateFlow(null)
     val anchorageLocationFromHistoryId = _anchorageLocationFromHistoryId.asStateFlow()
 
     fun setShowAnchorageAlarmBottomSheet(boolean: Boolean) {
         viewModelScope.launch {
             _showAnchorageAlarmBottomSheet.emit(boolean)
+        }
+    }
+
+    fun setShowTrackRouteBottomSheet(boolean: Boolean) {
+        viewModelScope.launch {
+            _showTrackRouteBottomSheet.emit(boolean)
         }
     }
 

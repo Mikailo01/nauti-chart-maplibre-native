@@ -7,7 +7,6 @@ import com.bytecause.data.local.room.tables.CustomPoiEntity
 import com.bytecause.data.repository.abstractions.AnchorageAlarmPreferencesRepository
 import com.bytecause.data.repository.abstractions.AnchorageMovementTrackRepository
 import com.bytecause.data.repository.abstractions.CustomPoiRepository
-import com.bytecause.map.services.AnchorageAlarmService
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
@@ -24,18 +23,28 @@ import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
+import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
+import com.bytecause.map.services.AnchorageAlarmService
+import com.bytecause.map.ui.effect.TrackRouteBottomSheetEffect
+import com.bytecause.map.ui.event.TrackRouteBottomSheetEvent
 import com.bytecause.map.ui.mappers.asAnchorageHistory
 import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
+import com.bytecause.map.ui.mappers.asTrackedRouteItem
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
+import com.bytecause.map.ui.model.AnchorageRepositionType
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.MeasureUnit
+import com.bytecause.map.ui.model.MetersUnitConvertConstants
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
 import com.bytecause.map.ui.model.SearchBoxTextType
+import com.bytecause.map.ui.model.TrackedRouteItem
+import com.bytecause.map.ui.state.TrackRouteState
 import com.bytecause.map.util.MapUtil
+import com.bytecause.util.extensions.toFirstDecimal
 import com.bytecause.util.mappers.asLatLng
 import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.mappers.mapList
@@ -55,6 +64,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -66,33 +76,35 @@ import javax.inject.Inject
 import kotlin.math.round
 
 
-enum class AnchorageRepositionType {
-    Coordinates,
-    Manual,
-    Distance
-}
-
 @HiltViewModel
 class MapViewModel
 @Inject
 constructor(
-    private val harboursDatabaseRepository: HarboursDatabaseRepository,
-    private val poiCacheRepository: PoiCacheRepository,
-    private val radiusPoiCacheRepository: RadiusPoiCacheRepository,
-    private val customPoiRepository: CustomPoiRepository,
-    getVesselsUseCase: GetVesselsUseCase,
-    getHarboursUseCase: GetHarboursUseCase,
-    private val vesselsDatabaseRepository: VesselsDatabaseRepository,
+    private val harboursDatabaseRepository: dagger.Lazy<HarboursDatabaseRepository>,
+    private val poiCacheRepository: dagger.Lazy<PoiCacheRepository>,
+    private val radiusPoiCacheRepository: dagger.Lazy<RadiusPoiCacheRepository>,
+    private val customPoiRepository: dagger.Lazy<CustomPoiRepository>,
+    getVesselsUseCase: dagger.Lazy<GetVesselsUseCase>,
+    getHarboursUseCase: dagger.Lazy<GetHarboursUseCase>,
+    private val vesselsDatabaseRepository: dagger.Lazy<VesselsDatabaseRepository>,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val customTileSourcesUseCase: CustomTileSourcesUseCase,
-    private val anchoragesRepository: AnchoragesRepository,
+    private val anchoragesRepository: dagger.Lazy<AnchoragesRepository>,
     anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository,
     anchorageMovementTrackRepository: AnchorageMovementTrackRepository,
-    private val anchorageHistoryRepository: AnchorageHistoryRepository
+    private val anchorageHistoryRepository: dagger.Lazy<AnchorageHistoryRepository>,
+    private val trackRouteRepository: dagger.Lazy<TrackRouteRepository>
 ) : ViewModel() {
 
-    private var _locationButtonStateFlow = MutableStateFlow<Int?>(null)
+    private val _locationButtonStateFlow = MutableStateFlow<Int?>(null)
     val locationButtonStateFlow get() = _locationButtonStateFlow.asStateFlow()
+
+    private val _trackRouteState = MutableStateFlow(TrackRouteState())
+    val trackRouteState: StateFlow<TrackRouteState> = _trackRouteState
+
+    private val _trackRouteEffect =
+        Channel<TrackRouteBottomSheetEffect>(capacity = Channel.CONFLATED)
+    val trackRouteEffect = _trackRouteEffect.receiveAsFlow()
 
     private val vesselsBbox = Channel<LatLngBounds>(Channel.CONFLATED)
     private val harboursBbox = Channel<LatLngBounds>(Channel.CONFLATED)
@@ -116,6 +128,12 @@ constructor(
     val areAnchoragesVisible: StateFlow<Boolean> =
         anchorageAlarmPreferencesRepository.getAnchorageLocationsVisible()
             .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    // TODO("Change SharingStarted to Lazily")
+    val trackedRecords: Flow<List<TrackedRouteItem>> = trackRouteRepository.get().getRecords()
+        .map { originalList -> mapList(originalList) { it.asTrackedRouteItem() } }
+        .onEach { _trackRouteState.update { state -> state.copy(records = it) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val trackedPoints: Flow<List<Point>> =
         combine(
@@ -150,7 +168,7 @@ constructor(
         ) { isActivated, bbox ->
 
             if (isActivated) {
-                getVesselsUseCase().firstOrNull()?.let { result ->
+                getVesselsUseCase.get().invoke().firstOrNull()?.let { result ->
                     val vessels = result.data
 
                     vessels?.let {
@@ -168,7 +186,7 @@ constructor(
         ) { harboursVisible, bbox ->
 
             if (harboursVisible) {
-                getHarboursUseCase().firstOrNull()?.let { result ->
+                getHarboursUseCase.get().invoke().firstOrNull()?.let { result ->
                     val harbours = result.data
 
                     harbours?.let {
@@ -202,7 +220,7 @@ constructor(
         minLon: Double,
         maxLon: Double
     ): Flow<List<AnchoragesEntity>> =
-        anchoragesRepository.getByBoundingBox(
+        anchoragesRepository.get().getByBoundingBox(
             minLat = minLat,
             maxLat = maxLat,
             minLon = minLon,
@@ -227,6 +245,53 @@ constructor(
         }
     }
 
+    fun trackRouteBottomSheetEventHandler(event: TrackRouteBottomSheetEvent) {
+        when (event) {
+            TrackRouteBottomSheetEvent.OnCloseBottomSheet -> sendEffect(TrackRouteBottomSheetEffect.CloseBottomSheet)
+            TrackRouteBottomSheetEvent.OnFilterClick -> TODO()
+            is TrackRouteBottomSheetEvent.OnRemoveItem -> onRemoveItem(event.id)
+            TrackRouteBottomSheetEvent.OnSortClick -> TODO()
+            TrackRouteBottomSheetEvent.OnStartForegroundService -> sendEffect(
+                TrackRouteBottomSheetEffect.StartForegroundService
+            )
+
+            TrackRouteBottomSheetEvent.OnStopForegroundService -> sendEffect(
+                TrackRouteBottomSheetEffect.StopForegroundService
+            )
+
+            TrackRouteBottomSheetEvent.OnToggleEditMode -> _trackRouteState.update {
+                it.copy(
+                    isEditMode = !it.isEditMode
+                )
+            }
+
+            is TrackRouteBottomSheetEvent.OnItemClick -> {}
+            TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> _trackRouteState.update {
+                it.copy(
+                    isRenderAllTracksSwitchChecked = !it.isRenderAllTracksSwitchChecked
+                )
+            }
+        }
+    }
+
+    private fun sendEffect(effect: TrackRouteBottomSheetEffect) {
+        viewModelScope.launch {
+            _trackRouteEffect.send(effect)
+        }
+    }
+
+    private fun onRemoveItem(id: Long) {
+        viewModelScope.launch {
+            trackRouteRepository.get().removeRecord(id)
+        }
+    }
+
+    fun setIsRouteServiceRunning(boolean: Boolean) {
+        _trackRouteState.update {
+            it.copy(serviceRunning = boolean)
+        }
+    }
+
     fun removeTextFromSearchBoxTextPlaceholder(text: SearchBoxTextType) {
         if (searchBoxTextPlaceholder.value.isEmpty()) return
 
@@ -245,13 +310,13 @@ constructor(
 
     fun saveAnchorageToHistory(anchorage: AnchorageHistoryUiModel) {
         viewModelScope.launch {
-            anchorageHistoryRepository.saveAnchorageHistory(anchorage.asAnchorageHistory())
+            anchorageHistoryRepository.get().saveAnchorageHistory(anchorage.asAnchorageHistory())
         }
     }
 
     fun updateAnchorageHistoryTimestamp(id: String, timestamp: Long) {
         viewModelScope.launch {
-            anchorageHistoryRepository.updateAnchorageHistoryTimestamp(
+            anchorageHistoryRepository.get().updateAnchorageHistoryTimestamp(
                 id = id,
                 timestamp = timestamp
             )
@@ -259,7 +324,7 @@ constructor(
     }
 
     suspend fun getAnchorageHistoryById(id: String): AnchorageHistoryUiModel? =
-        anchorageHistoryRepository.getAnchorageHistoryById(id).firstOrNull()
+        anchorageHistoryRepository.get().getAnchorageHistoryById(id).firstOrNull()
             ?.asAnchorageHistoryUiModel()
 
     fun setIsAnchorageRepositionEnabled(b: Boolean) {
@@ -337,23 +402,23 @@ constructor(
             if (index == latLngList.lastIndex) break
             distance += latLngList[index].distanceTo(latLngList[index + 1])
         }
-        return if (distance > 1000) MeasureUnit.KiloMeters(((round(distance / 1000 * 10) / 10)))
+        return if (distance > 1000) MeasureUnit.KiloMeters(((distance.toFirstDecimal { this / MetersUnitConvertConstants.KiloMeters.value })))
         else MeasureUnit.Meters(round(distance).toInt())
     }
 
     fun searchVesselById(id: Int): Flow<VesselInfoModel> =
-        vesselsDatabaseRepository.searchVesselById(id)
+        vesselsDatabaseRepository.get().searchVesselById(id)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun searchInPoiCache(placeIds: List<Long>): Flow<List<PoiUiModel>> =
-        poiCacheRepository.searchInCache(placeIds)
+        poiCacheRepository.get().searchInCache(placeIds)
             .flatMapLatest { originalList ->
                 if (originalList.size == placeIds.size) {
                     // If the size matches, emit content from poi cache table
                     flowOf(mapList(originalList) { it.asPoiUiModel() })
                 } else {
                     // If size does not match, fallback to the radius cache table
-                    radiusPoiCacheRepository.searchInCache(placeIds)
+                    radiusPoiCacheRepository.get().searchInCache(placeIds)
                         .map { radiusPoiCacheList ->
                             mapList(radiusPoiCacheList) { it.asPoiUiModel() }
                         }
@@ -363,22 +428,22 @@ constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun searchPoiWithInfoById(id: Long): Flow<PoiUiModelWithTags?> =
-        poiCacheRepository.searchPoiWithInfoById(id)
+        poiCacheRepository.get().searchPoiWithInfoById(id)
             .flatMapLatest { poi ->
                 if (poi != null) {
                     // if poi with given id has been found in poi cache table return it
                     flowOf(poi.asPoiUiModelWithTags())
                 } else {
                     // if poi hasn't been found, fallback to the radius cache table
-                    radiusPoiCacheRepository.searchPoiWithInfoById(id)
+                    radiusPoiCacheRepository.get().searchPoiWithInfoById(id)
                         .map { it?.asPoiUiModelWithTags() }
                 }
             }
 
-    val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.loadAllCustomPoi()
+    val loadAllCustomPoi: Flow<List<CustomPoiEntity>> = customPoiRepository.get().loadAllCustomPoi()
 
     fun searchCustomPoiById(id: Int): Flow<CustomPoiEntity> =
-        customPoiRepository.searchCustomPoiById(id)
+        customPoiRepository.get().searchCustomPoiById(id)
 
     val selectedPoiCategories: StateFlow<Set<String>?> =
         userPreferencesRepository.getSelectedPoiCategories()
@@ -390,7 +455,7 @@ constructor(
     ) { bbox, selectedCategories ->
 
         bbox.takeIf { it != null }?.let {
-            poiCacheRepository.loadPoiCacheByBoundingBox(
+            poiCacheRepository.get().loadPoiCacheByBoundingBox(
                 minLat = it.latitudeSouth,
                 maxLat = it.latitudeNorth,
                 minLon = it.longitudeWest,
@@ -401,7 +466,7 @@ constructor(
     }
 
     fun searchHarbourById(id: Int): Flow<HarboursModel> =
-        harboursDatabaseRepository.searchHarbourById(id)
+        harboursDatabaseRepository.get().searchHarbourById(id)
 
     fun setLocationButtonState(v: Int) {
         viewModelScope.launch {
