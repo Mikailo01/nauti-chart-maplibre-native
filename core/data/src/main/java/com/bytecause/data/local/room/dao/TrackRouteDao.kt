@@ -18,6 +18,9 @@ interface TrackRouteDao {
     @Query("SELECT * FROM route_record WHERE :id = id")
     fun getRecordById(id: Long): Flow<RouteRecordEntity>
 
+    @Query("SELECT * FROM route_record WHERE :timestamp = dateCreated")
+    fun getRecordByTimestamp(timestamp: Long): Flow<RouteRecordEntity>
+
     @Query("SELECT * FROM route_record")
     fun getRecords(): Flow<List<RouteRecordEntity>>
 }

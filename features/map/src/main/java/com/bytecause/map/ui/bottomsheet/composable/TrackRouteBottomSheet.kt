@@ -11,13 +11,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -50,6 +56,7 @@ import com.bytecause.data.services.Actions
 import com.bytecause.map.services.TrackRouteService
 import com.bytecause.map.ui.effect.TrackRouteBottomSheetEffect
 import com.bytecause.map.ui.event.TrackRouteBottomSheetEvent
+import com.bytecause.map.ui.model.RouteRecordUiModel
 import com.bytecause.map.ui.model.TrackedRouteItem
 import com.bytecause.map.ui.state.TrackRouteState
 import com.bytecause.map.ui.viewmodel.MapViewModel
@@ -63,6 +70,9 @@ import kotlinx.coroutines.delay
 @Composable
 fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
     val state by viewModel.trackRouteState.collectAsStateWithLifecycle()
+    val records by viewModel.getTrackedRecords.collectAsStateWithLifecycle()
+    val routeRecord by viewModel.routeRecord.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -70,14 +80,14 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
             when (effect) {
                 TrackRouteBottomSheetEffect.StartForegroundService -> {
                     Intent(context, TrackRouteService::class.java).apply {
-                        setAction(Actions.START.toString())
+                        action = Actions.START.toString()
                         context.startService(this)
                     }
                 }
 
                 TrackRouteBottomSheetEffect.StopForegroundService -> {
                     Intent(context, TrackRouteService::class.java).apply {
-                        setAction(Actions.STOP.toString())
+                        action = Actions.STOP.toString()
                         context.startService(this)
                     }
                 }
@@ -89,17 +99,26 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
 
     AppTheme {
         Surface(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            TrackRouteContent(
-                state = state,
-                onEvent = viewModel::trackRouteBottomSheetEventHandler
-            )
+            if (routeRecord == null) {
+                TrackRouteMainContent(
+                    state = state,
+                    records = records,
+                    onEvent = viewModel::trackRouteBottomSheetEventHandler
+                )
+            } else {
+                TrackRouteDetailContent(
+                    item = routeRecord!!,
+                    onEvent = viewModel::trackRouteBottomSheetEventHandler
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun TrackRouteContent(
+private fun TrackRouteMainContent(
     state: TrackRouteState,
+    records: List<TrackedRouteItem>,
     onEvent: (TrackRouteBottomSheetEvent) -> Unit
 ) {
     Column(
@@ -159,7 +178,7 @@ private fun TrackRouteContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            itemsIndexed(state.records, key = { _, item -> item.id }) { index, item ->
+            itemsIndexed(records, key = { _, item -> item.id }) { index, item ->
                 RecordItem(
                     item = item,
                     isEditModeEnabled = state.isEditMode,
@@ -214,6 +233,56 @@ private fun TrackRouteContent(
                 )
             }
 
+            OutlinedButton(onClick = { onEvent(TrackRouteBottomSheetEvent.OnCloseBottomSheet) }) {
+                Text(text = stringResource(R.string.close))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackRouteDetailContent(
+    item: RouteRecordUiModel,
+    onEvent: (TrackRouteBottomSheetEvent) -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            IconButton(onClick = { onEvent(TrackRouteBottomSheetEvent.OnNavigateBack) }) {
+                Icon(imageVector = Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
+            }
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        HorizontalDivider()
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Card(
+            colors = CardDefaults.cardColors().copy(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(10.dp)
+            ) {
+                Text(text = "Name: ${item.name}")
+                Text(text = "Description: ${item.description}")
+                Text(text = "Duration: ${formatDuration(item.duration)}")
+                Text(text = "Start time: ${getDateTimeFromTimestamp(item.startTime)}")
+                Text(text = "End time: ${getDateTimeFromTimestamp(item.dateCreated)}")
+            }
+        }
+        Row {
+            Spacer(modifier = Modifier.weight(1f))
             OutlinedButton(onClick = { onEvent(TrackRouteBottomSheetEvent.OnCloseBottomSheet) }) {
                 Text(text = stringResource(R.string.close))
             }
@@ -298,34 +367,33 @@ private fun RecordItem(
 @Composable
 @Preview(showBackground = true)
 private fun TrackRouteContentPreview() {
-    TrackRouteContent(
-        state = TrackRouteState(
-            records = listOf(
-                TrackedRouteItem(
-                    id = 0,
-                    name = "D",
-                    description = "",
-                    distance = 0.0,
-                    dateCreated = 1600616546521L,
-                    duration = 6050000L
-                ),
-                TrackedRouteItem(
-                    id = 1,
-                    name = "D",
-                    description = "",
-                    distance = 0.0,
-                    dateCreated = 1600616546521L,
-                    duration = 0L
-                ),
-                TrackedRouteItem(
-                    id = 2,
-                    name = "D",
-                    description = "",
-                    distance = 0.0,
-                    dateCreated = 1600616546521L,
-                    duration = 0L
-                ),
-            )
+    TrackRouteMainContent(
+        state = TrackRouteState(),
+        records = listOf(
+            TrackedRouteItem(
+                id = 0,
+                name = "D",
+                description = "",
+                distance = 0.0,
+                dateCreated = 1600616546521L,
+                duration = 6050000L
+            ),
+            TrackedRouteItem(
+                id = 1,
+                name = "D",
+                description = "",
+                distance = 0.0,
+                dateCreated = 1600616546521L,
+                duration = 0L
+            ),
+            TrackedRouteItem(
+                id = 2,
+                name = "D",
+                description = "",
+                distance = 0.0,
+                dateCreated = 1600616546521L,
+                duration = 0L
+            ),
         ),
         onEvent = {}
     )

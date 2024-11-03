@@ -8,6 +8,7 @@ sealed interface TrackRouteBottomSheetEvent {
     data object OnSortClick : TrackRouteBottomSheetEvent
     data object OnCloseBottomSheet : TrackRouteBottomSheetEvent
     data object OnToggleRenderAllTracksSwitch: TrackRouteBottomSheetEvent
+    data object OnNavigateBack : TrackRouteBottomSheetEvent
     data class OnRemoveItem(val id: Long) : TrackRouteBottomSheetEvent
     data class OnItemClick(val id: Long) : TrackRouteBottomSheetEvent
 }

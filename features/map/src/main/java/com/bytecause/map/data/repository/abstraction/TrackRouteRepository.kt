@@ -7,5 +7,6 @@ interface TrackRouteRepository {
     suspend fun saveRecord(record: RouteRecordEntity)
     suspend fun removeRecord(id: Long)
     fun getRecordById(id: Long): Flow<RouteRecordEntity>
+    fun getRecordByTimestamp(timestamp: Long): Flow<RouteRecordEntity>
     fun getRecords(): Flow<List<RouteRecordEntity>>
 }

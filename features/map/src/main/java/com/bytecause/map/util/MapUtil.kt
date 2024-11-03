@@ -62,19 +62,19 @@ object MapUtil {
 
     fun drawLine(
         polylineList: List<LatLng>,
-        lineManager: LineManager?,
+        lineManager: LineManager,
         @ColorInt lineColor: Int,
         lineWidth: Float = 2f,
     ) {
         val polyline =
-            lineManager?.create(
+            lineManager.create(
                 LineOptions()
                     .withLatLngs(polylineList)
                     .withLineColor(lineColor.toHexString())
                     .withLineWidth(lineWidth),
             )
 
-        lineManager?.update(polyline)
+        lineManager.update(polyline)
     }
 
     fun determineVesselColorType(type: String): Int {

@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Looper
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +15,7 @@ import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.data.services.Actions
 import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
 import com.bytecause.map.ui.model.MetersUnitConvertConstants
+import com.bytecause.map.ui.model.TrackRouteServiceState
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.extensions.toFirstDecimal
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -27,6 +27,7 @@ import com.google.android.gms.location.Priority
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import javax.inject.Inject
@@ -40,14 +41,13 @@ class TrackRouteService : LifecycleService() {
         private const val LOCATION_UPDATE_INTERVAL = 10_000L
         private const val DISTANCE_DELTA = 0.0
 
-        private val _isRunning = MutableStateFlow(false)
-        val isRunning: StateFlow<Boolean> = _isRunning
+        private val _trackServiceState = MutableStateFlow(TrackRouteServiceState())
+        val trackServiceState: StateFlow<TrackRouteServiceState> = _trackServiceState
     }
 
     @Inject
     lateinit var trackRouteRepository: dagger.Lazy<TrackRouteRepository>
 
-    private val capturedPoints = mutableListOf<Pair<Double, Double>>()
     private var startTime: Long = 0L
 
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -57,7 +57,7 @@ class TrackRouteService : LifecycleService() {
             super.onLocationResult(p0)
 
             p0.lastLocation?.let { lastLocation ->
-                capturedPoints.lastOrNull()?.let { previousLocation ->
+                trackServiceState.value.capturedPoints.lastOrNull()?.let { previousLocation ->
                     if (!MapUtil.arePointsWithinDelta(
                             point1 = LatLng(
                                 latitude = previousLocation.first,
@@ -70,9 +70,23 @@ class TrackRouteService : LifecycleService() {
                             deltaInMeters = DISTANCE_DELTA
                         )
                     ) {
-                        capturedPoints.add(lastLocation.latitude to lastLocation.longitude)
+                        _trackServiceState.update {
+                            it.copy(
+                                capturedPoints = it.capturedPoints + listOf(
+                                    lastLocation.latitude to lastLocation.longitude
+                                )
+                            )
+                        }
                     }
-                } ?: capturedPoints.add(lastLocation.latitude to lastLocation.longitude)
+                } ?: run {
+                    _trackServiceState.update {
+                        it.copy(
+                            capturedPoints = it.capturedPoints + listOf(
+                                lastLocation.latitude to lastLocation.longitude
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -115,7 +129,7 @@ class TrackRouteService : LifecycleService() {
         startTime = System.currentTimeMillis()
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
-        _isRunning.value = true
+        _trackServiceState.update { it.copy(isRunning = true) }
     }
 
     @Suppress("MissingPermission")
@@ -148,7 +162,7 @@ class TrackRouteService : LifecycleService() {
     }
 
     private fun stopService() {
-        _isRunning.value = false
+        _trackServiceState.value = TrackRouteServiceState()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -156,7 +170,9 @@ class TrackRouteService : LifecycleService() {
     private fun calculateAndSumDistance(points: List<Pair<Double, Double>>): Double {
         var distance = 0.0
         for (x in points.indices) {
-            if (x == points.indices.last) return distance
+            if (x == points.indices.last) {
+                return distance.toFirstDecimal { this / MetersUnitConvertConstants.NauticalMiles.value }
+            }
 
             val currentPair = points[x]
             val nextPair = points[x + 1]
@@ -175,10 +191,11 @@ class TrackRouteService : LifecycleService() {
             RouteRecordEntity(
                 name = "Test",
                 description = "Test description",
-                distance = calculateAndSumDistance(capturedPoints),
+                distance = calculateAndSumDistance(trackServiceState.value.capturedPoints),
+                startTime = startTime,
                 duration = System.currentTimeMillis() - startTime,
                 dateCreated = System.currentTimeMillis(),
-                points = capturedPoints
+                points = trackServiceState.value.capturedPoints
             )
         )
     }
@@ -188,7 +205,6 @@ class TrackRouteService : LifecycleService() {
 
         when (intent?.action) {
             Actions.START.toString() -> {
-                Log.d("idk", "start")
                 startForegroundService()
                 startLocationUpdates()
             }

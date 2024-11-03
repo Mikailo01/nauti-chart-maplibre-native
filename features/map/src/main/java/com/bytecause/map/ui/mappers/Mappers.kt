@@ -8,6 +8,7 @@ import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
+import com.bytecause.map.ui.model.RouteRecordUiModel
 import com.bytecause.map.ui.model.TrackedRouteItem
 import com.bytecause.nautichart.AnchorageHistory
 
@@ -70,6 +71,17 @@ internal fun RouteRecordEntity.asTrackedRouteItem(): TrackedRouteItem = TrackedR
     name = name,
     description = description,
     distance = distance,
+    duration = duration,
+    dateCreated = dateCreated
+)
+
+internal fun RouteRecordEntity.asRouteRecordUiModel(): RouteRecordUiModel = RouteRecordUiModel(
+    id = id,
+    name = name,
+    description = description,
+    points = points,
+    distance = distance,
+    startTime = startTime,
     duration = duration,
     dateCreated = dateCreated
 )

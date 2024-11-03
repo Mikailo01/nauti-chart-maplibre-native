@@ -1,8 +1,6 @@
 package com.bytecause.map.util
 
 import android.graphics.Color
-import org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM
-import org.maplibre.android.style.layers.Property.ICON_ANCHOR_CENTER
 
 object MapFragmentConstants {
     const val DEFAULT_BUTTON_STATE = 0
@@ -18,9 +16,6 @@ object MapFragmentConstants {
 
     const val MEASURE_LINE_GEOJSON_SOURCE = "measure_line_geojson_source"
     const val MEASURE_LINE_LAYER = "measure_line_layer"
-
-    const val SYMBOL_ICON_ANCHOR_BOTTOM = ICON_ANCHOR_BOTTOM
-    const val SYMBOL_ICON_ANCHOR_CENTER = ICON_ANCHOR_CENTER
 
     const val PULSING_CIRCLE_GEOJSON_SOURCE = "pulsing-circle-geojson-source"
     const val PULSING_CIRCLE_LAYER = "pulsing-circle-layer"

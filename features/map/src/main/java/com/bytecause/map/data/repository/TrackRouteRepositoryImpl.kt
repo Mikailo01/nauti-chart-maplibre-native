@@ -30,6 +30,10 @@ class TrackRouteRepositoryImpl @Inject constructor(
     override fun getRecordById(id: Long): Flow<RouteRecordEntity> = trackRouteDao.getRecordById(id)
         .flowOn(coroutineDispatcher)
 
+    override fun getRecordByTimestamp(timestamp: Long): Flow<RouteRecordEntity> =
+        trackRouteDao.getRecordByTimestamp(timestamp)
+            .flowOn(coroutineDispatcher)
+
     override fun getRecords(): Flow<List<RouteRecordEntity>> = trackRouteDao.getRecords()
         .flowOn(coroutineDispatcher)
 }

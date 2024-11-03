@@ -103,8 +103,6 @@ import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_TEXT_OFFSET_KEY
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_ANIMATION_DURATION
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_LAYER
-import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_ANCHOR_BOTTOM
-import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_ANCHOR_CENTER
 import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_SIZE
 import com.bytecause.map.util.MapFragmentConstants.SYMBOL_TYPE
 import com.bytecause.map.util.MapFragmentConstants.TRACKING_BUTTON_STATE
@@ -189,6 +187,9 @@ import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM
+import org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM_LEFT
+import org.maplibre.android.style.layers.Property.ICON_ANCHOR_CENTER
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
@@ -252,6 +253,8 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
     private var symbolManager: SymbolManager? = null
     private var boundaryManager: LineManager? = null
+    private var trackManager: LineManager? = null
+    private var trackSymbolManager: SymbolManager? = null
     private var markerSymbol: Symbol? = null
     private var vesselsFeatureCollection: FeatureCollection? = null
     private var harboursFeatureCollection: FeatureCollection? = null
@@ -349,7 +352,6 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                 when {
                     measureBottomSheetBehavior.state == STATE_EXPANDED -> {
                         leaveMeasureDistanceMode()
-                        shouldInterceptBackEvent = false
                     }
 
                     bottomSheetBehavior.state == STATE_EXPANDED || bottomSheetBehavior.state == STATE_COLLAPSED -> {
@@ -363,12 +365,12 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                     }
 
                     anchorageAlarmBottomSheetBehavior.state == STATE_EXPANDED || anchorageAlarmBottomSheetBehavior.state == STATE_COLLAPSED -> {
-                        mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
+                        anchorageAlarmBottomSheetBehavior.state = STATE_HIDDEN
                         shouldInterceptBackEvent = false
                     }
 
                     trackRouteBottomSheetBehavior.state == STATE_EXPANDED || trackRouteBottomSheetBehavior.state == STATE_COLLAPSED -> {
-                        mapSharedViewModel.setShowTrackRouteBottomSheet(false)
+                        trackRouteBottomSheetBehavior.state = STATE_HIDDEN
                         shouldInterceptBackEvent = false
                     }
 
@@ -481,14 +483,16 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                 anchorageAlarmBottomSheetLayout.id -> {
                                     anchorageAlarmBottomSheetLayout.visibility = View.GONE
+                                    mapSharedViewModel.setShowAnchorageAlarmBottomSheet(false)
+                                    viewModel.setIsAnchorageRepositionEnabled(false)
                                     if (AnchorageAlarmService.runningAnchorageAlarm.value.isRunning.not()) {
                                         removeAnchorageRadius(mapStyle)
                                         mapSharedViewModel.setAnchorageLocationFromHistoryId(null)
                                     }
-                                    viewModel.setIsAnchorageRepositionEnabled(false)
                                 }
 
                                 trackRouteBottomSheetLayout.id -> {
+                                    trackRouteBottomSheetLayout.visibility = View.GONE
                                     mapSharedViewModel.setShowTrackRouteBottomSheet(false)
                                 }
 
@@ -721,7 +725,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     .withIconSize(SYMBOL_ICON_SIZE)
                                                     .withIconImage(PIN_ICON)
                                                     .withIconAnchor(
-                                                        SYMBOL_ICON_ANCHOR_BOTTOM
+                                                        ICON_ANCHOR_BOTTOM
                                                     ),
                                             )
                                         }.let {
@@ -766,7 +770,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                             .withLatLng(latLng)
                                             .withIconImage(MAP_MARKER)
                                             .withIconSize(SYMBOL_ICON_SIZE)
-                                            .withIconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
+                                            .withIconAnchor(ICON_ANCHOR_BOTTOM),
                                     )
 
                                 // Disable symbol collisions and update symbol
@@ -1064,7 +1068,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 ),
                                                             ),
                                                             iconSize(POI_SYMBOL_ICON_SIZE),
-                                                            iconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
+                                                            iconAnchor(ICON_ANCHOR_BOTTOM),
                                                         )
 
                                                 style.apply {
@@ -1244,7 +1248,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                             ),
                                                         ),
                                                         iconSize(POI_SYMBOL_ICON_SIZE),
-                                                        iconAnchor(SYMBOL_ICON_ANCHOR_BOTTOM),
+                                                        iconAnchor(ICON_ANCHOR_BOTTOM),
                                                     )
 
                                             style.apply {
@@ -1379,7 +1383,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 literal(VESSEL_SYMBOL_DEFAULT_SIZE),
                                                             ),
                                                         ),
-                                                        iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                        iconAnchor(ICON_ANCHOR_CENTER),
                                                     )
                                                 }
 
@@ -1476,7 +1480,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 literal(HARBOUR_SYMBOL_DEFAULT_SIZE),
                                                             ),
                                                         ),
-                                                        iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                        iconAnchor(ICON_ANCHOR_CENTER),
                                                     )
                                                 }
 
@@ -1614,7 +1618,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 ),
                                                             ),
                                                         ),
-                                                        iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                        iconAnchor(ICON_ANCHOR_CENTER),
                                                     )
 
                                                 style.apply {
@@ -1671,7 +1675,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     ).apply {
                                                         setProperties(
                                                             iconImage(ANCHORAGE_ICON),
-                                                            iconAnchor(SYMBOL_ICON_ANCHOR_CENTER),
+                                                            iconAnchor(ICON_ANCHOR_CENTER),
                                                             iconSize(ANCHORAGE_SYMBOL_DEFAULT_SIZE)
                                                         )
                                                     }
@@ -2090,8 +2094,9 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                             )
 
                                             binding.mapBottomRightPanelLinearLayout.apply {
-                                                mapBottomRightButtonsLinearLayout.visibility =
-                                                    View.VISIBLE
+                                                if (anchorageAlarmButton.visibility == View.GONE) {
+                                                    anchorageAlarmButton.visibility = View.VISIBLE
+                                                }
                                                 anchorageAlarmButton.setOnClickListener {
                                                     mapSharedViewModel.setShowAnchorageAlarmBottomSheet(
                                                         true
@@ -2119,8 +2124,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     )
                                             }
                                         } else {
-                                            binding.mapBottomRightPanelLinearLayout.mapBottomRightButtonsLinearLayout.visibility =
-                                                View.GONE
+                                            if (binding.mapBottomRightPanelLinearLayout.anchorageAlarmButton.visibility == View.VISIBLE) {
+                                                binding.mapBottomRightPanelLinearLayout.anchorageAlarmButton.visibility =
+                                                    View.GONE
+                                            }
                                             binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                                                 if (anchorageAlarmBottomSheetBehavior.state == STATE_HIDDEN) {
                                                     removeAnchorageRadius(style)
@@ -2273,14 +2280,128 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                             viewLifecycleOwner.lifecycleScope.launch {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    TrackRouteService.isRunning.collect { isRunning ->
-                                        viewModel.setIsRouteServiceRunning(isRunning)
+                                    TrackRouteService.trackServiceState.collect { state ->
+                                        viewModel.setIsRouteServiceRunning(state.isRunning)
 
-                                        if (isRunning) {
+                                        if (state.isRunning) {
+                                            if (binding.mapBottomRightPanelLinearLayout.trackRouteButton.visibility ==
+                                                View.GONE
+                                            ) {
+                                                binding.mapBottomRightPanelLinearLayout.trackRouteButton.apply {
+                                                    visibility = View.VISIBLE
+                                                    setOnClickListener {
+                                                        mapSharedViewModel.setShowTrackRouteBottomSheet(
+                                                            true
+                                                        )
+                                                    }
+                                                }
+                                            }
 
+                                            trackManager?.deleteAll() ?: run {
+                                                trackManager = LineManager(
+                                                    mapView!!,
+                                                    mapLibreMap,
+                                                    style
+                                                )
+                                            }
+
+                                            drawLine(
+                                                polylineList = state.capturedPoints.map {
+                                                    LatLng(
+                                                        it.first,
+                                                        it.second
+                                                    )
+                                                },
+                                                lineManager = trackManager!!,
+                                                lineColor = Color.YELLOW
+                                            )
                                         } else {
-
+                                            if (binding.mapBottomRightPanelLinearLayout.trackRouteButton.visibility ==
+                                                View.VISIBLE
+                                            ) {
+                                                binding.mapBottomRightPanelLinearLayout.trackRouteButton.visibility =
+                                                    View.GONE
+                                                trackManager?.deleteAll()
+                                                trackManager = null
+                                            }
                                         }
+                                    }
+                                }
+                            }
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.routeRecord.collect { record ->
+                                        record ?: run {
+                                            if (TrackRouteService.trackServiceState.value.isRunning) return@collect
+                                            trackManager?.run {
+                                                deleteAll()
+                                                trackManager = null
+                                            }
+                                            trackSymbolManager?.run {
+                                                deleteAll()
+                                                trackSymbolManager = null
+                                            }
+                                            return@collect
+                                        }
+                                        if (trackManager != null) return@collect
+
+                                        val latLngs = record.points.map {
+                                            LatLng(
+                                                it.first,
+                                                it.second
+                                            )
+                                        }
+
+                                        val bounds: LatLngBounds = LatLngBounds.fromLatLngs(latLngs)
+
+                                        trackManager = LineManager(
+                                            mapView!!,
+                                            mapLibreMap,
+                                            style
+                                        )
+
+                                        drawLine(
+                                            polylineList = latLngs,
+                                            lineManager = trackManager!!,
+                                            lineColor = Color.YELLOW
+                                        )
+
+                                        trackSymbolManager = SymbolManager(
+                                            mapView!!,
+                                            mapLibreMap,
+                                            style,
+                                            trackManager!!.layerId,
+                                            null
+                                        )
+
+                                        style.addImage(
+                                            "finish_icon",
+                                            ContextCompat.getDrawable(
+                                                requireContext(),
+                                                com.bytecause.core.resources.R.drawable.finish
+                                            )!!
+                                        )
+
+                                        val symbolOptions = listOf(
+                                            SymbolOptions()
+                                                .withLatLng(latLngs.last())
+                                                .withIconAnchor(ICON_ANCHOR_BOTTOM_LEFT)
+                                                .withIconImage("finish_icon"),
+                                            SymbolOptions()
+                                                .withLatLng(latLngs.first())
+                                                .withIconAnchor(ICON_ANCHOR_BOTTOM)
+                                                .withIconImage(MAP_MARKER),
+                                        )
+
+                                        trackSymbolManager?.create(symbolOptions)
+
+                                        mapLibreMap.animateCamera(
+                                            CameraUpdateFactory.newLatLngBounds(
+                                                bounds,
+                                                200
+                                            )
+                                        )
                                     }
                                 }
                             }
@@ -2289,6 +2410,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     mapSharedViewModel.showTrackRouteBottomSheet.collect { show ->
                                         if (show) {
+                                            shouldInterceptBackEvent = true
                                             trackRouteBottomSheetLayout.visibility = View.VISIBLE
                                             trackRouteBottomSheetBehavior.state = STATE_EXPANDED
 
@@ -2299,9 +2421,8 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     TrackRoute(
                                                         viewModel = viewModel,
                                                         onCloseBottomSheet = {
-                                                            mapSharedViewModel.setShowTrackRouteBottomSheet(
-                                                                false
-                                                            )
+                                                            trackRouteBottomSheetBehavior.state =
+                                                                STATE_HIDDEN
                                                         }
                                                     )
                                                 }
@@ -4201,12 +4322,13 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
         super.onResume()
 
         requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback.apply {
-            isEnabled = false
+            isEnabled = shouldInterceptBackEvent
         })
         bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         markerBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
+        trackRouteBottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
 
         fusedLocationClient?.requestLocationUpdates(
             locationRequest,
@@ -4228,6 +4350,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
         markerBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         measureBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
         anchorageAlarmBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+        trackRouteBottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
 
         bearingSensor.onPause()
         fusedLocationClient?.removeLocationUpdates(locationCallback)

@@ -32,6 +32,7 @@ import com.bytecause.map.ui.mappers.asAnchorageHistoryUiModel
 import com.bytecause.map.ui.mappers.asHarbourUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModel
 import com.bytecause.map.ui.mappers.asPoiUiModelWithTags
+import com.bytecause.map.ui.mappers.asRouteRecordUiModel
 import com.bytecause.map.ui.mappers.asTrackedRouteItem
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.AnchorageRepositionType
@@ -40,6 +41,7 @@ import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.MetersUnitConvertConstants
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
+import com.bytecause.map.ui.model.RouteRecordUiModel
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.model.TrackedRouteItem
 import com.bytecause.map.ui.state.TrackRouteState
@@ -64,7 +66,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -114,10 +115,13 @@ constructor(
     private val _selectedFeatureIdFlow = MutableStateFlow<com.bytecause.map.ui.FeatureType?>(null)
     val selectedFeatureIdFlow = _selectedFeatureIdFlow.asStateFlow()
 
-    private var _searchBoxTextPlaceholder: MutableStateFlow<List<SearchBoxTextType>> =
+    private val _searchBoxTextPlaceholder: MutableStateFlow<List<SearchBoxTextType>> =
         MutableStateFlow(emptyList())
     val searchBoxTextPlaceholder: StateFlow<List<SearchBoxTextType>> =
         _searchBoxTextPlaceholder.asStateFlow()
+
+    private val _routeRecord = MutableStateFlow<RouteRecordUiModel?>(null)
+    val routeRecord: StateFlow<RouteRecordUiModel?> = _routeRecord
 
     val isAisActivated: StateFlow<Boolean> = userPreferencesRepository.getIsAisActivated()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
@@ -129,11 +133,10 @@ constructor(
         anchorageAlarmPreferencesRepository.getAnchorageLocationsVisible()
             .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
-    // TODO("Change SharingStarted to Lazily")
-    val trackedRecords: Flow<List<TrackedRouteItem>> = trackRouteRepository.get().getRecords()
-        .map { originalList -> mapList(originalList) { it.asTrackedRouteItem() } }
-        .onEach { _trackRouteState.update { state -> state.copy(records = it) } }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val getTrackedRecords: StateFlow<List<TrackedRouteItem>> =
+        trackRouteRepository.get().getRecords()
+            .map { originalList -> mapList(originalList) { it.asTrackedRouteItem() } }
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val trackedPoints: Flow<List<Point>> =
         combine(
@@ -265,12 +268,22 @@ constructor(
                 )
             }
 
-            is TrackRouteBottomSheetEvent.OnItemClick -> {}
+
             TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> _trackRouteState.update {
                 it.copy(
                     isRenderAllTracksSwitchChecked = !it.isRenderAllTracksSwitchChecked
                 )
             }
+
+            is TrackRouteBottomSheetEvent.OnItemClick -> {
+                viewModelScope.launch {
+                    trackRouteRepository.get().getRecordById(event.id).firstOrNull()?.let {
+                        _routeRecord.value = it.asRouteRecordUiModel()
+                    }
+                }
+            }
+
+            TrackRouteBottomSheetEvent.OnNavigateBack -> clearRouteRecord()
         }
     }
 
@@ -284,6 +297,10 @@ constructor(
         viewModelScope.launch {
             trackRouteRepository.get().removeRecord(id)
         }
+    }
+
+    private fun clearRouteRecord() {
+        _routeRecord.value = null
     }
 
     fun setIsRouteServiceRunning(boolean: Boolean) {
