@@ -1,12 +1,12 @@
 package com.bytecause.map.ui.state
 
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.bytecause.map.ui.model.AnchorageHistoryDeletionInterval
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.BottomSheetType
 
-@Immutable
+@Stable
 data class AnchorageAlarmSettingsState(
     val maxGpsUpdateInterval: Int = 0,
     val minGpsUpdateInterval: Int = 0,

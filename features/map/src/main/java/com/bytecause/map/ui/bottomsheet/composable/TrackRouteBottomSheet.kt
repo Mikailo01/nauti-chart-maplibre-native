@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -57,8 +58,11 @@ import com.bytecause.map.services.TrackRouteService
 import com.bytecause.map.ui.effect.TrackRouteBottomSheetEffect
 import com.bytecause.map.ui.event.TrackRouteBottomSheetEvent
 import com.bytecause.map.ui.model.RouteRecordUiModel
+import com.bytecause.map.ui.model.SortOptions
 import com.bytecause.map.ui.model.TrackedRouteItem
-import com.bytecause.map.ui.state.TrackRouteState
+import com.bytecause.map.ui.state.TrackRouteChooseFilterState
+import com.bytecause.map.ui.state.TrackRouteChooseSorterState
+import com.bytecause.map.ui.state.TrackRouteMainContentState
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.presentation.theme.AppTheme
 import com.bytecause.util.common.formatDuration
@@ -69,7 +73,10 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
-    val state by viewModel.trackRouteState.collectAsStateWithLifecycle()
+    val mainContentState by viewModel.trackRouteMainContentState.collectAsStateWithLifecycle()
+    val chooseFilterState by viewModel.trackRouteChooseFilterState.collectAsStateWithLifecycle()
+    val chooseSorterState by viewModel.trackRouteChooseSorterState.collectAsStateWithLifecycle()
+
     val records by viewModel.getTrackedRecords.collectAsStateWithLifecycle()
     val routeRecord by viewModel.routeRecord.collectAsStateWithLifecycle()
 
@@ -100,11 +107,29 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
     AppTheme {
         Surface(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
             if (routeRecord == null) {
-                TrackRouteMainContent(
-                    state = state,
-                    records = records,
-                    onEvent = viewModel::trackRouteBottomSheetEventHandler
-                )
+                when {
+                    mainContentState.chooseFilter -> {
+                        TrackRouteChooseFilterContent(
+                            state = chooseFilterState,
+                            onRadioButtonClick = {},
+                            onNavigateBack = {})
+                    }
+
+                    mainContentState.chooseSorter -> {
+                        TrackRouteChooseSorterContent(
+                            state = chooseSorterState,
+                            onRadioButtonClick = {},
+                            onNavigateBack = { })
+                    }
+
+                    else -> {
+                        TrackRouteMainContent(
+                            state = mainContentState,
+                            records = records,
+                            onEvent = viewModel::trackRouteBottomSheetEventHandler
+                        )
+                    }
+                }
             } else {
                 TrackRouteDetailContent(
                     item = routeRecord!!,
@@ -117,7 +142,7 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
 
 @Composable
 private fun TrackRouteMainContent(
-    state: TrackRouteState,
+    state: TrackRouteMainContentState,
     records: List<TrackedRouteItem>,
     onEvent: (TrackRouteBottomSheetEvent) -> Unit
 ) {
@@ -291,6 +316,95 @@ private fun TrackRouteDetailContent(
 }
 
 @Composable
+private fun TrackRouteChooseFilterContent(
+    state: TrackRouteChooseFilterState,
+    onRadioButtonClick: (SortOptions) -> Unit,
+    onNavigateBack: () -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                    contentDescription = stringResource(R.string.navigate_back),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = stringResource(R.string.filter_by),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        HorizontalDivider()
+
+        state.options.forEach { option ->
+            RadioButtonWithText(
+                selected = state.selectedOption == option,
+                option = option,
+                onClick = { selectedOption -> onRadioButtonClick(selectedOption) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrackRouteChooseSorterContent(
+    state: TrackRouteChooseSorterState,
+    onRadioButtonClick: (SortOptions) -> Unit,
+    onNavigateBack: () -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                    contentDescription = stringResource(R.string.navigate_back),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = stringResource(R.string.sort_by),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        HorizontalDivider()
+
+        state.options.forEach { option ->
+            RadioButtonWithText(
+                selected = state.selectedOption == option,
+                option = option,
+                onClick = { selectedOption -> onRadioButtonClick(selectedOption) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun RadioButtonWithText(
+    selected: Boolean,
+    option: SortOptions,
+    onClick: (SortOptions) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        RadioButton(selected = selected, onClick = { onClick(option) })
+        Text(
+            text = when (option) {
+                SortOptions.Name -> stringResource(R.string.name)
+                SortOptions.Date -> stringResource(R.string.date)
+                SortOptions.Distance -> stringResource(R.string.distance)
+                SortOptions.Duration -> stringResource(R.string.duration)
+            },
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
 private fun RecordItem(
     item: TrackedRouteItem,
     isEditModeEnabled: Boolean,
@@ -364,11 +478,12 @@ private fun RecordItem(
     }
 }
 
+
 @Composable
 @Preview(showBackground = true)
 private fun TrackRouteContentPreview() {
     TrackRouteMainContent(
-        state = TrackRouteState(),
+        state = TrackRouteMainContentState(),
         records = listOf(
             TrackedRouteItem(
                 id = 0,
@@ -397,4 +512,28 @@ private fun TrackRouteContentPreview() {
         ),
         onEvent = {}
     )
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun TrackRouteChooseFilterContentPreview() {
+    TrackRouteChooseFilterContent(
+        state = TrackRouteChooseFilterState(),
+        onRadioButtonClick = {},
+        onNavigateBack = {})
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun TrackRouteChooseSorterContentPreview() {
+    TrackRouteChooseSorterContent(
+        state = TrackRouteChooseSorterState(),
+        onRadioButtonClick = {},
+        onNavigateBack = {})
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun RadioButtonWithTextPreview() {
+    RadioButtonWithText(selected = false, option = SortOptions.Date, onClick = {})
 }

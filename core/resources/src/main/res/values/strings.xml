@@ -101,6 +101,10 @@
     <string name="description">Description</string>
     <string name="contacts">Contacts</string>
     <string name="name">Name</string>
+    <string name="date">Date</string>
+    <string name="duration">Duration</string>
+    <string name="filter_by">Filter by</string>
+    <string name="sort_by">Sort by</string>
     <string name="search_here">Search here</string>
     <string name="favorite">Favorite</string>
     <string name="travel_plans">Travel plans</string>

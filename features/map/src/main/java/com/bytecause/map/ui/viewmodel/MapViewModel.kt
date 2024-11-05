@@ -44,7 +44,9 @@ import com.bytecause.map.ui.model.PoiUiModelWithTags
 import com.bytecause.map.ui.model.RouteRecordUiModel
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.model.TrackedRouteItem
-import com.bytecause.map.ui.state.TrackRouteState
+import com.bytecause.map.ui.state.TrackRouteChooseFilterState
+import com.bytecause.map.ui.state.TrackRouteChooseSorterState
+import com.bytecause.map.ui.state.TrackRouteMainContentState
 import com.bytecause.map.util.MapUtil
 import com.bytecause.util.extensions.toFirstDecimal
 import com.bytecause.util.mappers.asLatLng
@@ -100,8 +102,17 @@ constructor(
     private val _locationButtonStateFlow = MutableStateFlow<Int?>(null)
     val locationButtonStateFlow get() = _locationButtonStateFlow.asStateFlow()
 
-    private val _trackRouteState = MutableStateFlow(TrackRouteState())
-    val trackRouteState: StateFlow<TrackRouteState> = _trackRouteState
+    private val _trackRouteMainContentState = MutableStateFlow(TrackRouteMainContentState())
+    val trackRouteMainContentState: StateFlow<TrackRouteMainContentState> =
+        _trackRouteMainContentState
+
+    private val _trackRouteChooseSorterState = MutableStateFlow(TrackRouteChooseSorterState())
+    val trackRouteChooseSorterState: StateFlow<TrackRouteChooseSorterState> =
+        _trackRouteChooseSorterState
+
+    private val _trackRouteChooseFilterState = MutableStateFlow(TrackRouteChooseFilterState())
+    val trackRouteChooseFilterState: StateFlow<TrackRouteChooseFilterState> =
+        _trackRouteChooseFilterState
 
     private val _trackRouteEffect =
         Channel<TrackRouteBottomSheetEffect>(capacity = Channel.CONFLATED)
@@ -251,9 +262,19 @@ constructor(
     fun trackRouteBottomSheetEventHandler(event: TrackRouteBottomSheetEvent) {
         when (event) {
             TrackRouteBottomSheetEvent.OnCloseBottomSheet -> sendEffect(TrackRouteBottomSheetEffect.CloseBottomSheet)
-            TrackRouteBottomSheetEvent.OnFilterClick -> TODO()
+            TrackRouteBottomSheetEvent.OnFilterClick -> _trackRouteMainContentState.update {
+                it.copy(
+                    chooseFilter = true
+                )
+            }
+
             is TrackRouteBottomSheetEvent.OnRemoveItem -> onRemoveItem(event.id)
-            TrackRouteBottomSheetEvent.OnSortClick -> TODO()
+            TrackRouteBottomSheetEvent.OnSortClick -> _trackRouteMainContentState.update {
+                it.copy(
+                    chooseSorter = true
+                )
+            }
+
             TrackRouteBottomSheetEvent.OnStartForegroundService -> sendEffect(
                 TrackRouteBottomSheetEffect.StartForegroundService
             )
@@ -262,14 +283,14 @@ constructor(
                 TrackRouteBottomSheetEffect.StopForegroundService
             )
 
-            TrackRouteBottomSheetEvent.OnToggleEditMode -> _trackRouteState.update {
+            TrackRouteBottomSheetEvent.OnToggleEditMode -> _trackRouteMainContentState.update {
                 it.copy(
                     isEditMode = !it.isEditMode
                 )
             }
 
 
-            TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> _trackRouteState.update {
+            TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> _trackRouteMainContentState.update {
                 it.copy(
                     isRenderAllTracksSwitchChecked = !it.isRenderAllTracksSwitchChecked
                 )
@@ -304,7 +325,7 @@ constructor(
     }
 
     fun setIsRouteServiceRunning(boolean: Boolean) {
-        _trackRouteState.update {
+        _trackRouteMainContentState.update {
             it.copy(serviceRunning = boolean)
         }
     }
