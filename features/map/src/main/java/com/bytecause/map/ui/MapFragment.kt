@@ -35,6 +35,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import coil.load
 import com.bytecause.data.services.Actions
+import com.bytecause.domain.model.MeasureUnit
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.util.PoiTagsUtil.excludeDescriptionKeysFromTags
@@ -51,7 +52,6 @@ import com.bytecause.map.ui.bottomsheet.composable.TrackRoute
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.AnchorageRepositionType
 import com.bytecause.map.ui.model.MarkerInfoModel
-import com.bytecause.map.ui.model.MeasureUnit
 import com.bytecause.map.ui.model.SearchBoxTextType
 import com.bytecause.map.ui.viewmodel.MapViewModel
 import com.bytecause.map.util.MapFragmentConstants.ANCHORAGES_GEOJSON_SOURCE
@@ -80,6 +80,7 @@ import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_PROPERTY_ID
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY
 import com.bytecause.map.util.MapFragmentConstants.CUSTOM_POI_SYMBOL_SELECTED_SIZE
 import com.bytecause.map.util.MapFragmentConstants.DEFAULT_BUTTON_STATE
+import com.bytecause.map.util.MapFragmentConstants.FINISH_ICON
 import com.bytecause.map.util.MapFragmentConstants.HARBOUR_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.HARBOUR_ICON
 import com.bytecause.map.util.MapFragmentConstants.HARBOUR_SYMBOL_DEFAULT_SIZE
@@ -95,6 +96,7 @@ import com.bytecause.map.util.MapFragmentConstants.PIN_ICON
 import com.bytecause.map.util.MapFragmentConstants.POIS_VISIBILITY_ZOOM_LEVEL
 import com.bytecause.map.util.MapFragmentConstants.POI_CATEGORY_KEY
 import com.bytecause.map.util.MapFragmentConstants.POI_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.POI_LABEL_FONT
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_ICON_SIZE
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_LAYER
 import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_NAME_KEY
@@ -103,6 +105,10 @@ import com.bytecause.map.util.MapFragmentConstants.POI_SYMBOL_TEXT_OFFSET_KEY
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_ANIMATION_DURATION
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_GEOJSON_SOURCE
 import com.bytecause.map.util.MapFragmentConstants.PULSING_CIRCLE_LAYER
+import com.bytecause.map.util.MapFragmentConstants.ROUTE_RECORD_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.ROUTE_RECORD_LAYER
+import com.bytecause.map.util.MapFragmentConstants.SPEED_POINTS_GEOJSON_SOURCE
+import com.bytecause.map.util.MapFragmentConstants.SPEED_POINTS_LAYER
 import com.bytecause.map.util.MapFragmentConstants.SYMBOL_ICON_SIZE
 import com.bytecause.map.util.MapFragmentConstants.SYMBOL_TYPE
 import com.bytecause.map.util.MapFragmentConstants.TRACKING_BUTTON_STATE
@@ -124,11 +130,13 @@ import com.bytecause.map.util.MapUtil.calculateZoomForBounds
 import com.bytecause.map.util.MapUtil.drawLine
 import com.bytecause.map.util.MapUtil.newLatLngFromDistance
 import com.bytecause.map.util.MapUtil.radiusInMetersToRadiusInPixels
+import com.bytecause.map.util.StyleExtensions.cleanUpSourceAndLayer
 import com.bytecause.map.util.TileSourceLoader
 import com.bytecause.map.util.TileSourceLoader.MAIN_LAYER_ID
 import com.bytecause.map.util.navigateToCustomPoiNavigation
 import com.bytecause.map.util.navigateToFirstRunNavigation
 import com.bytecause.map.util.navigateToSearchNavigation
+import com.bytecause.map.util.repeatOnLifecycleWhenDistinct
 import com.bytecause.presentation.components.views.CustomTextInputEditText
 import com.bytecause.presentation.interfaces.DrawerController
 import com.bytecause.presentation.model.PlaceType
@@ -207,6 +215,7 @@ import org.maplibre.android.style.layers.PropertyFactory.textFont
 import org.maplibre.android.style.layers.PropertyFactory.textMaxWidth
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.PropertyValue
 import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonOptions
@@ -261,7 +270,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
     private var customPoiFeatureCollection: FeatureCollection? = null
     private var poisFeatureCollection: FeatureCollection? = null
 
-    private var circleLayerAnimator: Animator? = null
+    private var circleLayerAnimatorMap: Map<String, Animator> = emptyMap()
 
     private val onCameraMoveListener: OnCameraMoveListener = OnCameraMoveListener {
         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()?.let {
@@ -492,6 +501,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                 }
 
                                 trackRouteBottomSheetLayout.id -> {
+                                    shouldInterceptBackEvent = false
                                     trackRouteBottomSheetLayout.visibility = View.GONE
                                     mapSharedViewModel.setShowTrackRouteBottomSheet(false)
                                 }
@@ -634,10 +644,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     MEASURE_LINE_GEOJSON_SOURCE
                                                 ) != null
                                             ) {
-                                                style.apply {
-                                                    removeLayer(MEASURE_LINE_LAYER)
-                                                    removeSource(MEASURE_LINE_GEOJSON_SOURCE)
-                                                }
+                                                style.cleanUpSourceAndLayer(
+                                                    MEASURE_LINE_GEOJSON_SOURCE,
+                                                    MEASURE_LINE_LAYER
+                                                )
 
                                                 symbolManager?.deleteAll()
                                                 mapSharedViewModel.setLatLng(PointType.Marker(points.first()))
@@ -654,15 +664,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                             return@collect
                                         }
 
-                                        if (style.getSourceAs<GeoJsonSource>(
-                                                MEASURE_LINE_GEOJSON_SOURCE
-                                            ) != null
-                                        ) {
-                                            style.apply {
-                                                removeLayer(MEASURE_LINE_LAYER)
-                                                removeSource(MEASURE_LINE_GEOJSON_SOURCE)
-                                            }
-                                        }
+                                        style.cleanUpSourceAndLayer(
+                                            MEASURE_LINE_GEOJSON_SOURCE,
+                                            MEASURE_LINE_LAYER
+                                        )
 
                                         val lineFeature = Feature.fromGeometry(
                                             LineString.fromLngLats(
@@ -924,8 +929,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     POI_GEOJSON_SOURCE
                                                 ) != null
                                             ) {
-                                                removeLayer(POI_SYMBOL_LAYER)
-                                                removeSource(POI_GEOJSON_SOURCE)
+                                                cleanUpSourceAndLayer(
+                                                    POI_GEOJSON_SOURCE,
+                                                    POI_SYMBOL_LAYER
+                                                )
                                                 removeSearchBoxText(SearchBoxTextType.PoiName())
                                             }
                                         }
@@ -1021,8 +1028,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
                                                                     // start pulsing animation
                                                                     updatePulsingCircle(
+                                                                        PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                        PULSING_CIRCLE_LAYER,
                                                                         style,
-                                                                        geometry() as Point
+                                                                        listOf(geometry() as Point)
                                                                     )
                                                                 }
                                                             },
@@ -1056,7 +1065,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                             textSize(12f),
                                                             // font must be included in json style
                                                             // e.g.: "glyphs": "asset://glyphs/{fontstack}/{range}.pbf"
-                                                            textFont(arrayOf("Open Sans Semibold")),
+                                                            textFont(arrayOf(POI_LABEL_FONT)),
                                                             textOffset(
                                                                 get(
                                                                     POI_SYMBOL_TEXT_OFFSET_KEY
@@ -1075,14 +1084,14 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     // iterate over drawable map entries and add it's values into
                                                     // maplibre's style
                                                     drawableCache.entries.forEach { entry ->
-                                                        addImage(entry.key, entry.value)
+                                                        if (getImage(entry.key) == null) {
+                                                            addImage(entry.key, entry.value)
+                                                        }
                                                     }
-                                                    style.getSourceAs<GeoJsonSource>(
-                                                        POI_GEOJSON_SOURCE
-                                                    )?.let {
-                                                        removeLayer(POI_SYMBOL_LAYER)
-                                                        removeSource(it)
-                                                    }
+                                                    cleanUpSourceAndLayer(
+                                                        POI_GEOJSON_SOURCE,
+                                                        POI_SYMBOL_LAYER
+                                                    )
                                                     addSource(geoJsonSource)
                                                     addLayer(symbolLayer)
                                                 }
@@ -1123,16 +1132,11 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                         // avoid any potential collisions.
                                         if (mapSharedViewModel.showPoiStateFlow.value != null) return@collect
 
-
                                         if (poiList.isNullOrEmpty()) {
-                                            style.apply {
-                                                getSourceAs<GeoJsonSource>(
-                                                    POI_GEOJSON_SOURCE
-                                                )?.let {
-                                                    removeLayer(POI_SYMBOL_LAYER)
-                                                    removeSource(it)
-                                                }
-                                            }
+                                            style.cleanUpSourceAndLayer(
+                                                POI_GEOJSON_SOURCE,
+                                                POI_SYMBOL_LAYER
+                                            )
                                             return@collect
                                         }
 
@@ -1204,8 +1208,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         if ((viewModel.selectedFeatureIdFlow.value as? FeatureType.Pois)?.id == poi.id) {
                                                             // start pulsing animation
                                                             updatePulsingCircle(
+                                                                PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                PULSING_CIRCLE_LAYER,
                                                                 style,
-                                                                geometry() as Point
+                                                                listOf(geometry() as Point)
                                                             )
                                                         }
                                                     },
@@ -1261,7 +1267,9 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                             // iterate over drawable map entries and add it's values into
                                             // maplibre's style
                                             drawableCache.entries.forEach { entry ->
-                                                addImage(entry.key, entry.value)
+                                                if (getImage(entry.key) == null) {
+                                                    addImage(entry.key, entry.value)
+                                                }
                                             }
                                         }
                                     }
@@ -1328,8 +1336,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                             ?.also {
                                                                 // start pulsing animation
                                                                 updatePulsingCircle(
+                                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                    PULSING_CIRCLE_LAYER,
                                                                     style,
-                                                                    geometry() as Point
+                                                                    listOf(geometry() as Point)
                                                                 )
                                                             },
                                                     )
@@ -1395,7 +1405,9 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                         style.apply {
                                             drawableCache.entries.forEach { entry ->
-                                                addImage(entry.key, entry.value)
+                                                if (getImage(entry.key) == null) {
+                                                    addImage(entry.key, entry.value)
+                                                }
                                             }
                                         }
                                     }
@@ -1434,8 +1446,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                             ?.also {
                                                                 // start pulsing animation
                                                                 updatePulsingCircle(
+                                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                    PULSING_CIRCLE_LAYER,
                                                                     style,
-                                                                    geometry() as Point
+                                                                    listOf(geometry() as Point)
                                                                 )
                                                             },
                                                     )
@@ -1490,15 +1504,17 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                             }
                                         }
 
-                                        style.apply {
-                                            ContextCompat.getDrawable(
-                                                requireContext(),
-                                                com.bytecause.core.resources.R.drawable.harbour_marker_icon
-                                            )?.let {
-                                                addImage(
-                                                    HARBOUR_ICON,
-                                                    it
-                                                )
+                                        if (style.getImage(HARBOUR_ICON) == null) {
+                                            style.apply {
+                                                ContextCompat.getDrawable(
+                                                    requireContext(),
+                                                    com.bytecause.core.resources.R.drawable.harbour_marker_icon
+                                                )?.let {
+                                                    addImage(
+                                                        HARBOUR_ICON,
+                                                        it
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1510,15 +1526,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.loadAllCustomPoi.collect { customPoiList ->
                                         if (customPoiList.isEmpty()) {
-                                            style.apply {
-                                                if (getSourceAs<GeoJsonSource>(
-                                                        CUSTOM_POI_GEOJSON_SOURCE
-                                                    ) != null
-                                                ) {
-                                                    removeLayer(CUSTOM_POI_SYMBOL_LAYER)
-                                                    removeSource(CUSTOM_POI_GEOJSON_SOURCE)
-                                                }
-                                            }
+                                            style.cleanUpSourceAndLayer(
+                                                CUSTOM_POI_GEOJSON_SOURCE,
+                                                CUSTOM_POI_SYMBOL_LAYER
+                                            )
                                             return@collect
                                         }
 
@@ -1564,8 +1575,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         ((viewModel.selectedFeatureIdFlow.value as? FeatureType.CustomPoi)?.id == customPoi.poiId).takeIf { it }
                                                             ?.also {
                                                                 updatePulsingCircle(
+                                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                    PULSING_CIRCLE_LAYER,
                                                                     style,
-                                                                    geometry() as Point
+                                                                    listOf(geometry() as Point)
                                                                 )
                                                             }
                                                     )
@@ -1629,7 +1642,9 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                         style.apply {
                                             drawableCache.entries.forEach { entry ->
-                                                addImage(entry.key, entry.value)
+                                                if (getImage(entry.key) == null) {
+                                                    addImage(entry.key, entry.value)
+                                                }
                                             }
                                         }
                                     }
@@ -1686,15 +1701,17 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                 }
                                             }
 
-                                        style.apply {
-                                            ContextCompat.getDrawable(
-                                                requireContext(),
-                                                com.bytecause.core.resources.R.drawable.anchor
-                                            )?.let {
-                                                addImage(
-                                                    ANCHORAGE_ICON,
-                                                    it
-                                                )
+                                        if (style.getImage(ANCHORAGE_ICON) == null) {
+                                            style.apply {
+                                                ContextCompat.getDrawable(
+                                                    requireContext(),
+                                                    com.bytecause.core.resources.R.drawable.anchor
+                                                )?.let {
+                                                    addImage(
+                                                        ANCHORAGE_ICON,
+                                                        it
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1717,9 +1734,15 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                             // Remove vessels layer and source
                                             style.apply {
-                                                removeLayer(VESSEL_SYMBOL_LAYER)
-                                                removeSource(VESSEL_GEOJSON_SOURCE)
-                                                removePulsingCircleLayer(this)
+                                                cleanUpSourceAndLayer(
+                                                    VESSEL_GEOJSON_SOURCE,
+                                                    VESSEL_SYMBOL_LAYER
+                                                )
+                                                removePulsingCircleLayer(
+                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                    PULSING_CIRCLE_LAYER,
+                                                    this
+                                                )
 
                                                 vesselsFeatureCollection = null
                                             }
@@ -1743,9 +1766,15 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                             // Remove harbours layer and source
                                             style.apply {
-                                                removeLayer(HARBOUR_SYMBOL_LAYER)
-                                                removeSource(HARBOUR_GEOJSON_SOURCE)
-                                                removePulsingCircleLayer(this)
+                                                cleanUpSourceAndLayer(
+                                                    HARBOUR_GEOJSON_SOURCE,
+                                                    HARBOUR_SYMBOL_LAYER
+                                                )
+                                                removePulsingCircleLayer(
+                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                    PULSING_CIRCLE_LAYER,
+                                                    this
+                                                )
 
                                                 harboursFeatureCollection = null
                                             }
@@ -1767,11 +1796,15 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                             // Remove anchorages layer and source
                                             style.apply {
-                                                removeLayer(ANCHORAGES_SYMBOL_LAYER)
-                                                removeSource(ANCHORAGES_GEOJSON_SOURCE)
-                                                removePulsingCircleLayer(this)
-
-                                                //harboursFeatureCollection = null
+                                                cleanUpSourceAndLayer(
+                                                    ANCHORAGES_GEOJSON_SOURCE,
+                                                    ANCHORAGES_SYMBOL_LAYER
+                                                )
+                                                removePulsingCircleLayer(
+                                                    PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                    PULSING_CIRCLE_LAYER,
+                                                    this
+                                                )
                                             }
                                         }
                                     }
@@ -1801,7 +1834,11 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         ?.setGeoJson(
                                                             vesselsFeatureCollection
                                                         )
-                                                    removePulsingCircleLayer(style)
+                                                    removePulsingCircleLayer(
+                                                        PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                        PULSING_CIRCLE_LAYER,
+                                                        style
+                                                    )
                                                 } else {
                                                     // Reset size for previously selected features
                                                     vesselsFeatureCollection?.features()
@@ -1826,8 +1863,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 )
 
                                                             updatePulsingCircle(
+                                                                PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                PULSING_CIRCLE_LAYER,
                                                                 style,
-                                                                feature.geometry() as Point
+                                                                listOf(feature.geometry() as Point)
                                                             )
 
                                                             style.getSourceAs<GeoJsonSource>(
@@ -1856,7 +1895,11 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         customPoiFeatureCollection
                                                     )
 
-                                                    removePulsingCircleLayer(style)
+                                                    removePulsingCircleLayer(
+                                                        PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                        PULSING_CIRCLE_LAYER,
+                                                        style
+                                                    )
                                                 } else {
                                                     // Reset size for previously selected features
                                                     customPoiFeatureCollection?.features()
@@ -1881,8 +1924,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 )
 
                                                             updatePulsingCircle(
+                                                                PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                PULSING_CIRCLE_LAYER,
                                                                 style,
-                                                                feature.geometry() as Point
+                                                                listOf(feature.geometry() as Point)
                                                             )
 
                                                             style.getSourceAs<GeoJsonSource>(
@@ -1911,7 +1956,11 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         harboursFeatureCollection
                                                     )
 
-                                                    removePulsingCircleLayer(style)
+                                                    removePulsingCircleLayer(
+                                                        PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                        PULSING_CIRCLE_LAYER,
+                                                        style
+                                                    )
                                                 } else {
                                                     // Reset size for previously selected features
                                                     harboursFeatureCollection?.features()
@@ -1936,8 +1985,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                                 )
 
                                                             updatePulsingCircle(
+                                                                PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                PULSING_CIRCLE_LAYER,
                                                                 style,
-                                                                feature.geometry() as Point
+                                                                listOf(feature.geometry() as Point)
                                                             )
 
                                                             style.getSourceAs<GeoJsonSource>(
@@ -1958,7 +2009,11 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         poisFeatureCollection
                                                     )
 
-                                                    removePulsingCircleLayer(style)
+                                                    removePulsingCircleLayer(
+                                                        PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                        PULSING_CIRCLE_LAYER,
+                                                        style
+                                                    )
                                                 } else {
 
                                                     poisFeatureCollection?.features()
@@ -1969,8 +2024,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                         }?.let { feature ->
 
                                                             updatePulsingCircle(
+                                                                PULSING_CIRCLE_GEOJSON_SOURCE,
+                                                                PULSING_CIRCLE_LAYER,
                                                                 style,
-                                                                feature.geometry() as Point
+                                                                listOf(feature.geometry() as Point)
                                                             )
 
                                                             style.getSourceAs<GeoJsonSource>(
@@ -2151,17 +2208,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                         currentPosition.latitude to currentPosition.longitude
                                     }
 
-                                if (style.getSourceAs<GeoJsonSource>(
-                                        ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                    ) != null
-                                ) {
-                                    style.apply {
-                                        removeLayer(ANCHOR_CHAIN_LINE_LAYER)
-                                        removeSource(
-                                            ANCHOR_CHAIN_LINE_GEOJSON_SOURCE
-                                        )
-                                    }
-                                }
+                                style.cleanUpSourceAndLayer(
+                                    ANCHOR_CHAIN_LINE_GEOJSON_SOURCE,
+                                    ANCHOR_CHAIN_LINE_LAYER
+                                )
 
                                 val lineFeatures = Feature.fromGeometry(
                                     LineString.fromLngLats(
@@ -2230,14 +2280,10 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                     viewModel.trackedPoints.collect { points ->
                                         if (points.isEmpty()) {
-                                            mapStyle.apply {
-                                                getSourceAs<GeoJsonSource>(
-                                                    ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE
-                                                )?.let {
-                                                    removeLayer(ANCHORAGE_MOVEMENT_LINE_LAYER)
-                                                    removeSource(it.id)
-                                                }
-                                            }
+                                            style.cleanUpSourceAndLayer(
+                                                ANCHORAGE_MOVEMENT_LINE_GEOJSON_SOURCE,
+                                                ANCHORAGE_MOVEMENT_LINE_LAYER
+                                            )
 
                                             return@collect
                                         }
@@ -2274,6 +2320,30 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                 )
                                             }
                                         }
+                                    }
+                                }
+                            }
+
+                            // draws all points with the same speed on tracked route
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    viewModel.speedPoints.collect { speedPoints ->
+                                        if (speedPoints.isEmpty()) {
+                                            removePulsingCircleLayer(
+                                                SPEED_POINTS_GEOJSON_SOURCE,
+                                                SPEED_POINTS_LAYER,
+                                                style
+                                            )
+                                            return@collect
+                                        }
+
+                                        updatePulsingCircle(
+                                            sourceId = SPEED_POINTS_GEOJSON_SOURCE,
+                                            layerId = SPEED_POINTS_LAYER,
+                                            style = style,
+                                            points = speedPoints,
+                                            animatedRadius = 8f
+                                        )
                                     }
                                 }
                             }
@@ -2330,79 +2400,128 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                             }
 
                             viewLifecycleOwner.lifecycleScope.launch {
-                                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                                    viewModel.routeRecord.collect { record ->
-                                        record ?: run {
-                                            if (TrackRouteService.trackServiceState.value.isRunning) return@collect
-                                            trackManager?.run {
-                                                deleteAll()
-                                                trackManager = null
-                                            }
-                                            trackSymbolManager?.run {
-                                                deleteAll()
-                                                trackSymbolManager = null
-                                            }
-                                            return@collect
-                                        }
-                                        if (trackManager != null) return@collect
+                                viewLifecycleOwner.repeatOnLifecycleWhenDistinct(
+                                    Lifecycle.State.STARTED,
+                                    viewModel.routeRecords
+                                ) { records ->
+                                    if (records.isEmpty()) {
+                                        style.cleanUpSourceAndLayer(
+                                            ROUTE_RECORD_GEOJSON_SOURCE,
+                                            ROUTE_RECORD_LAYER
+                                        )
 
-                                        val latLngs = record.points.map {
+                                        trackSymbolManager?.run {
+                                            deleteAll()
+                                            trackSymbolManager = null
+                                        }
+
+                                        return@repeatOnLifecycleWhenDistinct
+                                    }
+
+                                    val latLngs = records.map { record ->
+                                        record.points.map { point ->
                                             LatLng(
-                                                it.first,
-                                                it.second
+                                                point.first,
+                                                point.second
                                             )
                                         }
+                                    }
 
-                                        val bounds: LatLngBounds = LatLngBounds.fromLatLngs(latLngs)
+                                    trackSymbolManager?.deleteAll()
 
-                                        trackManager = LineManager(
-                                            mapView!!,
-                                            mapLibreMap,
-                                            style
-                                        )
+                                    val symbolOptions = mutableListOf<SymbolOptions>()
+                                    val features = mutableListOf<Feature>()
 
-                                        drawLine(
-                                            polylineList = latLngs,
-                                            lineManager = trackManager!!,
-                                            lineColor = Color.YELLOW
-                                        )
-
-                                        trackSymbolManager = SymbolManager(
-                                            mapView!!,
-                                            mapLibreMap,
-                                            style,
-                                            trackManager!!.layerId,
-                                            null
-                                        )
-
-                                        style.addImage(
-                                            "finish_icon",
-                                            ContextCompat.getDrawable(
-                                                requireContext(),
-                                                com.bytecause.core.resources.R.drawable.finish
-                                            )!!
-                                        )
-
-                                        val symbolOptions = listOf(
-                                            SymbolOptions()
-                                                .withLatLng(latLngs.last())
-                                                .withIconAnchor(ICON_ANCHOR_BOTTOM_LEFT)
-                                                .withIconImage("finish_icon"),
-                                            SymbolOptions()
-                                                .withLatLng(latLngs.first())
-                                                .withIconAnchor(ICON_ANCHOR_BOTTOM)
-                                                .withIconImage(MAP_MARKER),
-                                        )
-
-                                        trackSymbolManager?.create(symbolOptions)
-
-                                        mapLibreMap.animateCamera(
-                                            CameraUpdateFactory.newLatLngBounds(
-                                                bounds,
-                                                200
+                                    for (track in latLngs) {
+                                        val feature =
+                                            Feature.fromGeometry(
+                                                LineString.fromLngLats(
+                                                    track.map {
+                                                        Point.fromLngLat(
+                                                            it.longitude,
+                                                            it.latitude
+                                                        )
+                                                    })
                                             )
+
+                                        features.add(feature)
+
+                                        symbolOptions.add(
+                                            SymbolOptions()
+                                                .withLatLng(track.last())
+                                                .withIconAnchor(ICON_ANCHOR_BOTTOM_LEFT)
+                                                .withIconImage(FINISH_ICON)
+                                        )
+                                        symbolOptions.add(
+                                            SymbolOptions()
+                                                .withLatLng(track.first())
+                                                .withIconAnchor(ICON_ANCHOR_BOTTOM)
+                                                .withIconImage(MAP_MARKER)
                                         )
                                     }
+
+                                    val featureCollection =
+                                        FeatureCollection.fromFeatures(features)
+
+                                    style.getSourceAs<GeoJsonSource>(
+                                        ROUTE_RECORD_GEOJSON_SOURCE
+                                    )
+                                        ?.setGeoJson(featureCollection)
+                                        ?: run {
+                                            val lineSource = GeoJsonSource(
+                                                ROUTE_RECORD_GEOJSON_SOURCE,
+                                                featureCollection
+                                            )
+                                            val lineLayer = LineLayer(
+                                                ROUTE_RECORD_LAYER,
+                                                ROUTE_RECORD_GEOJSON_SOURCE
+                                            ).apply {
+                                                setProperties(
+                                                    lineColor(
+                                                        requireContext().getColor(com.bytecause.core.resources.R.color.yellow)
+                                                            .toHexString()
+                                                    ),
+                                                    lineWidth(2f)
+                                                )
+                                            }
+
+                                            style.apply {
+                                                addSource(lineSource)
+                                                addLayer(lineLayer)
+
+                                                if (getImage(FINISH_ICON) == null) {
+                                                    addImage(
+                                                        FINISH_ICON,
+                                                        ContextCompat.getDrawable(
+                                                            requireContext(),
+                                                            com.bytecause.core.resources.R.drawable.finish
+                                                        )!!
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                    trackSymbolManager = SymbolManager(
+                                        mapView!!,
+                                        mapLibreMap,
+                                        style,
+                                        ROUTE_RECORD_LAYER,
+                                        null
+                                    ).apply {
+                                        iconAllowOverlap = true
+                                    }
+
+                                    trackSymbolManager?.create(symbolOptions)
+
+                                    val bounds: LatLngBounds =
+                                        LatLngBounds.fromLatLngs(latLngs.flatten())
+
+                                    mapLibreMap.animateCamera(
+                                        CameraUpdateFactory.newLatLngBounds(
+                                            bounds,
+                                            200
+                                        )
+                                    )
                                 }
                             }
 
@@ -2411,7 +2530,8 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                     mapSharedViewModel.showTrackRouteBottomSheet.collect { show ->
                                         if (show) {
                                             shouldInterceptBackEvent = true
-                                            trackRouteBottomSheetLayout.visibility = View.VISIBLE
+                                            trackRouteBottomSheetLayout.visibility =
+                                                View.VISIBLE
                                             trackRouteBottomSheetBehavior.state = STATE_EXPANDED
 
                                             binding.trackRouteBottomSheet
@@ -2618,14 +2738,16 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
 
                                                         if (distanceText.isBlank() || bearingText.isBlank()) {
                                                             if (distanceText.isBlank()) {
-                                                                distanceEditText.error = getString(
-                                                                    com.bytecause.core.resources.R.string.cannot_be_empty
-                                                                )
+                                                                distanceEditText.error =
+                                                                    getString(
+                                                                        com.bytecause.core.resources.R.string.cannot_be_empty
+                                                                    )
                                                             }
                                                             if (bearingText.isBlank()) {
-                                                                bearingEditText.error = getString(
-                                                                    com.bytecause.core.resources.R.string.cannot_be_empty
-                                                                )
+                                                                bearingEditText.error =
+                                                                    getString(
+                                                                        com.bytecause.core.resources.R.string.cannot_be_empty
+                                                                    )
                                                             }
                                                             return@setOnClickListener
                                                         }
@@ -2651,8 +2773,12 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
                                                     currentPositionImageButton.setOnClickListener {
                                                         mapSharedViewModel.lastKnownPosition.replayCache.lastOrNull()
                                                             ?.run {
-                                                                latitudeEditText.setText(latitude.toString())
-                                                                longitudeEditText.setText(longitude.toString())
+                                                                latitudeEditText.setText(
+                                                                    latitude.toString()
+                                                                )
+                                                                longitudeEditText.setText(
+                                                                    longitude.toString()
+                                                                )
                                                             }
                                                     }
 
@@ -3199,7 +3325,8 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
         style.apply {
             val centerPoint =
                 getSourceAs<GeoJsonSource>(ANCHORAGE_RADIUS_CENTER_SYMBOL_GEOJSON_SOURCE)
-            val borderRadius = getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
+            val borderRadius =
+                getSourceAs<GeoJsonSource>(ANCHORAGE_BORDER_RADIUS_GEOJSON_SOURCE)
 
             centerPoint?.setGeoJson(Point.fromLngLat(latLng.longitude, latLng.latitude))
             borderRadius?.setGeoJson(Point.fromLngLat(latLng.longitude, latLng.latitude))
@@ -3222,72 +3349,108 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
     }
 
     // Adds a layer on which to render the tapped animation.
-    private fun addPulsingCircleLayer(style: Style) {
-        val circleSource = GeoJsonSource(PULSING_CIRCLE_GEOJSON_SOURCE)
+    private fun addPulsingCircleLayer(
+        sourceId: String,
+        layerId: String,
+        style: Style,
+        vararg properties: PropertyValue<*> = emptyArray()
+    ) {
+        val circleSource = GeoJsonSource(sourceId)
         style.addSource(circleSource)
 
         val circleLayer =
-            CircleLayer(PULSING_CIRCLE_LAYER, PULSING_CIRCLE_GEOJSON_SOURCE)
-                .withProperties(
-                    circleColor(ANIMATED_CIRCLE_COLOR)
-                )
+            CircleLayer(layerId, sourceId).apply {
+                if (properties.isEmpty()) withProperties(circleColor(ANIMATED_CIRCLE_COLOR)) // default prop
+                else withProperties(*properties)
+            }
 
         style.addLayerBelow(circleLayer, VESSEL_SYMBOL_LAYER)
     }
 
-    // Removes layer reserved for tapped animation and cancels animation.
-    private fun removePulsingCircleLayer(style: Style) {
-        style.apply {
-            removeLayer(PULSING_CIRCLE_LAYER)
-            removeSource(PULSING_CIRCLE_GEOJSON_SOURCE)
+    private fun removePulsingCircleLayer(sourceId: String, layerId: String, style: Style) {
+        circleLayerAnimatorMap[layerId]?.apply {
+            removeAllListeners()
+            cancel()
         }
-        circleLayerAnimator?.cancel()
-        circleLayerAnimator = null
+
+        style.apply {
+            removeLayer(layerId)
+            removeSource(sourceId)
+        }
     }
 
     // Change position of this tapped animation layer.
-    private fun updatePulsingCircle(style: Style, point: Point) {
-        val source = style.getSourceAs(PULSING_CIRCLE_GEOJSON_SOURCE) ?: run {
+    private fun updatePulsingCircle(
+        sourceId: String,
+        layerId: String,
+        style: Style,
+        points: List<Point>,
+        animatedRadius: Float = ANIMATED_CIRCLE_RADIUS,
+        vararg properties: PropertyValue<*> = emptyArray()
+    ) {
+        val source = style.getSourceAs(sourceId) ?: run {
             // if source doesn't exist add new source and layer
-            addPulsingCircleLayer(style)
+            addPulsingCircleLayer(sourceId, layerId, style, *properties)
             // return new source
-            style.getSourceAs<GeoJsonSource>(PULSING_CIRCLE_GEOJSON_SOURCE)
+            style.getSourceAs<GeoJsonSource>(sourceId)
         }
         source?.apply {
-            setGeoJson(point)
-            animatePulsingCircle(style)
-        }
-    }
+            when {
+                points.size == 1 -> {
+                    setGeoJson(points.first())
+                    animatePulsingCircle(layerId, animatedRadius, style)
+                }
 
-    // Renders tapped pulsing animation.
-    private fun animatePulsingCircle(style: Style) {
-        circleLayerAnimator?.cancel()
-        val circleLayer =
-            style.getLayerAs<CircleLayer>(PULSING_CIRCLE_LAYER)
+                points.isNotEmpty() -> {
+                    val features = mutableListOf<Feature>()
 
-        circleLayerAnimator = ValueAnimator.ofFloat(0f, ANIMATED_CIRCLE_RADIUS).apply {
-            duration = PULSING_CIRCLE_ANIMATION_DURATION
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.RESTART
-            addUpdateListener { animation ->
-                val value = animation.animatedValue as Float
+                    for (point in points) {
+                        features.add(Feature.fromGeometry(point))
+                    }
 
-                if (value < 14.5f) {
-                    // Circle is expanding show the circle
-                    circleLayer?.setProperties(
-                        circleRadius(value),
-                        circleOpacity(1f - (value / ANIMATED_CIRCLE_RADIUS)),
-                    )
-                } else {
-                    // Value is greater than 14.5f, circle is shrinking, hide circle to prevent transition glitch
-                    circleLayer?.setProperties(
-                        circleRadius(0f),
-                        circleOpacity(0f),
-                    )
+                    val featureCollection = FeatureCollection.fromFeatures(features)
+                    setGeoJson(featureCollection)
+                    animatePulsingCircle(layerId, animatedRadius, style)
                 }
             }
         }
-        circleLayerAnimator?.start()
+    }
+
+    private fun animatePulsingCircle(layerId: String, animatedRadius: Float, style: Style) {
+        circleLayerAnimatorMap[layerId]?.apply {
+            removeAllListeners()
+            cancel()
+        }
+
+        val circleLayer =
+            style.getLayerAs<CircleLayer>(layerId)
+
+        circleLayerAnimatorMap = circleLayerAnimatorMap + mapOf(
+            layerId to ValueAnimator.ofFloat(0f, animatedRadius).apply {
+                duration = PULSING_CIRCLE_ANIMATION_DURATION
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = ValueAnimator.RESTART
+                addUpdateListener { animation ->
+                    val value = animation.animatedValue as Float
+
+                    if (value < animatedRadius - 0.5f) {
+                        // Circle is expanding show the circle
+                        circleLayer?.setProperties(
+                            circleRadius(value),
+                            circleOpacity(1f - (value / animatedRadius)),
+                        )
+                    } else {
+                        // Circle is shrinking, hide circle to prevent transition glitch
+                        circleLayer?.setProperties(
+                            circleRadius(0f),
+                            circleOpacity(0f),
+                        )
+                    }
+                }
+            }
+        )
+
+        circleLayerAnimatorMap[layerId]?.start()
     }
 
     // Interferes all taps on the map and determines if a symbol is tapped.
@@ -3602,7 +3765,8 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
             binding.anchorageAlarmBottomSheet.anchorageAlarmBottomSheetMainContentId.apply {
                 radiusValueTextView.text =
                     getString(com.bytecause.core.resources.R.string.value_with_unit_placeholder).format(
-                        AnchorageAlarmService.runningAnchorageAlarm.value.radius.toInt().toString(),
+                        AnchorageAlarmService.runningAnchorageAlarm.value.radius.toInt()
+                            .toString(),
                         "M"
                     )
 
@@ -4282,11 +4446,6 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
         }
     }
 
-    private fun cancelAnimation() {
-        circleLayerAnimator?.cancel()
-        circleLayerAnimator = null
-    }
-
     override fun onBearingUpdated(bearing: Int) {
         binding.anchorageAlarmBottomSheet
             .anchorageAlarmBottomSheetRepositionLayout
@@ -4355,7 +4514,7 @@ class MapFragment : Fragment(R.layout.fragment_map), BearingSensorListener {
         bearingSensor.onPause()
         fusedLocationClient?.removeLocationUpdates(locationCallback)
 
-        cancelAnimation()
+        circleLayerAnimatorMap.values.onEach { it.pause() }
 
         saveMapState()
 

@@ -12,7 +12,9 @@ object MapFragmentConstants {
     const val SYMBOL_ICON_SIZE = 1f
     const val PIN_ICON = "pin_icon"
     const val MAP_MARKER = "map_marker"
+    const val FINISH_ICON = "finish_icon"
     const val LINE_WIDTH = 2f
+    const val POI_LABEL_FONT = "Open Sans Semibold"
 
     const val MEASURE_LINE_GEOJSON_SOURCE = "measure_line_geojson_source"
     const val MEASURE_LINE_LAYER = "measure_line_layer"
@@ -78,6 +80,12 @@ object MapFragmentConstants {
     const val CUSTOM_POI_SYMBOL_PROPERTY_SELECTED_KEY = "custom_poi_selected"
     const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_PROPERTY_KEY = "vessel_icon_drawable"
     const val CUSTOM_POI_SYMBOL_ICON_DRAWABLE_KEY_PREFIX = "custom_poi_icon_"
+
+    const val ROUTE_RECORD_GEOJSON_SOURCE = "route_record_geojson_source"
+    const val ROUTE_RECORD_LAYER = "route_record_layer"
+
+    const val SPEED_POINTS_GEOJSON_SOURCE = "speed_points_geojson_source"
+    const val SPEED_POINTS_LAYER = "speed_points_layer"
 
     const val POIS_VISIBILITY_ZOOM_LEVEL = 10.0
 }

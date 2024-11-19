@@ -1,9 +1,11 @@
 package com.bytecause.map.ui.mappers
 
+import android.util.Log
 import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.domain.model.HarboursModel
 import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.model.RadiusPoiCacheModel
+import com.bytecause.domain.model.RouteRecordModel
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.HarboursUiModel
 import com.bytecause.map.ui.model.PoiUiModel
@@ -66,22 +68,23 @@ internal fun AnchorageHistory.asAnchorageHistoryUiModel(): AnchorageHistoryUiMod
         timestamp = timestamp
     )
 
-internal fun RouteRecordEntity.asTrackedRouteItem(): TrackedRouteItem = TrackedRouteItem(
+internal fun RouteRecordModel.asTrackedRouteItem(): TrackedRouteItem = TrackedRouteItem(
     id = id,
     name = name,
     description = description,
     distance = distance,
-    duration = duration,
+    duration = dateCreated - startTime,
     dateCreated = dateCreated
 )
 
-internal fun RouteRecordEntity.asRouteRecordUiModel(): RouteRecordUiModel = RouteRecordUiModel(
+internal fun RouteRecordModel.asRouteRecordUiModel(): RouteRecordUiModel = RouteRecordUiModel(
     id = id,
     name = name,
     description = description,
     points = points,
     distance = distance,
+    duration = dateCreated - startTime,
     startTime = startTime,
-    duration = duration,
-    dateCreated = dateCreated
+    dateCreated = dateCreated,
+    speed = speed
 )

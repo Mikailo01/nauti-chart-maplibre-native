@@ -1,6 +1,7 @@
 package com.bytecause.nautichart.coordinateconversions
 
-import com.bytecause.map.util.MapUtil
+import com.bytecause.util.map.MapUtil.latitudeToDMS
+import com.bytecause.util.map.MapUtil.longitudeToDMS
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,8 +32,8 @@ class LatLonToDMSConversionTest(
     @Test
     fun testCoordinateDMSConversion() {
         val resultDMS: String = when (conversionType) {
-            "latitudeToDMS" -> com.bytecause.map.util.MapUtil.latitudeToDMS(inputDecimal)
-            "longitudeToDMS" -> com.bytecause.map.util.MapUtil.longitudeToDMS(inputDecimal)
+            "latitudeToDMS" -> latitudeToDMS(inputDecimal)
+            "longitudeToDMS" -> longitudeToDMS(inputDecimal)
             else -> throw IllegalArgumentException("Invalid conversion type: $conversionType")
         }
 

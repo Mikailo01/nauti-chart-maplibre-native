@@ -1,5 +1,6 @@
 package com.bytecause.map.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.AnchoragesEntity
@@ -10,20 +11,25 @@ import com.bytecause.data.repository.abstractions.CustomPoiRepository
 import com.bytecause.domain.abstractions.HarboursDatabaseRepository
 import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
+import com.bytecause.domain.abstractions.TrackRouteRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.model.CustomTileProviderType
+import com.bytecause.domain.model.FilterOptions
 import com.bytecause.domain.model.HarboursModel
+import com.bytecause.domain.model.MeasureUnit
+import com.bytecause.domain.model.MetersUnitConvertConstants
+import com.bytecause.domain.model.SortOptions
 import com.bytecause.domain.model.VesselInfoModel
 import com.bytecause.domain.model.VesselModel
 import com.bytecause.domain.tilesources.DefaultTileSources
 import com.bytecause.domain.tilesources.TileSources
 import com.bytecause.domain.usecase.CustomTileSourcesUseCase
 import com.bytecause.domain.usecase.GetHarboursUseCase
+import com.bytecause.domain.usecase.GetRouteRecordsUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
-import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
 import com.bytecause.map.services.AnchorageAlarmService
 import com.bytecause.map.ui.effect.TrackRouteBottomSheetEffect
 import com.bytecause.map.ui.event.TrackRouteBottomSheetEvent
@@ -37,12 +43,11 @@ import com.bytecause.map.ui.mappers.asTrackedRouteItem
 import com.bytecause.map.ui.model.AnchorageHistoryUiModel
 import com.bytecause.map.ui.model.AnchorageRepositionType
 import com.bytecause.map.ui.model.HarboursUiModel
-import com.bytecause.map.ui.model.MeasureUnit
-import com.bytecause.map.ui.model.MetersUnitConvertConstants
 import com.bytecause.map.ui.model.PoiUiModel
 import com.bytecause.map.ui.model.PoiUiModelWithTags
 import com.bytecause.map.ui.model.RouteRecordUiModel
 import com.bytecause.map.ui.model.SearchBoxTextType
+import com.bytecause.map.ui.model.TrackRouteContentType
 import com.bytecause.map.ui.model.TrackedRouteItem
 import com.bytecause.map.ui.state.TrackRouteChooseFilterState
 import com.bytecause.map.ui.state.TrackRouteChooseSorterState
@@ -52,6 +57,7 @@ import com.bytecause.util.extensions.toFirstDecimal
 import com.bytecause.util.mappers.asLatLng
 import com.bytecause.util.mappers.asLatLngModel
 import com.bytecause.util.mappers.mapList
+import com.bytecause.util.mappers.mapNullInputList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -63,11 +69,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -96,7 +104,8 @@ constructor(
     anchorageAlarmPreferencesRepository: AnchorageAlarmPreferencesRepository,
     anchorageMovementTrackRepository: AnchorageMovementTrackRepository,
     private val anchorageHistoryRepository: dagger.Lazy<AnchorageHistoryRepository>,
-    private val trackRouteRepository: dagger.Lazy<TrackRouteRepository>
+    private val trackRouteRepository: dagger.Lazy<TrackRouteRepository>,
+    private val getRouteRecordsUseCase: dagger.Lazy<GetRouteRecordsUseCase>
 ) : ViewModel() {
 
     private val _locationButtonStateFlow = MutableStateFlow<Int?>(null)
@@ -105,6 +114,11 @@ constructor(
     private val _trackRouteMainContentState = MutableStateFlow(TrackRouteMainContentState())
     val trackRouteMainContentState: StateFlow<TrackRouteMainContentState> =
         _trackRouteMainContentState
+
+    private val _trackRouteBottomSheetContentType =
+        MutableStateFlow<TrackRouteContentType>(TrackRouteContentType.Main)
+    val trackRouteBottomSheetContentType: StateFlow<TrackRouteContentType> =
+        _trackRouteBottomSheetContentType
 
     private val _trackRouteChooseSorterState = MutableStateFlow(TrackRouteChooseSorterState())
     val trackRouteChooseSorterState: StateFlow<TrackRouteChooseSorterState> =
@@ -131,8 +145,18 @@ constructor(
     val searchBoxTextPlaceholder: StateFlow<List<SearchBoxTextType>> =
         _searchBoxTextPlaceholder.asStateFlow()
 
-    private val _routeRecord = MutableStateFlow<RouteRecordUiModel?>(null)
-    val routeRecord: StateFlow<RouteRecordUiModel?> = _routeRecord
+    private val _routeRecords = MutableStateFlow<List<RouteRecordUiModel>>(emptyList())
+    val routeRecords: StateFlow<List<RouteRecordUiModel>> = _routeRecords
+        .onEach {
+            // if route records list is empty and switch is checked, uncheck it
+            if (it.isEmpty()) _trackRouteMainContentState.update { state ->
+                state.copy(
+                    isRenderAllTracksSwitchChecked = false
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
 
     val isAisActivated: StateFlow<Boolean> = userPreferencesRepository.getIsAisActivated()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
@@ -144,10 +168,21 @@ constructor(
         anchorageAlarmPreferencesRepository.getAnchorageLocationsVisible()
             .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
-    val getTrackedRecords: StateFlow<List<TrackedRouteItem>> =
-        trackRouteRepository.get().getRecords()
-            .map { originalList -> mapList(originalList) { it.asTrackedRouteItem() } }
-            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val getTrackedRecords: StateFlow<List<TrackedRouteItem>> = combine(
+        trackRouteRepository.get().getRecords(), // used for observing changes only
+        trackRouteChooseFilterState,
+        trackRouteChooseSorterState
+    ) { _, filter, sorter ->
+
+        getRouteRecordsUseCase.get()(
+            sorter = sorter.selectedOption,
+            filter1 = filter.selectedDateFilterOption,
+            filter2 = filter.selectedDistanceFilterOption,
+            filter3 = filter.selectedDurationFilterOption
+        ).firstOrNull()
+    }
+        .map { list -> mapNullInputList(list) { it.asTrackedRouteItem() } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val trackedPoints: Flow<List<Point>> =
         combine(
@@ -158,6 +193,9 @@ constructor(
                 mapList(tracks) { Point.fromLngLat(it.longitude, it.latitude) }
             } else emptyList()
         }
+
+    private val _speedPoints = MutableStateFlow<List<Point>>(emptyList())
+    val speedPoints: StateFlow<List<Point>> = _speedPoints
 
     private val _isAnchorageRepositionEnabled = MutableStateFlow(false)
     val isAnchorageRepositionEnabled: StateFlow<Boolean> = _isAnchorageRepositionEnabled
@@ -259,29 +297,21 @@ constructor(
         }
     }
 
-    fun trackRouteBottomSheetEventHandler(event: TrackRouteBottomSheetEvent) {
+    fun trackRouteBottomSheetMainContentEventHandler(event: TrackRouteBottomSheetEvent) {
         when (event) {
             TrackRouteBottomSheetEvent.OnCloseBottomSheet -> sendEffect(TrackRouteBottomSheetEffect.CloseBottomSheet)
-            TrackRouteBottomSheetEvent.OnFilterClick -> _trackRouteMainContentState.update {
-                it.copy(
-                    chooseFilter = true
-                )
-            }
+            TrackRouteBottomSheetEvent.OnFilterClick -> _trackRouteBottomSheetContentType.update { TrackRouteContentType.Filter }
 
             is TrackRouteBottomSheetEvent.OnRemoveItem -> onRemoveItem(event.id)
-            TrackRouteBottomSheetEvent.OnSortClick -> _trackRouteMainContentState.update {
-                it.copy(
-                    chooseSorter = true
-                )
-            }
+            TrackRouteBottomSheetEvent.OnSortClick -> _trackRouteBottomSheetContentType.update { TrackRouteContentType.Sort }
 
             TrackRouteBottomSheetEvent.OnStartForegroundService -> sendEffect(
                 TrackRouteBottomSheetEffect.StartForegroundService
             )
 
-            TrackRouteBottomSheetEvent.OnStopForegroundService -> sendEffect(
-                TrackRouteBottomSheetEffect.StopForegroundService
-            )
+            TrackRouteBottomSheetEvent.OnShowConfirmStopRouteTrackDialog -> {
+                sendEffect(TrackRouteBottomSheetEffect.ShowConfirmStopRouteTrackDialog)
+            }
 
             TrackRouteBottomSheetEvent.OnToggleEditMode -> _trackRouteMainContentState.update {
                 it.copy(
@@ -289,22 +319,43 @@ constructor(
                 )
             }
 
+            TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> {
+                _trackRouteMainContentState.update {
+                    it.copy(
+                        isRenderAllTracksSwitchChecked = !it.isRenderAllTracksSwitchChecked
+                    )
+                }
 
-            TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch -> _trackRouteMainContentState.update {
-                it.copy(
-                    isRenderAllTracksSwitchChecked = !it.isRenderAllTracksSwitchChecked
-                )
+                if (trackRouteMainContentState.value.isRenderAllTracksSwitchChecked) {
+                    viewModelScope.launch {
+                        val routes = trackRouteRepository.get()
+                            .getRecords().map { originalList ->
+                                mapList(originalList) { it.asRouteRecordUiModel() }
+                            }.first()
+
+                        _routeRecords.value = routes
+                    }
+                } else {
+                    _routeRecords.value = emptyList()
+                }
             }
 
             is TrackRouteBottomSheetEvent.OnItemClick -> {
                 viewModelScope.launch {
                     trackRouteRepository.get().getRecordById(event.id).firstOrNull()?.let {
-                        _routeRecord.value = it.asRouteRecordUiModel()
+                        Log.d("idk", it.speed.values.joinToString())
+                        _routeRecords.value = listOf(it.asRouteRecordUiModel())
                     }
+                }.invokeOnCompletion {
+                    _trackRouteBottomSheetContentType.update { TrackRouteContentType.Detail }
                 }
             }
 
-            TrackRouteBottomSheetEvent.OnNavigateBack -> clearRouteRecord()
+            TrackRouteBottomSheetEvent.OnAnimationFinished -> _trackRouteMainContentState.update {
+                it.copy(
+                    hasAnimationFinished = true
+                )
+            }
         }
     }
 
@@ -320,8 +371,42 @@ constructor(
         }
     }
 
-    private fun clearRouteRecord() {
-        _routeRecord.value = null
+    fun findSpeedPoints(speed: Double) {
+        val filteredSpeed = routeRecords.value.first().speed.filter { it.value == speed.toFloat() }
+
+        val speedPoints = filteredSpeed.keys.map { Point.fromLngLat(it.second, it.first) }
+        _speedPoints.value = speedPoints
+    }
+
+    fun clearRouteRecord() {
+        _routeRecords.value = emptyList()
+        _speedPoints.value = emptyList()
+        resetContentTypeToDefault()
+    }
+
+    fun resetContentTypeToDefault() {
+        _trackRouteBottomSheetContentType.update { TrackRouteContentType.Main }
+    }
+
+    fun updateSortOption(option: SortOptions) {
+        _trackRouteChooseSorterState.update { it.copy(selectedOption = option) }
+        resetContentTypeToDefault()
+    }
+
+    fun updateFilterOption(option: FilterOptions) {
+        when (option) {
+            is FilterOptions.Date -> {
+                _trackRouteChooseFilterState.update { it.copy(selectedDateFilterOption = option.value) }
+            }
+
+            is FilterOptions.Distance -> {
+                _trackRouteChooseFilterState.update { it.copy(selectedDistanceFilterOption = option.value) }
+            }
+
+            is FilterOptions.Duration -> {
+                _trackRouteChooseFilterState.update { it.copy(selectedDurationFilterOption = option.value) }
+            }
+        }
     }
 
     fun setIsRouteServiceRunning(boolean: Boolean) {
@@ -594,7 +679,6 @@ constructor(
             )
         }
 
-    // User Preferences DataStore operations.
     fun getFirstRunFlag() = userPreferencesRepository.getFirstRunFlag()
 
     fun saveUserLocation(position: LatLng) {
@@ -611,4 +695,58 @@ constructor(
             emit(getCachedTileSourceType(it).firstOrNull())
         }
     }
+
+    /*  private fun isWithinDateRange(timestamp: Long, filterOption: DateFilterOptions): Boolean {
+          val date = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+          val today = LocalDate.now(ZoneId.systemDefault())
+
+          return when (filterOption) {
+              DateFilterOptions.All -> true
+              DateFilterOptions.Today -> date == today
+              DateFilterOptions.Week -> date.isAfter(today.minusWeeks(1)) || date.isEqual(
+                  today.minusWeeks(
+                      1
+                  )
+              )
+
+              DateFilterOptions.Month -> date.isAfter(today.minusMonths(1)) || date.isEqual(
+                  today.minusMonths(
+                      1
+                  )
+              )
+
+              DateFilterOptions.Year -> date.isAfter(today.minusYears(1)) || date.isEqual(
+                  today.minusYears(
+                      1
+                  )
+              )
+          }
+      }
+
+      private fun isWithinDistanceRange(
+          distance: Double,
+          filterOptions: DistanceFilterOptions
+      ): Boolean {
+          return when (filterOptions) {
+              DistanceFilterOptions.All -> true
+              DistanceFilterOptions.ExtraLong -> distance >= filterOptions.value
+              else -> distance <= filterOptions.value
+          }
+      }
+
+      private fun isWithinDurationFilter(
+          duration: Long,
+          filterOptions: DurationFilterOptions
+      ): Boolean {
+          return when (filterOptions) {
+              DurationFilterOptions.All -> true
+              DurationFilterOptions.Day -> duration <= Duration.ofDays(filterOptions.value)
+                  .toMillis()
+
+              DurationFilterOptions.MoreThanDay -> duration >= Duration.ofDays(filterOptions.value)
+                  .toMillis()
+
+              else -> duration <= Duration.ofHours(filterOptions.value).toMillis()
+          }
+      }*/
 }

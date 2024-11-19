@@ -3,6 +3,7 @@ package com.bytecause.util.context
 import android.Manifest
 import android.R.attr
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
@@ -11,6 +12,7 @@ import android.text.format.Formatter
 import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.getDrawableOrThrow
 import androidx.core.graphics.drawable.toBitmap
@@ -74,3 +76,9 @@ fun Context.isLocationPermissionGranted(): Boolean = ContextCompat.checkSelfPerm
     this,
     Manifest.permission.ACCESS_FINE_LOCATION
 ) == PackageManager.PERMISSION_GRANTED
+
+fun Context.getActivity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.getActivity()
+    else -> null
+}

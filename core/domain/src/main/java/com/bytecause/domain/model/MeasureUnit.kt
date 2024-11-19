@@ -1,4 +1,4 @@
-package com.bytecause.map.ui.model
+package com.bytecause.domain.model
 
 sealed class MeasureUnit {
     data class Meters(val value: Int) : MeasureUnit()

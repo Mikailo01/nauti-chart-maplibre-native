@@ -1,7 +1,10 @@
 package com.bytecause.map.ui.bottomsheet.composable
 
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,7 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -35,13 +40,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,11 +59,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bytecause.core.resources.R
 import com.bytecause.data.services.Actions
+import com.bytecause.domain.model.DateFilterOptions
+import com.bytecause.domain.model.DistanceFilterOptions
+import com.bytecause.domain.model.DurationFilterOptions
+import com.bytecause.domain.model.FilterOptions
+import com.bytecause.domain.model.SortOptions
 import com.bytecause.map.services.TrackRouteService
+import com.bytecause.map.ui.dialog.ConfirmStopRouteTrackComposeDialog
 import com.bytecause.map.ui.effect.TrackRouteBottomSheetEffect
 import com.bytecause.map.ui.event.TrackRouteBottomSheetEvent
 import com.bytecause.map.ui.model.RouteRecordUiModel
-import com.bytecause.map.ui.model.SortOptions
+import com.bytecause.map.ui.model.TrackRouteContentType
 import com.bytecause.map.ui.model.TrackedRouteItem
 import com.bytecause.map.ui.state.TrackRouteChooseFilterState
 import com.bytecause.map.ui.state.TrackRouteChooseSorterState
@@ -69,18 +80,33 @@ import com.bytecause.util.common.formatDuration
 import com.bytecause.util.common.getDateTimeFromTimestamp
 import com.bytecause.util.compose.swipeToDismiss
 import com.bytecause.util.compose.then
+import com.bytecause.util.context.getActivity
+import ir.ehsannarmani.compose_charts.LineChart
+import ir.ehsannarmani.compose_charts.extensions.format
+import ir.ehsannarmani.compose_charts.models.AnimationMode
+import ir.ehsannarmani.compose_charts.models.DrawStyle
+import ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
+import ir.ehsannarmani.compose_charts.models.Line
+import ir.ehsannarmani.compose_charts.models.PopupProperties
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
     val mainContentState by viewModel.trackRouteMainContentState.collectAsStateWithLifecycle()
     val chooseFilterState by viewModel.trackRouteChooseFilterState.collectAsStateWithLifecycle()
     val chooseSorterState by viewModel.trackRouteChooseSorterState.collectAsStateWithLifecycle()
+    val contentType by viewModel.trackRouteBottomSheetContentType.collectAsStateWithLifecycle()
 
     val records by viewModel.getTrackedRecords.collectAsStateWithLifecycle()
-    val routeRecord by viewModel.routeRecord.collectAsStateWithLifecycle()
+    val routeRecord by viewModel.routeRecords.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+
+    val offsetMapX = remember {
+        mutableStateMapOf<Long, Animatable<Float, AnimationVector1D>>()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.trackRouteEffect.collect { effect ->
@@ -92,49 +118,83 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
                     }
                 }
 
-                TrackRouteBottomSheetEffect.StopForegroundService -> {
-                    Intent(context, TrackRouteService::class.java).apply {
-                        action = Actions.STOP.toString()
-                        context.startService(this)
+                TrackRouteBottomSheetEffect.CloseBottomSheet -> onCloseBottomSheet()
+
+                TrackRouteBottomSheetEffect.ShowConfirmStopRouteTrackDialog -> {
+                    (context.getActivity() as? AppCompatActivity)?.supportFragmentManager?.let {
+                        ConfirmStopRouteTrackComposeDialog().run {
+                            show(it, tag)
+                        }
                     }
                 }
-
-                TrackRouteBottomSheetEffect.CloseBottomSheet -> onCloseBottomSheet()
             }
+        }
+    }
+
+    LaunchedEffect(mainContentState.isEditMode) {
+        if (mainContentState.isEditMode && mainContentState.hasAnimationFinished.not()) {
+            for (item in mainContentState.lazyListState.layoutInfo.visibleItemsInfo) {
+                launch {
+                    delay(100L * item.index)
+
+                    val itemKey = item.key as Long
+
+                    offsetMapX[itemKey] = Animatable(0f)
+
+                    offsetMapX[itemKey]?.animateTo(
+                        targetValue = 100f,
+                        animationSpec = tween(durationMillis = 300)
+                    )
+
+                    delay(100L)
+
+                    offsetMapX[itemKey]?.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = 300)
+                    )
+                }
+            }
+
+            viewModel.trackRouteBottomSheetMainContentEventHandler(
+                TrackRouteBottomSheetEvent.OnAnimationFinished
+            )
         }
     }
 
     AppTheme {
         Surface(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            if (routeRecord == null) {
-                when {
-                    mainContentState.chooseFilter -> {
-                        TrackRouteChooseFilterContent(
-                            state = chooseFilterState,
-                            onRadioButtonClick = {},
-                            onNavigateBack = {})
-                    }
-
-                    mainContentState.chooseSorter -> {
-                        TrackRouteChooseSorterContent(
-                            state = chooseSorterState,
-                            onRadioButtonClick = {},
-                            onNavigateBack = { })
-                    }
-
-                    else -> {
-                        TrackRouteMainContent(
-                            state = mainContentState,
-                            records = records,
-                            onEvent = viewModel::trackRouteBottomSheetEventHandler
-                        )
-                    }
+            when (contentType) {
+                is TrackRouteContentType.Detail -> {
+                    TrackRouteDetailContent(
+                        item = routeRecord.first(),
+                        onShowSpeedPoints = { speedValue -> viewModel.findSpeedPoints(speedValue) },
+                        onCloseBottomSheet = onCloseBottomSheet,
+                        onNavigateBack = { viewModel.clearRouteRecord() }
+                    )
                 }
-            } else {
-                TrackRouteDetailContent(
-                    item = routeRecord!!,
-                    onEvent = viewModel::trackRouteBottomSheetEventHandler
-                )
+
+                TrackRouteContentType.Filter -> {
+                    TrackRouteChooseFilterContent(
+                        state = chooseFilterState,
+                        onRadioButtonClick = viewModel::updateFilterOption,
+                        onNavigateBack = { viewModel.resetContentTypeToDefault() })
+                }
+
+                TrackRouteContentType.Main -> {
+                    TrackRouteMainContent(
+                        state = mainContentState,
+                        records = records,
+                        offsetX = { offsetMapX.mapValues { it.value.value } },
+                        onEvent = viewModel::trackRouteBottomSheetMainContentEventHandler
+                    )
+                }
+
+                TrackRouteContentType.Sort -> {
+                    TrackRouteChooseSorterContent(
+                        state = chooseSorterState,
+                        onRadioButtonClick = viewModel::updateSortOption,
+                        onNavigateBack = { viewModel.resetContentTypeToDefault() })
+                }
             }
         }
     }
@@ -144,19 +204,21 @@ fun TrackRoute(viewModel: MapViewModel, onCloseBottomSheet: () -> Unit) {
 private fun TrackRouteMainContent(
     state: TrackRouteMainContentState,
     records: List<TrackedRouteItem>,
+    offsetX: () -> Map<Long, Float>,
     onEvent: (TrackRouteBottomSheetEvent) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+
             Text(
-                text = "Tracks",
+                text = stringResource(R.string.tracks),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
             Spacer(modifier = Modifier.weight(1f))
+
             IconButton(
                 onClick = { onEvent(TrackRouteBottomSheetEvent.OnToggleEditMode) },
                 colors = if (state.isEditMode) {
@@ -169,10 +231,11 @@ private fun TrackRouteMainContent(
             ) {
                 Image(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.edit_mode),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
                 )
             }
+
             IconButton(
                 onClick = { onEvent(TrackRouteBottomSheetEvent.OnFilterClick) },
                 colors = IconButtonDefaults.iconButtonColors()
@@ -180,10 +243,11 @@ private fun TrackRouteMainContent(
             ) {
                 Image(
                     painter = painterResource(R.drawable.filter_off_icon),
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.filter),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
                 )
             }
+
             IconButton(
                 onClick = { onEvent(TrackRouteBottomSheetEvent.OnSortClick) },
                 colors = IconButtonDefaults.iconButtonColors()
@@ -191,26 +255,30 @@ private fun TrackRouteMainContent(
             ) {
                 Image(
                     painter = painterResource(R.drawable.sort),
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.sort),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
                 )
             }
         }
+
         HorizontalDivider(thickness = 2.dp, modifier = Modifier.padding(start = 20.dp))
 
         LazyColumn(
+            state = state.lazyListState,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            itemsIndexed(records, key = { _, item -> item.id }) { index, item ->
+            items(records, key = { item -> item.id }) { item ->
+
                 RecordItem(
                     item = item,
                     isEditModeEnabled = state.isEditMode,
-                    index = index,
+                    offsetX = { offsetX()[item.id] ?: 0f },
                     onClick = { onEvent(TrackRouteBottomSheetEvent.OnItemClick(it)) },
                     onRemove = { onEvent(TrackRouteBottomSheetEvent.OnRemoveItem(it)) }
                 )
+
                 HorizontalDivider()
             }
         }
@@ -224,16 +292,19 @@ private fun TrackRouteMainContent(
                 onCheckedChange = { onEvent(TrackRouteBottomSheetEvent.OnToggleRenderAllTracksSwitch) },
                 colors = SwitchDefaults.colors(),
             )
+
             Text(
-                text = "Render all tracks",
+                text = stringResource(R.string.show_all_tracks),
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelMedium
             )
+
             Spacer(modifier = Modifier.weight(1f))
+
             IconButton(
                 onClick = {
                     onEvent(
-                        if (state.serviceRunning) TrackRouteBottomSheetEvent.OnStopForegroundService
+                        if (state.serviceRunning) TrackRouteBottomSheetEvent.OnShowConfirmStopRouteTrackDialog
                         else TrackRouteBottomSheetEvent.OnStartForegroundService
                     )
                 },
@@ -268,13 +339,20 @@ private fun TrackRouteMainContent(
 @Composable
 private fun TrackRouteDetailContent(
     item: RouteRecordUiModel,
-    onEvent: (TrackRouteBottomSheetEvent) -> Unit
+    onShowSpeedPoints: (Double) -> Unit,
+    onCloseBottomSheet: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
-    Column {
+    val context = LocalContext.current
+    val color = MaterialTheme.colorScheme.primary
+
+    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            IconButton(onClick = { onEvent(TrackRouteBottomSheetEvent.OnNavigateBack) }) {
+
+            IconButton(onClick = onNavigateBack) {
                 Icon(imageVector = Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
             }
+
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleMedium,
@@ -299,16 +377,67 @@ private fun TrackRouteDetailContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.padding(10.dp)
             ) {
-                Text(text = "Name: ${item.name}")
-                Text(text = "Description: ${item.description}")
-                Text(text = "Duration: ${formatDuration(item.duration)}")
-                Text(text = "Start time: ${getDateTimeFromTimestamp(item.startTime)}")
-                Text(text = "End time: ${getDateTimeFromTimestamp(item.dateCreated)}")
+                Text(text = stringResource(R.string.name) + ": ${item.name}")
+                if (item.description.isNotBlank()) {
+                    Text(text = stringResource(R.string.description) + ": ${item.description}")
+                }
+                Text(text = stringResource(R.string.duration) + ": ${formatDuration(item.duration)}")
+                Text(text = stringResource(R.string.start_time) + ": ${getDateTimeFromTimestamp(item.startTime)}")
+                Text(text = stringResource(R.string.end_time) + ": ${getDateTimeFromTimestamp(item.dateCreated)}")
             }
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        if (item.speed.values.isNotEmpty()) {
+            LineChart(
+                modifier = Modifier
+                    .height(200.dp)
+                    .fillMaxWidth(),
+                data = remember {
+                    listOf(
+                        Line(
+                            label = context.getString(R.string.speed),
+                            values = item.speed.values.map { it.toDouble() },
+                            color = SolidColor(color),
+                            firstGradientFillColor = color.copy(alpha = 0.5f),
+                            secondGradientFillColor = Color.Transparent,
+                            strokeAnimationSpec = tween(1000, easing = EaseInOutCubic),
+                            gradientAnimationDelay = 0,
+                            drawStyle = DrawStyle.Stroke(width = 2.dp),
+                        )
+                    )
+                },
+                animationMode = AnimationMode.Together(delayBuilder = {
+                    it * 500L
+                }),
+                labelHelperProperties = LabelHelperProperties(
+                    textStyle = MaterialTheme.typography.titleSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                ),
+                indicatorProperties = HorizontalIndicatorProperties(
+                    textStyle = MaterialTheme.typography.labelMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                ),
+                popupProperties = PopupProperties(
+                    textStyle = MaterialTheme.typography.labelSmall.copy(MaterialTheme.colorScheme.onSecondaryContainer),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentBuilder = { speed ->
+                        onShowSpeedPoints(speed)
+                        speed.format(1)
+                    }
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
         Row {
             Spacer(modifier = Modifier.weight(1f))
-            OutlinedButton(onClick = { onEvent(TrackRouteBottomSheetEvent.OnCloseBottomSheet) }) {
+
+            OutlinedButton(onClick = onCloseBottomSheet) {
                 Text(text = stringResource(R.string.close))
             }
         }
@@ -318,11 +447,12 @@ private fun TrackRouteDetailContent(
 @Composable
 private fun TrackRouteChooseFilterContent(
     state: TrackRouteChooseFilterState,
-    onRadioButtonClick: (SortOptions) -> Unit,
+    onRadioButtonClick: (FilterOptions) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
+
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Default.ArrowBack,
@@ -330,20 +460,113 @@ private fun TrackRouteChooseFilterContent(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
+
             Text(
                 text = stringResource(R.string.filter_by),
                 style = MaterialTheme.typography.titleMedium
             )
         }
+
         HorizontalDivider()
 
-        state.options.forEach { option ->
-            RadioButtonWithText(
-                selected = state.selectedOption == option,
-                option = option,
-                onClick = { selectedOption -> onRadioButtonClick(selectedOption) }
-            )
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+
+            FilterTypeHeader(stringResource(R.string.date_created))
+
+            DateFilterOptions.entries.forEachIndexed { index, option ->
+                RadioButtonWithText(
+                    index = index,
+                    selected = state.selectedDateFilterOption == option,
+                    option = when (option) {
+                        DateFilterOptions.All -> stringResource(R.string.all)
+                        DateFilterOptions.Today -> stringResource(R.string.today)
+                        DateFilterOptions.Week -> stringResource(R.string.last_7_days)
+                        DateFilterOptions.Month -> stringResource(R.string.last_30_days)
+                        DateFilterOptions.Year -> stringResource(R.string.this_year)
+                    },
+                    onClick = { selectedOption ->
+                        onRadioButtonClick(
+                            FilterOptions.Date(
+                                DateFilterOptions.entries[selectedOption]
+                            )
+                        )
+                    }
+                )
+            }
+
+            FilterTypeHeader(stringResource(R.string.distance))
+
+            DistanceFilterOptions.entries.forEachIndexed { index, option ->
+                RadioButtonWithText(
+                    index = index,
+                    selected = state.selectedDistanceFilterOption == option,
+                    option = when (option) {
+                        DistanceFilterOptions.All -> stringResource(R.string.all)
+                        DistanceFilterOptions.Short -> stringResource(R.string.less_than_value_nm).format(
+                            option.value
+                        )
+
+                        DistanceFilterOptions.Mid -> stringResource(R.string.less_than_value_nm).format(
+                            option.value
+                        )
+
+                        DistanceFilterOptions.Long -> stringResource(R.string.less_than_value_nm).format(
+                            option.value
+                        )
+
+                        DistanceFilterOptions.ExtraLong -> stringResource(R.string.more_than_value_nm).format(
+                            option.value
+                        )
+                    },
+                    onClick = { selectedOption ->
+                        onRadioButtonClick(
+                            FilterOptions.Distance(
+                                DistanceFilterOptions.entries[selectedOption]
+                            )
+                        )
+                    }
+                )
+            }
+
+            FilterTypeHeader(stringResource(R.string.duration))
+
+            DurationFilterOptions.entries.forEachIndexed { index, option ->
+                RadioButtonWithText(
+                    index = index,
+                    selected = state.selectedDurationFilterOption == option,
+                    option = when (option) {
+                        DurationFilterOptions.All -> stringResource(R.string.all)
+                        DurationFilterOptions.OneHour -> stringResource(R.string.less_than_1_hour)
+                        DurationFilterOptions.SixHours -> stringResource(R.string.less_than_6_hours)
+                        DurationFilterOptions.TwelveHours -> stringResource(R.string.less_than_12_hours)
+                        DurationFilterOptions.Day -> stringResource(R.string.less_than_day)
+                        DurationFilterOptions.MoreThanDay -> stringResource(R.string.more_than_day)
+                    },
+                    onClick = { selectedOption ->
+                        onRadioButtonClick(
+                            FilterOptions.Duration(
+                                DurationFilterOptions.entries[selectedOption]
+                            )
+                        )
+                    }
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun FilterTypeHeader(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(10.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -355,6 +578,7 @@ private fun TrackRouteChooseSorterContent(
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
+
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Default.ArrowBack,
@@ -362,18 +586,26 @@ private fun TrackRouteChooseSorterContent(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
+
             Text(
                 text = stringResource(R.string.sort_by),
                 style = MaterialTheme.typography.titleMedium
             )
         }
+
         HorizontalDivider()
 
-        state.options.forEach { option ->
+        SortOptions.entries.forEachIndexed { index, option ->
             RadioButtonWithText(
+                index = index,
                 selected = state.selectedOption == option,
-                option = option,
-                onClick = { selectedOption -> onRadioButtonClick(selectedOption) }
+                option = when (option) {
+                    SortOptions.Name -> stringResource(R.string.name)
+                    SortOptions.Recent -> stringResource(R.string.recent)
+                    SortOptions.Distance -> stringResource(R.string.distance)
+                    SortOptions.Duration -> stringResource(R.string.duration)
+                },
+                onClick = { selectedOption -> onRadioButtonClick(SortOptions.entries[selectedOption]) }
             )
         }
     }
@@ -381,26 +613,28 @@ private fun TrackRouteChooseSorterContent(
 
 @Composable
 private fun RadioButtonWithText(
+    index: Int,
     selected: Boolean,
-    option: SortOptions,
-    onClick: (SortOptions) -> Unit
+    option: String,
+    onClick: (Int) -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick(index)
+            }
     ) {
-        RadioButton(selected = selected, onClick = { onClick(option) })
+
+        RadioButton(selected = selected, onClick = { onClick(index) })
+
         Text(
-            text = when (option) {
-                SortOptions.Name -> stringResource(R.string.name)
-                SortOptions.Date -> stringResource(R.string.date)
-                SortOptions.Distance -> stringResource(R.string.distance)
-                SortOptions.Duration -> stringResource(R.string.duration)
-            },
+            text = option,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
+
     }
 }
 
@@ -408,44 +642,15 @@ private fun RadioButtonWithText(
 private fun RecordItem(
     item: TrackedRouteItem,
     isEditModeEnabled: Boolean,
-    index: Int,
+    offsetX: () -> Float,
     modifier: Modifier = Modifier,
     onClick: (Long) -> Unit,
     onRemove: (Long) -> Unit
 ) {
-    // Animatable for horizontal offset
-    val offsetX = remember {
-        Animatable(0f)
-    }
-
-    var hasFinished by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(isEditModeEnabled) {
-        if (isEditModeEnabled && hasFinished.not()) {
-            delay(100L * index) // animate incrementally
-
-            offsetX.animateTo(
-                targetValue = 100f,
-                animationSpec = tween(durationMillis = 300)
-            )
-
-            delay(100L)
-
-            offsetX.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 300)
-            )
-
-            hasFinished = true
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .offset { IntOffset(offsetX.value.toInt(), 0) }
+            .offset { IntOffset(offsetX().toInt(), 0) }
             .then(
                 condition = isEditModeEnabled,
                 onTrue = {
@@ -455,6 +660,7 @@ private fun RecordItem(
             )
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleMedium,
@@ -473,7 +679,7 @@ private fun RecordItem(
 
         Column {
             Text(text = stringResource(R.string.distance) + ": ${item.distance} NM")
-            Text(text = "Duration" + ": ${formatDuration(item.duration)}")
+            Text(text = stringResource(R.string.duration) + ": ${formatDuration(item.duration)}")
         }
     }
 }
@@ -510,6 +716,7 @@ private fun TrackRouteContentPreview() {
                 duration = 0L
             ),
         ),
+        offsetX = { emptyMap() },
         onEvent = {}
     )
 }
@@ -520,7 +727,8 @@ private fun TrackRouteChooseFilterContentPreview() {
     TrackRouteChooseFilterContent(
         state = TrackRouteChooseFilterState(),
         onRadioButtonClick = {},
-        onNavigateBack = {})
+        onNavigateBack = {}
+    )
 }
 
 @Composable
@@ -529,11 +737,17 @@ private fun TrackRouteChooseSorterContentPreview() {
     TrackRouteChooseSorterContent(
         state = TrackRouteChooseSorterState(),
         onRadioButtonClick = {},
-        onNavigateBack = {})
+        onNavigateBack = {}
+    )
 }
 
 @Composable
 @Preview(showBackground = true)
 private fun RadioButtonWithTextPreview() {
-    RadioButtonWithText(selected = false, option = SortOptions.Date, onClick = {})
+    RadioButtonWithText(
+        index = 0,
+        selected = false,
+        option = SortOptions.Recent.name,
+        onClick = {}
+    )
 }

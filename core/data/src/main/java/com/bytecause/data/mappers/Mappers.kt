@@ -11,6 +11,7 @@ import com.bytecause.data.local.room.tables.PoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiCacheEntity
 import com.bytecause.data.local.room.tables.RadiusPoiMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.RegionEntity
+import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.data.local.room.tables.VesselInfoEntity
 import com.bytecause.data.local.room.tables.VesselsMetadataDatasetEntity
 import com.bytecause.data.local.room.tables.relations.CountryRegionsRelation
@@ -26,6 +27,7 @@ import com.bytecause.domain.model.PoiCacheModel
 import com.bytecause.domain.model.RadiusPoiCacheModel
 import com.bytecause.domain.model.RadiusPoiMetadataDatasetModel
 import com.bytecause.domain.model.RegionModel
+import com.bytecause.domain.model.RouteRecordModel
 import com.bytecause.domain.model.VesselInfoModel
 import com.bytecause.domain.model.VesselModel
 import com.bytecause.domain.model.VesselsMetadataDatasetModel
@@ -212,4 +214,28 @@ fun AnchorageMovementTrackEntity.asAnchorageMovementTrackModel(): AnchorageMovem
     AnchorageMovementTrackModel(
         latitude = latitude,
         longitude = longitude
+    )
+
+fun RouteRecordEntity.asRouteRecordModel(): RouteRecordModel =
+    RouteRecordModel(
+        id = id,
+        name = name,
+        description = description,
+        distance = distance,
+        startTime = startTime,
+        dateCreated = dateCreated,
+        points = points,
+        speed = speed
+    )
+
+fun RouteRecordModel.asRouteRecordEntity(): RouteRecordEntity =
+    RouteRecordEntity(
+        id = id,
+        name = name,
+        description = description,
+        distance = distance,
+        startTime = startTime,
+        dateCreated = dateCreated,
+        points = points,
+        speed = speed
     )

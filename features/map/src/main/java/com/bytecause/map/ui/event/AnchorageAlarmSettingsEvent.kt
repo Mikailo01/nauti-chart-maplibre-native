@@ -19,4 +19,5 @@ sealed interface AnchorageAlarmSettingsEvent {
     data object OnDeleteAnchorageHistory : AnchorageAlarmSettingsEvent
     data object OnToggleEditMode : AnchorageAlarmSettingsEvent
     data object OnNavigateBack : AnchorageAlarmSettingsEvent
+    data object OnAnimationFinished : AnchorageAlarmSettingsEvent
 }

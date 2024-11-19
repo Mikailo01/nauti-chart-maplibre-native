@@ -1,10 +1,13 @@
 package com.bytecause.map.ui.state
 
 import androidx.compose.runtime.Stable
-import com.bytecause.map.ui.model.SortOptions
+import com.bytecause.domain.model.DateFilterOptions
+import com.bytecause.domain.model.DistanceFilterOptions
+import com.bytecause.domain.model.DurationFilterOptions
 
 @Stable
 data class TrackRouteChooseFilterState(
-    val options: List<SortOptions> = SortOptions.entries,
-    val selectedOption: SortOptions = SortOptions.Date
+    val selectedDateFilterOption: DateFilterOptions = DateFilterOptions.All,
+    val selectedDistanceFilterOption: DistanceFilterOptions = DistanceFilterOptions.All,
+    val selectedDurationFilterOption: DurationFilterOptions = DurationFilterOptions.All
 )

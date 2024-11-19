@@ -11,6 +11,7 @@ import com.bytecause.domain.abstractions.PoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiCacheRepository
 import com.bytecause.domain.abstractions.RadiusPoiMetadataDatasetRepository
 import com.bytecause.domain.abstractions.RegionRepository
+import com.bytecause.domain.abstractions.TrackRouteRepository
 import com.bytecause.domain.abstractions.UserPreferencesRepository
 import com.bytecause.domain.abstractions.VesselsDatabaseRepository
 import com.bytecause.domain.abstractions.VesselsMetadataDatasetRepository
@@ -19,6 +20,7 @@ import com.bytecause.domain.usecase.GetHarboursUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.usecase.GetPoiResultByRegionUseCase
 import com.bytecause.domain.usecase.GetRegionsUseCase
+import com.bytecause.domain.usecase.GetRouteRecordsUseCase
 import com.bytecause.domain.usecase.GetVesselsUseCase
 import com.bytecause.domain.usecase.UpdateExpiredDatasetsUseCase
 import com.bytecause.domain.usecase.UpdateHarboursUseCase
@@ -144,4 +146,9 @@ object UseCaseModule {
             onlineRasterTileSourceRepository = customOnlineRasterTileSourceRepository,
             offlineVectorTileSourceRepository = customOfflineVectorTileSourceRepository
         )
+
+    @Provides
+    fun providesGetRouteRecordsUseCase(
+        trackRouteRepository: TrackRouteRepository
+    ): GetRouteRecordsUseCase = GetRouteRecordsUseCase(trackRouteRepository)
 }

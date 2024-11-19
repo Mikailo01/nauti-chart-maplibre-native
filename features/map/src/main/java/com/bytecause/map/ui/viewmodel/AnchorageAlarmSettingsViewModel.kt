@@ -126,6 +126,11 @@ class AnchorageAlarmSettingsViewModel @Inject constructor(
             AnchorageAlarmSettingsEvent.OnToggleEditMode -> onToggleEditMode()
             AnchorageAlarmSettingsEvent.OnDeleteAnchorageHistory -> onClearAnchorageHistory()
             AnchorageAlarmSettingsEvent.OnAnchorageHistoryDeletionIntervalClick -> onAnchorageHistoryDeletionIntervalClick()
+            AnchorageAlarmSettingsEvent.OnAnimationFinished -> _uiState.update {
+                it.copy(
+                    hasAnimationFinished = true
+                )
+            }
         }
     }
 

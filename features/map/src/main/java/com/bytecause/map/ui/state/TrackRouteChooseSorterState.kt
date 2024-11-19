@@ -1,10 +1,9 @@
 package com.bytecause.map.ui.state
 
 import androidx.compose.runtime.Stable
-import com.bytecause.map.ui.model.SortOptions
+import com.bytecause.domain.model.SortOptions
 
 @Stable
 data class TrackRouteChooseSorterState(
-    val options: List<SortOptions> = SortOptions.entries,
-    val selectedOption: SortOptions = SortOptions.Date
+    val selectedOption: SortOptions = SortOptions.Recent
 )

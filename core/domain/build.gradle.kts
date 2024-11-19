@@ -11,4 +11,10 @@ java {
 dependencies {
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.core)
+
+    // Testing
+    testImplementation(libs.junit)
+
+    // Assertions
+    testImplementation(libs.google.truth)
 }

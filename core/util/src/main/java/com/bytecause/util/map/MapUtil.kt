@@ -1,5 +1,8 @@
 package com.bytecause.util.map
 
+import com.bytecause.domain.model.MetersUnitConvertConstants
+import com.bytecause.util.extensions.toFirstDecimal
+import org.maplibre.android.geometry.LatLng
 import java.math.RoundingMode
 
 object MapUtil {
@@ -24,5 +27,24 @@ object MapUtil {
     fun longitudeToDMS(longitude: Double): String {
         val direction = if (longitude >= 0) "E" else "W"
         return decimalToDMS(longitude) + direction
+    }
+
+    fun calculateAndSumDistance(points: List<Pair<Double, Double>>): Double {
+        var distance = 0.0
+        for (x in points.indices) {
+            if (x == points.indices.last) {
+                return distance.toFirstDecimal { this / MetersUnitConvertConstants.NauticalMiles.value }
+            }
+
+            val currentPair = points[x]
+            val nextPair = points[x + 1]
+
+            distance += LatLng(latitude = currentPair.first, longitude = currentPair.second)
+                .distanceTo(
+                    LatLng(latitude = nextPair.first, longitude = nextPair.second)
+                )
+        }
+
+        return distance.toFirstDecimal { this / MetersUnitConvertConstants.NauticalMiles.value }
     }
 }

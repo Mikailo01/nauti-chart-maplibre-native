@@ -5,6 +5,7 @@ import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -55,7 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -156,6 +158,10 @@ private fun AnchorageSettingsScreen(
         }
     )
 
+    val offsetMapX = remember {
+        mutableStateMapOf<String, Animatable<Float, AnimationVector1D>>()
+    }
+
     BackHandler(
         enabled = bottomSheetScaffoldState.bottomSheetState.isVisible
     ) {
@@ -195,9 +201,38 @@ private fun AnchorageSettingsScreen(
         } else bottomSheetScaffoldState.bottomSheetState.expand()
     }
 
+    LaunchedEffect(state.isEditMode) {
+        if (state.isEditMode && state.hasAnimationFinished.not()) {
+            for (item in state.lazyListState.layoutInfo.visibleItemsInfo) {
+                launch {
+                    delay(100L * item.index)
+
+                    val itemKey = item.key as String
+
+                    offsetMapX[itemKey] = Animatable(0f)
+
+                    offsetMapX[itemKey]?.animateTo(
+                        targetValue = 100f,
+                        animationSpec = tween(durationMillis = 300)
+                    )
+
+                    delay(100L)
+
+                    offsetMapX[itemKey]?.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = 300)
+                    )
+                }
+            }
+
+            viewModel.uiEventHandler(AnchorageAlarmSettingsEvent.OnAnimationFinished)
+        }
+    }
+
     AnchorageSettingsScreenContent(
         state = state,
         bottomSheetScaffoldState = bottomSheetScaffoldState,
+        offsetX = { offsetMapX.mapValues { it.value.value } },
         onEvent = viewModel::uiEventHandler
     )
 }
@@ -207,6 +242,7 @@ private fun AnchorageSettingsScreen(
 private fun AnchorageSettingsScreenContent(
     state: AnchorageAlarmSettingsState,
     bottomSheetScaffoldState: BottomSheetScaffoldState,
+    offsetX: () -> Map<String, Float>,
     onEvent: (AnchorageAlarmSettingsEvent) -> Unit
 ) {
     Scaffold(
@@ -512,16 +548,15 @@ private fun AnchorageSettingsScreenContent(
                             }
                         } else {
                             LazyColumn(
+                                state = state.lazyListState,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 0.dp, max = 200.dp)
                             ) {
-                                itemsIndexed(
-                                    state.anchorageHistory,
-                                    key = { _, item -> item.id }) { index, item ->
+                                items(state.anchorageHistory, key = { item -> item.id }) { item ->
                                     AnchorageHistoryItem(
                                         item = item,
-                                        index = index,
+                                        offsetX = { offsetX()[item.id] ?: 0f },
                                         isEditEnabled = state.isEditMode,
                                         onItemClick = {
                                             onEvent(
@@ -736,47 +771,18 @@ private fun NumberPicker(
 private fun AnchorageHistoryItem(
     item: AnchorageHistoryUiModel,
     isEditEnabled: Boolean,
-    index: Int,
+    offsetX: () -> Float,
     modifier: Modifier = Modifier,
     onItemClick: (String) -> Unit,
     onRemove: (String) -> Unit
 ) {
-    // Animatable for horizontal offset
-    val offsetX = remember {
-        Animatable(0f)
-    }
-
-    var hasFinished by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(isEditEnabled) {
-        if (isEditEnabled && hasFinished.not()) {
-            delay(100L * index) // animate incrementally
-
-            offsetX.animateTo(
-                targetValue = 100f,
-                animationSpec = tween(durationMillis = 300)
-            )
-
-            delay(100L)
-
-            offsetX.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 300)
-            )
-
-            hasFinished = true
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clickable {
                 onItemClick(item.id)
             }
-            .offset { IntOffset(offsetX.value.toInt(), 0) }
+            .offset { IntOffset(offsetX().toInt(), 0) }
             .then(isEditEnabled, onTrue = { swipeToDismiss { onRemove(item.id) } })
     ) {
         Text(text = getDateTimeFromTimestamp(item.timestamp))
@@ -807,6 +813,7 @@ private fun AnchorageHistoryItem(
 private fun AnchorageSettingsScreenContentPreview() {
     AnchorageSettingsScreenContent(
         state = AnchorageAlarmSettingsState(),
+        offsetX = { emptyMap() },
         bottomSheetScaffoldState = rememberBottomSheetScaffoldState(),
         onEvent = {}
     )

@@ -11,13 +11,12 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.bytecause.core.resources.R
-import com.bytecause.data.local.room.tables.RouteRecordEntity
 import com.bytecause.data.services.Actions
-import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
-import com.bytecause.map.ui.model.MetersUnitConvertConstants
+import com.bytecause.domain.abstractions.TrackRouteRepository
+import com.bytecause.domain.model.RouteRecordModel
 import com.bytecause.map.ui.model.TrackRouteServiceState
 import com.bytecause.map.util.MapUtil
-import com.bytecause.util.extensions.toFirstDecimal
+import com.bytecause.util.map.MapUtil.calculateAndSumDistance
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -40,6 +39,10 @@ class TrackRouteService : LifecycleService() {
         private const val CHANNEL_ID = "track_route_channel"
         private const val LOCATION_UPDATE_INTERVAL = 10_000L
         private const val DISTANCE_DELTA = 0.0
+
+        const val NAME = "name_string_extra"
+        const val DESCRIPTION = "description_string_extra"
+        const val DISCARD = "discard_boolean_extra"
 
         private val _trackServiceState = MutableStateFlow(TrackRouteServiceState())
         val trackServiceState: StateFlow<TrackRouteServiceState> = _trackServiceState
@@ -74,6 +77,9 @@ class TrackRouteService : LifecycleService() {
                             it.copy(
                                 capturedPoints = it.capturedPoints + listOf(
                                     lastLocation.latitude to lastLocation.longitude
+                                ),
+                                speed = it.speed + mapOf(
+                                    (lastLocation.latitude to lastLocation.longitude) to lastLocation.speed
                                 )
                             )
                         }
@@ -83,6 +89,9 @@ class TrackRouteService : LifecycleService() {
                         it.copy(
                             capturedPoints = it.capturedPoints + listOf(
                                 lastLocation.latitude to lastLocation.longitude
+                            ),
+                            speed = it.speed + mapOf(
+                                (lastLocation.latitude to lastLocation.longitude) to lastLocation.speed
                             )
                         )
                     }
@@ -167,35 +176,16 @@ class TrackRouteService : LifecycleService() {
         stopSelf()
     }
 
-    private fun calculateAndSumDistance(points: List<Pair<Double, Double>>): Double {
-        var distance = 0.0
-        for (x in points.indices) {
-            if (x == points.indices.last) {
-                return distance.toFirstDecimal { this / MetersUnitConvertConstants.NauticalMiles.value }
-            }
-
-            val currentPair = points[x]
-            val nextPair = points[x + 1]
-
-            distance = LatLng(latitude = currentPair.first, longitude = currentPair.second)
-                .distanceTo(
-                    LatLng(latitude = nextPair.first, longitude = nextPair.second)
-                )
-        }
-
-        return distance.toFirstDecimal { this / MetersUnitConvertConstants.NauticalMiles.value }
-    }
-
-    private suspend fun saveRecord() {
+    private suspend fun saveRecord(name: String, description: String) {
         trackRouteRepository.get().saveRecord(
-            RouteRecordEntity(
-                name = "Test",
-                description = "Test description",
+            RouteRecordModel(
+                name = name,
+                description = description,
                 distance = calculateAndSumDistance(trackServiceState.value.capturedPoints),
                 startTime = startTime,
-                duration = System.currentTimeMillis() - startTime,
                 dateCreated = System.currentTimeMillis(),
-                points = trackServiceState.value.capturedPoints
+                points = trackServiceState.value.capturedPoints,
+                speed = trackServiceState.value.speed
             )
         )
     }
@@ -211,7 +201,17 @@ class TrackRouteService : LifecycleService() {
 
             Actions.STOP.toString() -> {
                 lifecycleScope.launch {
-                    saveRecord()
+                    val (name, description) = intent.getStringExtra(NAME) to intent.getStringExtra(
+                        DESCRIPTION
+                    )
+                    val shouldDiscard = intent.getBooleanExtra(DISCARD, false)
+
+                    if (!shouldDiscard && name != null) {
+                        saveRecord(
+                            name = name,
+                            description = description ?: ""
+                        )
+                    }
                 }.invokeOnCompletion {
                     stopService()
                 }

@@ -12,8 +12,8 @@
         android:background="@drawable/bottom_sheet_rounded_corners"
         android:clickable="true"
         android:focusable="true"
-        android:orientation="vertical"
         android:padding="15dp"
+        android:orientation="vertical"
         android:visibility="gone"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
         tools:visibility="visible">

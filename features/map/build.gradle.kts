@@ -63,4 +63,6 @@ dependencies {
     // Jsoup
     implementation(libs.jsoup)
 
+    // Charts
+    implementation(libs.composeCharts)
 }

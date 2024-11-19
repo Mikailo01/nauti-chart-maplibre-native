@@ -42,6 +42,9 @@
     <string name="additional_overlay">Additional overlay</string>
     <string name="geolocation">Geolocation</string>
 
+    <string name="speed">Speed</string>
+    <string name="show_all_tracks">Show all tracks</string>
+    <string name="tracks">Tracks</string>
     <string name="latitude">Latitude °</string>
     <string name="latitude_edit_text_hint">e.g.: 30.46050</string>
     <string name="longitude">Longitude °</string>
@@ -97,13 +100,30 @@
     <string name="one_week">1 week</string>
     <string name="two_weeks">2 weeks</string>
     <string name="one_month">1 month</string>
+    <string name="last_7_days">Last 7 days</string>
+    <string name="all">All</string>
+    <string name="last_30_days">Last 30 days</string>
+    <string name="this_year">This year</string>
+    <string name="less_than_value_nm">Less than %1s NM</string>
+    <string name="more_than_value_nm">More than 100 NM</string>
+    <string name="less_than_1_hour">Less than 1 hour</string>
+    <string name="less_than_6_hours">Less than 6 hours</string>
+    <string name="less_than_12_hours">Less than 12 hours</string>
+    <string name="less_than_day">Less than Day</string>
+    <string name="more_than_day">More than Day</string>
+    <string name="today">Today</string>
     <string name="search_history">Search history</string>
     <string name="description">Description</string>
     <string name="contacts">Contacts</string>
     <string name="name">Name</string>
-    <string name="date">Date</string>
+    <string name="recent">Recent</string>
     <string name="duration">Duration</string>
+    <string name="start_time">Start time</string>
+    <string name="end_time">End time</string>
+    <string name="date_created">Date created</string>
     <string name="filter_by">Filter by</string>
+    <string name="filter">Filter</string>
+    <string name="sort">Sort</string>
     <string name="sort_by">Sort by</string>
     <string name="search_here">Search here</string>
     <string name="favorite">Favorite</string>
@@ -194,6 +214,10 @@
     <string name="tile_size">Tile size</string>
     <string name="confirm">Confirm</string>
     <string name="done">Done</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="discard">Discard</string>
+    <string name="save_route">Save route</string>
+    <string name="stop_tracking">Stop tracking</string>
     <string name="custom_tile_source">Custom tile source</string>
     <string name="choose_mbtile">Choose MbTile</string>
     <string name="online">Online</string>
@@ -250,6 +274,7 @@
     <string name="nothing">Nothing</string>
     <string name="add_marker">Add Marker</string>
     <string name="add_description">Add description</string>
+    <string name="edit_mode">Edit mode</string>
     <string name="remove_description">Remove description</string>
     <string name="delete_pois">Delete points-of-interest</string>
 

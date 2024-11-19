@@ -1,8 +1,8 @@
-package com.bytecause.map.ui.model
+package com.bytecause.domain.model
 
 enum class SortOptions {
     Name,
-    Date,
+    Recent,
     Distance,
     Duration
 }

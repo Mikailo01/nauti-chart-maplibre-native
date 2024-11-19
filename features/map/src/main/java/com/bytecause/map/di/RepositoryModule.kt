@@ -16,7 +16,7 @@ import com.bytecause.map.data.repository.VesselsDatabaseRepositoryImpl
 import com.bytecause.map.data.repository.VesselsRemoteRepositoryImpl
 import com.bytecause.map.data.repository.abstraction.AnchorageHistoryRepository
 import com.bytecause.map.data.repository.abstraction.AnchoragesRepository
-import com.bytecause.map.data.repository.abstraction.TrackRouteRepository
+import com.bytecause.domain.abstractions.TrackRouteRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
