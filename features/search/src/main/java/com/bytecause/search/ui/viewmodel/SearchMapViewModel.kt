@@ -1,10 +1,8 @@
 package com.bytecause.search.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.repository.abstractions.SearchHistoryRepository
-import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.domain.model.ApiResult
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.SearchedPlaceModel
@@ -12,6 +10,7 @@ import com.bytecause.presentation.model.SearchedPlaceUiModel
 import com.bytecause.presentation.model.UiState
 import com.bytecause.search.data.local.appsearch.RECENTLY_SEARCHED_PLACE_NAMESPACE
 import com.bytecause.search.data.local.appsearch.SearchPlaceCacheEntity
+import com.bytecause.search.data.local.appsearch.abstraction.SearchManager
 import com.bytecause.search.data.repository.abstractions.SearchMapRepository
 import com.bytecause.search.mapper.asRecentlySearchedPlace
 import com.bytecause.search.mapper.asRecentlySearchedPlaceUiModel
@@ -103,8 +102,6 @@ constructor(
                     }
 
                     is ApiResult.Failure -> {
-
-                        Log.d("idk", result.exception?.message.toString())
                         _uiSearchState.emit(UiState(error = result.exception))
                     }
 

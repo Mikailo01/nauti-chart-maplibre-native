@@ -1,6 +1,5 @@
 package com.bytecause.map.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.data.local.room.tables.AnchoragesEntity
@@ -343,7 +342,6 @@ constructor(
             is TrackRouteBottomSheetEvent.OnItemClick -> {
                 viewModelScope.launch {
                     trackRouteRepository.get().getRecordById(event.id).firstOrNull()?.let {
-                        Log.d("idk", it.speed.values.joinToString())
                         _routeRecords.value = listOf(it.asRouteRecordUiModel())
                     }
                 }.invokeOnCompletion {

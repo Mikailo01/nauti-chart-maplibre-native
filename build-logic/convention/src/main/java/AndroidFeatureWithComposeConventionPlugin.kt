@@ -24,6 +24,7 @@ class AndroidFeatureWithComposeConventionPlugin : Plugin<Project> {
                 // add dependencies for all features
                 implementation(libs.findLibrary("androidx-navigation-fragmentKtx").get())
                 implementation(libs.findLibrary("androidx-compose-lifecycle").get())
+                implementation(libs.findLibrary("timber").get())
 
                 // desugaring libs
                 coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())

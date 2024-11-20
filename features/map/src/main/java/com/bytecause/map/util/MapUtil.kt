@@ -1,6 +1,5 @@
 package com.bytecause.map.util
 
-import android.util.Log
 import androidx.annotation.ColorInt
 import androidx.core.text.isDigitsOnly
 import com.bytecause.domain.model.DMS
@@ -279,7 +278,6 @@ object MapUtil {
 
             return LatLng(latitude.toDouble(), longitude.toDouble())
         } else if (coordinates.contains(Regex("[ ,]+"))) {
-            Log.d(com.bytecause.util.extensions.TAG(this), "else")
             val pattern = """^[-?0-9. ]+$""".toRegex()
             val filteredInput =
                 coordinates.replace(',', ' ').filter { char ->

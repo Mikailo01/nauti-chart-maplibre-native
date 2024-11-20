@@ -1,10 +1,10 @@
 package com.bytecause.pois.data.remote
 
-import android.util.Log
 import com.bytecause.pois.util.CountryNameMapping
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import timber.log.Timber
 import java.io.IOException
 
 class RegionDataExtractRemoteDataSource {
@@ -29,7 +29,7 @@ class RegionDataExtractRemoteDataSource {
                 }
                 map
             } catch (e: IOException) {
-                Log.e("RegionDataExtractRemoteDataSource", "error")
+                Timber.tag("RegionDataExtractRemoteDataSource").e("error: %1s", e.message)
                 map
             }
         }

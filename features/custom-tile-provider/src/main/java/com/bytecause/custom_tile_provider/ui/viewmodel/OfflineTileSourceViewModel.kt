@@ -20,7 +20,6 @@ import com.bytecause.util.file.FileUtil.offlineTilesDir
 import com.bytecause.util.map.MbTileType
 import com.bytecause.util.map.MbTilesLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,7 +124,7 @@ class OfflineTileSourceViewModel @Inject constructor(
     }
 
     private fun performTileSourceIO() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val destinationFolder = getApplication<Application>().offlineTilesDir()
 
             if (checkFilenameExists(

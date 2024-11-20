@@ -1,15 +1,14 @@
 package com.bytecause.search.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bytecause.domain.model.ApiResult
-import com.bytecause.search.ui.model.ElementTagModel
 import com.bytecause.domain.model.Loading
 import com.bytecause.domain.model.PoiQueryModel
 import com.bytecause.domain.usecase.GetPoiResultByRadiusUseCase
 import com.bytecause.domain.util.PoiTagsUtil.formatTagString
 import com.bytecause.presentation.model.UiState
+import com.bytecause.search.ui.model.ElementTagModel
 import com.bytecause.search.ui.model.PoiUiModel
 import com.bytecause.search.util.PoiTagsUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -204,7 +203,6 @@ constructor(
         allTags: Map<String, List<ElementTagModel>>,
         filteredTags: Map<String, List<String>>,
     ): Map<String, List<ElementTagModel>> {
-        Log.d(com.bytecause.util.extensions.TAG(this), filteredTags.values.joinToString())
 
         val updatedAllTags =
             allTags.mapValues { (tagType, allTagList) ->

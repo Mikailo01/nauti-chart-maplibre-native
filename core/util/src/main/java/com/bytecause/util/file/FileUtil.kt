@@ -4,17 +4,17 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
 
 object FileUtil {
 
-    fun Context.offlineTilesDir(): String = this.obbDir.absolutePath
+    fun Context.offlineTilesDir(): String = obbDir.absolutePath
 
     suspend fun copyFileToFolder(
         contentResolver: ContentResolver,
@@ -27,29 +27,30 @@ object FileUtil {
             val destinationFile =
                 File(destinationFolder, fileName)
 
-            // Open InputStream from the file URI
-            val inputStream: InputStream? = contentResolver.openInputStream(fileUri)
-
-            // Create OutputStream to the destination file
-            val outputStream: OutputStream = FileOutputStream(destinationFile)
-
             // Buffer for reading and writing
             val buffer = ByteArray(1024)
             var length: Int
 
             // Copy the data
-            inputStream?.use { stream ->
-                outputStream.use { outputStream ->
-                    while (stream.read(buffer).also { length = it } > 0) {
+            contentResolver.openInputStream(fileUri)?.use { inputStream ->
+                FileOutputStream(destinationFile).use { outputStream ->
+                    while (inputStream.read(buffer).also { length = it } > 0) {
                         outputStream.write(buffer, 0, length)
+                        ensureActive()
                     }
                 }
             }
 
-            Log.d("FileCopy", "File copied successfully to ${destinationFile.absolutePath}")
+            Timber.tag("FileCopy").d("File copied successfully to %s", destinationFile.absolutePath)
             destinationFile
         } catch (e: Exception) {
-            Log.e("FileCopy", "Error copying file: ${e.message}", e)
+            Timber.tag("FileCopy").e(e, "Error copying file: %s", e.message)
+
+            // Cleanup operation
+            withContext(NonCancellable) {
+                deleteFileFromFolder(destinationFolder, fileName)
+            }
+
             null
         }
     }
@@ -62,7 +63,6 @@ object FileUtil {
             val targetFolder = File(destinationFolder, fileName)
             targetFolder.delete()
         } catch (e: Exception) {
-            e.printStackTrace()
             false
         }
     }

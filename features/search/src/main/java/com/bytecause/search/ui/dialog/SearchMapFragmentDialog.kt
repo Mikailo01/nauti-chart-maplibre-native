@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -230,8 +229,6 @@ class SearchMapFragmentDialog : DialogFragment() {
                     hideErrorLayout()
                     genericRecyclerViewAdapter.updateContent(emptyList())
 
-                    Log.d("idk", text.toString())
-
                     if (text.isNullOrEmpty() && genericRecyclerViewAdapter.itemCount == 0) {
                         // Clear right drawable when empty.
                         setDrawables(
@@ -242,7 +239,6 @@ class SearchMapFragmentDialog : DialogFragment() {
                         return
                     }
                     // Show right drawable if not empty.
-                    Log.d("idk", "set")
                     setDrawables(
                         right = clearTextDrawable,
                     )

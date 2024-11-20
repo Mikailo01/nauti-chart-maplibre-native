@@ -17,6 +17,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             dependencies {
                 // add dependencies for all features
                 implementation(libs.findLibrary("androidx-navigation-fragmentKtx").get())
+                implementation(libs.findLibrary("timber").get())
 
                 // Testing
                 androidTestImplementation(libs.findLibrary("junit").get())
