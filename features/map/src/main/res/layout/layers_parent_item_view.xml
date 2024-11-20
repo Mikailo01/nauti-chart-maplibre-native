@@ -27,7 +27,7 @@
     <com.google.android.material.divider.MaterialDivider
         android:id="@+id/recycler_view_divider"
         android:layout_width="match_parent"
-        android:layout_height="2dp"
+        android:layout_height="1dp"
         app:dividerColor="@color/md_theme_onSurface"/>
 
 </LinearLayout>

@@ -30,6 +30,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.io.File
 
 
 enum class LayerTypes {
@@ -167,7 +168,45 @@ class MapBottomSheetFragment :
                 viewModel.contentMapStateFlow.collect { newContent ->
                     newContent ?: return@collect
 
+                    binding.divider.visibility = if (newContent.isEmpty()) {
+                        View.GONE
+                    } else View.VISIBLE
+
                     recyclerViewAdapter.submitList(newContent)
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.customTileSources.collect { tileSourceMap ->
+                    tileSourceMap.values.forEach {
+                        it.forEachIndexed { index, provider ->
+                            when (val tileSource = provider.type) {
+                                is CustomTileProviderType.Raster.Offline -> {
+                                    if (!tilesExist(tileSource.name)) {
+                                        viewModel.deleteOfflineTileSourceProvider(index, tileSource)
+                                            ?.let {
+                                                resetCurrentTileSourceIfNeeded(tileSource)
+                                            }
+                                    }
+                                }
+
+                                is CustomTileProviderType.Vector.Offline -> {
+                                    if (!tilesExist(tileSource.name)) {
+                                        viewModel.deleteOfflineTileSourceProvider(index, tileSource)
+                                            ?.let {
+                                                resetCurrentTileSourceIfNeeded(tileSource)
+                                            }
+                                    }
+                                }
+
+                                else -> {
+                                    // Do nothing
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -180,7 +219,7 @@ class MapBottomSheetFragment :
         when (view.tag) {
             LayerTypes.CUSTOM_ONLINE_RASTER_TILE_SOURCE -> {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    viewModel.customTileSources.firstOrNull()?.let { customTileSourceMap ->
+                    viewModel.customTileSources.value.let { customTileSourceMap ->
                         customTileSourceMap[TileSourceTypes.RasterOnline]?.let { customRasterTileProviders ->
                             customRasterTileProviders[position].let { customRasterTileProvider ->
                                 (customRasterTileProvider.type as CustomTileProviderType.Raster.Online).run {
@@ -207,7 +246,7 @@ class MapBottomSheetFragment :
 
             LayerTypes.CUSTOM_OFFLINE_RASTER_TILE_SOURCE -> {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    viewModel.customTileSources.firstOrNull()?.let { customTileSourceMap ->
+                    viewModel.customTileSources.value.let { customTileSourceMap ->
                         customTileSourceMap[TileSourceTypes.RasterOffline]?.let { customRasterTileProviders ->
                             customRasterTileProviders[position].let { customRasterTileProvider ->
                                 (customRasterTileProvider.type as CustomTileProviderType.Raster.Offline).run {
@@ -235,7 +274,7 @@ class MapBottomSheetFragment :
 
             LayerTypes.CUSTOM_OFFLINE_VECTOR_TILE_SOURCE -> {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    viewModel.customTileSources.firstOrNull()?.let { customTileSourceMap ->
+                    viewModel.customTileSources.value.let { customTileSourceMap ->
                         customTileSourceMap[TileSourceTypes.VectorOffline]?.let { customVectorTileProviders ->
                             customVectorTileProviders[position].let {
                                 customVectorTileProviders[position].let { customVectorTileProvider ->
@@ -346,5 +385,38 @@ class MapBottomSheetFragment :
     override fun onDestroyView() {
         super.onDestroyView()
         recyclerView.removeOnLayoutChangeListener(onLayoutChangeListener)
+    }
+
+    private fun tilesExist(tilesName: String): Boolean {
+        val file = File(requireContext().offlineTilesDir())
+        return file.listFiles()?.any { it.name == tilesName } == true
+    }
+
+    private fun resetCurrentTileSourceIfNeeded(deletedTileSource: CustomTileProviderType) {
+        mapSharedViewModel.tileSource.replayCache.lastOrNull()
+            ?.let { tilesource ->
+
+                when (deletedTileSource) {
+                    is CustomTileProviderType.Raster.Offline -> {
+                        if ((tilesource as? TileSources.Raster.Custom.Offline)?.name == deletedTileSource.name) {
+                            // set default tile provider if the currently selected has been deleted
+                            mapSharedViewModel.setTile(
+                                DefaultTileSources.MAPNIK
+                            )
+                        }
+                    }
+
+                    is CustomTileProviderType.Vector.Offline -> {
+                        if ((tilesource as? TileSources.Vector.Custom.Offline)?.name == deletedTileSource.name) {
+                            // set default tile provider if the currently selected has been deleted
+                            mapSharedViewModel.setTile(
+                                DefaultTileSources.MAPNIK
+                            )
+                        }
+                    }
+
+                    else -> return
+                }
+            }
     }
 }

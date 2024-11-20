@@ -17,10 +17,12 @@ import com.bytecause.util.file.FileUtil.deleteFileFromFolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,6 +36,7 @@ constructor(
     private val customOfflineVectorTileSourceRepository: CustomOfflineVectorTileSourceRepository,
     customTileSourcesUseCase: CustomTileSourcesUseCase,
 ) : ViewModel() {
+
     private val _contentMapStateFlow: MutableStateFlow<Map<LayerTypes, List<LayersChildItem>>?> =
         MutableStateFlow(null)
 
@@ -50,8 +53,9 @@ constructor(
         }
     }
 
-    val customTileSources: Flow<Map<TileSourceTypes, List<CustomTileProvider>>> =
+    val customTileSources: StateFlow<Map<TileSourceTypes, List<CustomTileProvider>>> =
         customTileSourcesUseCase()
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
     fun deleteCustomProvider(
         parentPosition: Int,
@@ -83,19 +87,6 @@ constructor(
                 else -> null
             }
 
-        // Update the content map state flow
-        _contentMapStateFlow.value = _contentMapStateFlow.value!!.toMutableMap().apply {
-            val mapKey = this.keys.elementAt(parentPosition)
-
-            val updatedList = this[mapKey]?.toMutableList()?.apply {
-                removeAt(childPosition)
-            }
-
-            if (updatedList.isNullOrEmpty()) {
-                this.remove(mapKey)
-            } else this[mapKey] = updatedList
-        }
-
         // Emit the name of the deleted item
         emit(deletedItemName)
     }
@@ -106,10 +97,30 @@ constructor(
         }
     }
 
+    suspend fun deleteOfflineTileSourceProvider(index: Int, type: CustomTileProviderType): String? {
+        return when (type) {
+            is CustomTileProviderType.Raster.Offline -> {
+                customOfflineRasterTileSourceRepository.deleteOfflineRasterTileSourceProvider(
+                    index
+                )
+                    .firstOrNull()
+            }
+
+            is CustomTileProviderType.Vector.Offline -> {
+                customOfflineVectorTileSourceRepository.deleteOfflineVectorTileSourceProvider(
+                    index
+                )
+                    .firstOrNull()
+            }
+
+            else -> null
+        }
+    }
+
     private fun getCustomTileSources() {
         viewModelScope.launch {
-            customTileSources.firstOrNull()?.let { customTileProviders ->
-                if (customTileProviders.isEmpty()) return@let
+            customTileSources.collect { customTileProviders ->
+                if (customTileProviders.isEmpty()) return@collect
 
                 val sourcesMap: MutableMap<LayerTypes, List<LayersChildItem>> = mutableMapOf()
 

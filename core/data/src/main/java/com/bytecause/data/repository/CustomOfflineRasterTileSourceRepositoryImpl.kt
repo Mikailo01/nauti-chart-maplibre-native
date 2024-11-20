@@ -11,7 +11,6 @@ import com.bytecause.domain.model.CustomTileProvider
 import com.bytecause.domain.model.CustomTileProviderType
 import com.bytecause.nautichart.CustomOfflineRasterTileSource
 import com.bytecause.nautichart.CustomOfflineRasterTileSourceList
-import com.bytecause.util.file.FileUtil.offlineTilesDir
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.io.File
 import javax.inject.Inject
 
 private val Context.customOfflineRasterTileSourceDataStore: DataStore<CustomOfflineRasterTileSourceList> by dataStore(
@@ -36,8 +34,18 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
 ) : CustomOfflineRasterTileSourceRepository {
 
     override suspend fun saveOfflineRasterTileSourceProvider(tileProvider: CustomTileProvider) {
-        (tileProvider.type as? CustomTileProviderType.Raster.Offline)?.let { provider ->
-            withContext(coroutineDispatcher) {
+        withContext(coroutineDispatcher) {
+            (tileProvider.type as? CustomTileProviderType.Raster.Offline)?.let { provider ->
+
+                // Delete any existing tile source with the same name if present
+                context.customOfflineRasterTileSourceDataStore.data.firstOrNull()?.let {
+                    it.offlineRasterTileSourceOrBuilderList.forEachIndexed { index, tileSource ->
+                        if (tileSource.name == provider.name) {
+                            deleteOfflineRasterTileSourceProvider(index).firstOrNull()
+                        }
+                    }
+                }
+
                 context.customOfflineRasterTileSourceDataStore.updateData {
                     it.toBuilder().addOfflineRasterTileSource(
                         provider.run {
@@ -73,21 +81,16 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
 
     override fun getOfflineRasterTileSourceProviders(): Flow<List<CustomTileProvider>> =
         context.customOfflineRasterTileSourceDataStore.data.map {
-            it.offlineRasterTileSourceOrBuilderList.mapIndexedNotNull { index, tileSource ->
-                if (tilesExist(tileSource.name)) {
-                    CustomTileProvider(
-                        CustomTileProviderType.Raster.Offline(
-                            name = tileSource.name,
-                            minZoom = tileSource.minZoom,
-                            maxZoom = tileSource.maxZoom,
-                            tileSize = tileSource.tileSize,
-                            filePath = tileSource.filePath
-                        )
+            it.offlineRasterTileSourceOrBuilderList.map { tileSource ->
+                CustomTileProvider(
+                    CustomTileProviderType.Raster.Offline(
+                        name = tileSource.name,
+                        minZoom = tileSource.minZoom,
+                        maxZoom = tileSource.maxZoom,
+                        tileSize = tileSource.tileSize,
+                        filePath = tileSource.filePath
                     )
-                } else {
-                    deleteOfflineRasterTileSourceProvider(index)
-                    null
-                }
+                )
             }
         }
             .catch { exception ->
@@ -96,9 +99,4 @@ class CustomOfflineRasterTileSourceRepositoryImpl @Inject constructor(
                 else throw exception
             }
             .flowOn(coroutineDispatcher)
-
-    private fun tilesExist(tilesName: String): Boolean {
-        val file = File(context.offlineTilesDir())
-        return file.listFiles()?.any { it.name == tilesName } == true
-    }
 }

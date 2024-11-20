@@ -15,6 +15,7 @@ import com.bytecause.map.ui.bottomsheet.MapBottomSheetResources
 import com.bytecause.map.ui.model.LayersChildItem
 import com.bytecause.map.ui.recyclerview.interfaces.SelectLayerListener
 import com.bytecause.presentation.components.views.recyclerview.FullyExpandedRecyclerView
+import com.google.android.material.divider.MaterialDivider
 
 
 class LayerParentAdapter(
@@ -40,6 +41,7 @@ class LayerParentAdapter(
         val childRecyclerView: FullyExpandedRecyclerView =
             itemView.findViewById(R.id.child_layers_recycler_view)
         val layerTypeTextView: TextView = itemView.findViewById(R.id.layer_type_text_view)
+        val divider: MaterialDivider = itemView.findViewById(R.id.recycler_view_divider)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -67,6 +69,13 @@ class LayerParentAdapter(
                 null
             }
         }
+
+        holder.divider.visibility =
+            if (position == (holder.bindingAdapter?.itemCount?.minus(1) ?: -1)) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
 
         val childAdapter = LayerChildAdapter(
             entry.value.filter {

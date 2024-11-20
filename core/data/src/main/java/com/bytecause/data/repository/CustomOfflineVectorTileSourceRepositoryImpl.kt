@@ -34,8 +34,18 @@ class CustomOfflineVectorTileSourceRepositoryImpl @Inject constructor(
 ) : CustomOfflineVectorTileSourceRepository {
 
     override suspend fun saveOfflineVectorTileSourceProvider(tileProvider: CustomTileProvider) {
-        (tileProvider.type as? CustomTileProviderType.Vector.Offline)?.let { provider ->
-            withContext(coroutineDispatcher) {
+        withContext(coroutineDispatcher) {
+            (tileProvider.type as? CustomTileProviderType.Vector.Offline)?.let { provider ->
+
+                // Delete any existing tile source with the same name if present
+                context.customOfflineVectorTileSourceDataStore.data.firstOrNull()?.let {
+                    it.offlineVectorTileSourceOrBuilderList.forEachIndexed { index, tileSource ->
+                        if (tileSource.name == provider.name) {
+                            deleteOfflineVectorTileSourceProvider(index).firstOrNull()
+                        }
+                    }
+                }
+
                 context.customOfflineVectorTileSourceDataStore.updateData {
                     it.toBuilder().addOfflineVectorTileSource(
                         provider.run {

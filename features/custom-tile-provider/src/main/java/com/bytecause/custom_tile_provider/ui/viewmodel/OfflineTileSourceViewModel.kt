@@ -87,7 +87,7 @@ class OfflineTileSourceViewModel @Inject constructor(
 
             OfflineTileSourceEvent.OnDoneButtonClick -> {
                 if (checkPropsSet()) {
-                    performTileSourceIO()
+                    performTileSourceCopy(false)
                 }
             }
 
@@ -99,6 +99,14 @@ class OfflineTileSourceViewModel @Inject constructor(
                     it.copy(isLoading = false)
                 }
                 sendEffect(OfflineTileSourceEffect.VectorUnsupported)
+            }
+
+            OfflineTileSourceEvent.OnTileSourceOverwriteDialogConfirm -> {
+                _uiState.update { it.copy(sourceNameError = null) }
+                performTileSourceCopy(true)
+            }
+            OfflineTileSourceEvent.OnTileSourceOverwriteDialogDismiss -> {
+                _uiState.update { it.copy(sourceNameError = null) }
             }
         }
     }
@@ -123,14 +131,14 @@ class OfflineTileSourceViewModel @Inject constructor(
         return true
     }
 
-    private fun performTileSourceIO() {
+    private fun performTileSourceCopy(overwrite: Boolean) {
         viewModelScope.launch {
             val destinationFolder = getApplication<Application>().offlineTilesDir()
 
             if (checkFilenameExists(
                     uiState.value.sourceName,
                     destinationFolder
-                )
+                ) && !overwrite
             ) {
                 uiEventHandler(
                     OfflineTileSourceEvent.OnSourceNameError(

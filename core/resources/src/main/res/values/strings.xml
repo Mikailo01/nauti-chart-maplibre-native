@@ -64,6 +64,7 @@
     <string name="map_tile_source">Map tile source</string>
     <string name="name_cannot_be_empty">Name cannot be empty!</string>
     <string name="name_of_this_tile_provider_already_exists">Name of this tile provider already exists.</string>
+    <string name="do_you_wish_to_overwrite_an_existing_tile_source">Do you wish to overwrite an existing tile source ?</string>
     <string name="url_cannot_be_empty">Url cannot be empty!</string>
     <string name="url_is_not_in_valid_format">Url is not in valid format.\nPlease make sure that the inputted url is in corresponding format: \n\n%1s %2s\n\nSupported types: JPG, PNG, JPEG</string>
     <string name="url_format_1">https://example.org/{z}/{x}/{y}.png</string>
@@ -187,6 +188,7 @@
     <string name="no_element_found">No element found</string>
     <string name="download">Download</string>
     <string name="cancel">Cancel</string>
+    <string name="overwrite">Overwrite</string>
     <string name="try_again">Try Again</string>
     <string name="download_will_be_finished_in_the_background.">Download will be finished in the background.</string>
     <string name="downloading">Downloading</string>

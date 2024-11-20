@@ -14,4 +14,6 @@ sealed interface OfflineTileSourceEvent {
     data object OnLaunchFileManager : OfflineTileSourceEvent
     data object OnDoneButtonClick : OfflineTileSourceEvent
     data object OnVectorUnsupported : OfflineTileSourceEvent
+    data object OnTileSourceOverwriteDialogDismiss : OfflineTileSourceEvent
+    data object OnTileSourceOverwriteDialogConfirm : OfflineTileSourceEvent
 }

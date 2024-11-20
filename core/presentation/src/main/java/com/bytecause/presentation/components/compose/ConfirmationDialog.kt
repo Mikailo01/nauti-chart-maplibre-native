@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bytecause.core.resources.R
@@ -26,7 +27,9 @@ import com.bytecause.core.resources.R
 @Composable
 fun ConfirmationDialog(
     modifier: Modifier = Modifier,
-    @StringRes title: Int = -1,
+    @StringRes title: Int = R.string.are_you_sure,
+    @StringRes confirmText: Int = R.string.confirm,
+    @StringRes dismissText: Int = R.string.dismiss,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     content: @Composable () -> Unit
@@ -48,10 +51,11 @@ fun ConfirmationDialog(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = stringResource(id = title.takeIf { it != -1 } ?: R.string.are_you_sure),
+                    text = stringResource(id = title),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 10.dp),
                     fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
@@ -65,14 +69,14 @@ fun ConfirmationDialog(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(onClick = { onDismiss() }) {
-                    Text(text = stringResource(id = R.string.cancel))
+                    Text(text = stringResource(id = dismissText))
                 }
 
                 Button(
                     onClick = { onConfirm() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(text = stringResource(id = R.string.confirm))
+                    Text(text = stringResource(id = confirmText))
                 }
             }
         }

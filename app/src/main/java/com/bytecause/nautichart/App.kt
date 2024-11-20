@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.bytecause.features.search.BuildConfig
 import com.bytecause.nautichart.di.factory.CustomWorkerFactory
 import com.bytecause.nautichart.worker.AnchorageHistoryRemovalWorker
 import com.bytecause.nautichart.worker.DeletePoiSearchRadiusCacheWorker
@@ -15,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -37,6 +39,10 @@ class App : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
 
         coroutineScope.launch {
             try {

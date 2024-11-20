@@ -1,6 +1,7 @@
 import com.android.build.api.dsl.ApplicationExtension
 import com.bytecause.convention.configureKotlinAndroid
 import com.bytecause.convention.coreLibraryDesugaring
+import com.bytecause.convention.implementation
 import com.bytecause.convention.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -21,6 +22,7 @@ class AndroidApplicationConventionPlugin: Plugin<Project> {
             }
 
             dependencies {
+                implementation(libs.findLibrary("timber").get())
                 // desugaring libs
                 coreLibraryDesugaring(libs.findLibrary("desugar_jdk_libs").get())
             }

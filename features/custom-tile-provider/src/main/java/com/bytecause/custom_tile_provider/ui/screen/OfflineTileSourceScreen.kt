@@ -26,8 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bytecause.core.resources.R
@@ -36,6 +38,7 @@ import com.bytecause.custom_tile_provider.ui.events.OfflineTileSourceEvent
 import com.bytecause.custom_tile_provider.ui.state.OfflineTileSourceState
 import com.bytecause.custom_tile_provider.ui.state.TileNameError
 import com.bytecause.custom_tile_provider.ui.viewmodel.OfflineTileSourceViewModel
+import com.bytecause.presentation.components.compose.ConfirmationDialog
 import com.bytecause.presentation.components.compose.CustomOutlinedButton
 import com.bytecause.presentation.components.compose.Divider
 import com.bytecause.presentation.components.compose.TileSizeChips
@@ -134,12 +137,11 @@ fun OfflineTileSourceContent(
                 enabled = !state.isLoading,
                 isError = state.sourceNameError != null,
                 supportingText = {
-                    if (state.sourceNameError != null) {
-                        when (state.sourceNameError) {
-                            TileNameError.Empty -> Text(text = stringResource(id = R.string.name_cannot_be_empty))
-                            TileNameError.Exists -> Text(text = stringResource(id = R.string.name_of_this_tile_provider_already_exists))
-                        }
-                    }
+                    if (state.sourceNameError is TileNameError.Empty) Text(
+                        text = stringResource(
+                            id = R.string.name_cannot_be_empty
+                        )
+                    )
                 }
             )
 
@@ -189,6 +191,23 @@ fun OfflineTileSourceContent(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
         )
+
+        if (state.sourceNameError is TileNameError.Exists) {
+            ConfirmationDialog(
+                title = R.string.name_of_this_tile_provider_already_exists,
+                confirmText = R.string.overwrite,
+                dismissText = R.string.cancel,
+                onConfirm = { onEvent(OfflineTileSourceEvent.OnTileSourceOverwriteDialogConfirm) },
+                onDismiss = { onEvent(OfflineTileSourceEvent.OnTileSourceOverwriteDialogDismiss) }
+            ) {
+                Text(
+                    text = stringResource(R.string.do_you_wish_to_overwrite_an_existing_tile_source),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontStyle = FontStyle.Italic
+                )
+            }
+        }
 
         if (state.isLoading) {
             Box(modifier = Modifier.align(Alignment.Center)) {
